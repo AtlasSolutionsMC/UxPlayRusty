@@ -21,7 +21,7 @@ use crate::raop_media_runtime::{SessionMedia, SessionMediaConfig};
 use crate::raop_parameters::SetParameterContext;
 use fairplay_playfair::port::{FairPlay, INVALID as FAIRPLAY_INVALID};
 use http_response_rs::port::HttpResponse;
-use std::io;
+use std::io::{self, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -788,6 +788,12 @@ impl ProtocolConnection {
                                 crate::logger::INFO,
                                 format!("playlistInsert uuid {uuid} is not a stored playlist"),
                             );
+                        }
+                        if let Some(xml) = playlist_insert_item_xml(body) {
+                            let mut stdout = std::io::stdout().lock();
+                            let _ = stdout.write_all(b"playlistInsert parameter item list is:\n");
+                            let _ = stdout.write_all(&xml);
+                            let _ = stdout.flush();
                         }
                     }
                     logger.log(
@@ -1727,6 +1733,21 @@ impl ConnectionHandler for ProtocolConnection {
     }
 }
 
+fn playlist_insert_item_xml(body: &[u8]) -> Option<Vec<u8>> {
+    let plist = plist::Value::from_reader(std::io::Cursor::new(body)).ok()?;
+    let root = plist.as_dictionary()?;
+    let params = root.get("params")?.as_dictionary()?;
+    let item = params.get("item")?.as_dictionary()?;
+    let mut xml = Vec::new();
+    plist::Value::Dictionary(item.clone())
+        .to_writer_xml(&mut xml)
+        .ok()?;
+    if !xml.ends_with(b"\n") {
+        xml.push(b'\n');
+    }
+    Some(xml)
+}
+
 fn log_event_message(logger: &Option<Arc<crate::logger::Logger>>, event: &EventMessage) {
     let Some(logger) = logger else {
         return;
@@ -2490,6 +2511,29 @@ mod tests {
         AesContext, AesMode, Direction, Ed25519Key, X25519Key, gcm_decrypt, gcm_encrypt, sha512,
     };
     use uxplay_pairing::port::{Pairing, PairingStatus, ed25519_pk_to_base64};
+
+    #[test]
+    fn playlist_insert_item_xml_matches_libplist_output() {
+        let mut item = plist::Dictionary::new();
+        item.insert("uuid".into(), plist::Value::String("U-1".into()));
+        item.insert(
+            "url".into(),
+            plist::Value::String("https://x/a.m3u8".into()),
+        );
+        let mut params = plist::Dictionary::new();
+        params.insert("item".into(), plist::Value::Dictionary(item));
+        let mut root = plist::Dictionary::new();
+        root.insert("params".into(), plist::Value::Dictionary(params));
+        let mut body = Vec::new();
+        plist::Value::Dictionary(root)
+            .to_writer_binary(&mut body)
+            .unwrap();
+
+        assert_eq!(
+            playlist_insert_item_xml(&body).unwrap(),
+            b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>uuid</key>\n\t<string>U-1</string>\n\t<key>url</key>\n\t<string>https://x/a.m3u8</string>\n</dict>\n</plist>\n"
+        );
+    }
 
     #[test]
     fn source_peer_address_preserves_only_valid_link_local_scope_ids() {
