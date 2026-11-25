@@ -1170,6 +1170,7 @@ name = "uxplay-raop-rtp"
 version = "0.1.0"
 dependencies = [
  "compat-rs",
+ "libc",
  "socket2",
  "uxplay-crypto",
 ]

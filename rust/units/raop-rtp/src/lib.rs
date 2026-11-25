@@ -425,6 +425,11 @@ fn run_audio_thread(
                     break;
                 }
             }
+            Err(error) if is_select_failure(&error) => {
+                log_select_error(&logger, &error);
+                running.store(false, Ordering::Release);
+                break;
+            }
             Err(error) if is_would_block(&error) => {}
             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
             Err(error) => log_recvfrom_error(&logger, &error),
@@ -533,6 +538,11 @@ fn run_audio_thread(
                         &logger,
                     );
                 }
+            }
+            Err(error) if is_select_failure(&error) => {
+                log_select_error(&logger, &error);
+                running.store(false, Ordering::Release);
+                break;
             }
             Err(error) if is_would_block(&error) => {}
             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
@@ -810,6 +820,22 @@ fn is_would_block(error: &io::Error) -> bool {
     )
 }
 
+fn is_select_failure(error: &io::Error) -> bool {
+    #[cfg(windows)]
+    {
+        error.raw_os_error() == Some(10038) // WSAENOTSOCK
+    }
+    #[cfg(unix)]
+    {
+        error.raw_os_error() == Some(libc::EBADF)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = error;
+        false
+    }
+}
+
 fn log(logger: &Option<LogCallback>, level: i32, message: String) {
     if let Some(logger) = logger {
         logger(level, &message);
@@ -825,6 +851,18 @@ fn log_recvfrom_error(logger: &Option<LogCallback>, error: &io::Error) {
         logger,
         LOGGER_ERR,
         format!("raop_rtp error in recvfrom  {code} {text}"),
+    );
+}
+
+fn log_select_error(logger: &Option<LogCallback>, error: &io::Error) {
+    let (code, text) = error.raw_os_error().map_or_else(
+        || (0, error.to_string()),
+        |code| (code, socket_error_message(code)),
+    );
+    log(
+        logger,
+        LOGGER_ERR,
+        format!("raop_rtp error in select {code} {text}"),
     );
 }
 
@@ -1187,6 +1225,35 @@ mod tests {
             socket_error_message(10054)
         );
         assert_eq!(lock(&events).last().unwrap().1, expected_message);
+    }
+
+    #[test]
+    #[cfg(any(unix, windows))]
+    fn invalid_socket_uses_the_source_select_failure_path() {
+        #[cfg(windows)]
+        let invalid_socket = io::Error::from_raw_os_error(10038);
+        #[cfg(unix)]
+        let invalid_socket = io::Error::from_raw_os_error(libc::EBADF);
+        #[cfg(not(any(unix, windows)))]
+        let invalid_socket = io::Error::from(io::ErrorKind::InvalidInput);
+
+        assert!(is_select_failure(&invalid_socket));
+        #[cfg(windows)]
+        let ordinary_network_error = io::Error::from_raw_os_error(10054);
+        #[cfg(unix)]
+        let ordinary_network_error = io::Error::from_raw_os_error(libc::ECONNRESET);
+        #[cfg(not(any(unix, windows)))]
+        let ordinary_network_error = io::Error::from(io::ErrorKind::ConnectionReset);
+        assert!(!is_select_failure(&ordinary_network_error));
+
+        let (callback, events) = collecting_runtime_logger();
+        log_select_error(&Some(callback), &invalid_socket);
+        let expected = format!(
+            "raop_rtp error in select {} {}",
+            invalid_socket.raw_os_error().unwrap_or(0),
+            socket_error_message(invalid_socket.raw_os_error().unwrap_or(0))
+        );
+        assert_eq!(*lock(&events), [(LOGGER_ERR, expected)]);
     }
 
     #[test]

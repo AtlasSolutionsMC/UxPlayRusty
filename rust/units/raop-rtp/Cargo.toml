@@ -9,6 +9,9 @@ compat-rs = { path = "../compat" }
 uxplay-crypto = { path = "../crypto" }
 socket2 = { version = "0.6", features = ["all"] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [lints.rust]
 unsafe_code = "forbid"
 
