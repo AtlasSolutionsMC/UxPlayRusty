@@ -40,8 +40,15 @@ require GStreamer plus the `mp4mux`, `filesink`, `h264parse`, `h265parse`, and
 
 ## Current limits
 
-The Rust app does not yet construct or own this renderer. The generic
-`rust-anything record`/`gate` recorder cannot characterize these static C globals
-because its C harness attempts to compile the whole UxPlay tree, which pulls in
-optional DNS-SD/libplist and renderer dependencies. The isolated C oracle and
-Rust tests provide focused evidence, but this unit is not marked gate-complete.
+The Rust app constructs and owns this renderer through `MediaOutputRuntime` when
+MP4 output is enabled, and sends decoded audio/video into it from the live media
+callbacks. App integration tests cover audio-only and video-only finalization,
+including EOS and MP4 container atoms. A source-valid AAC-ELD fixture is still
+missing, so mixed A/V finalization is not claimed.
+
+The generic `rust-anything record`/`gate` recorder cannot characterize these
+static C globals because its C harness attempts to compile the whole UxPlay tree,
+which pulls in optional DNS-SD/libplist and renderer dependencies. The isolated
+C oracle and Rust tests provide focused evidence; live Apple-client playback,
+cross-platform renderer acceptance, and final generic unit-gate status remain
+open.

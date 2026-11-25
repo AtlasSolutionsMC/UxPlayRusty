@@ -570,6 +570,28 @@ fn serve_client(
                         "raop_rtp_mirror: prepended sps_pps timestamp does not match timestamp of video payload\n{video_timestamp}\n{parameter_set_timestamp} , discarding"
                     ),
                 ),
+                MirrorDiagnostic::UnexpectedH264Nal {
+                    partitioned,
+                    nal_type,
+                    ref_idc,
+                    nal_size,
+                    processed_bytes,
+                    payload_size,
+                    nalus_count,
+                } => callbacks.log(
+                    MirrorLogLevel::Info,
+                    &format!(
+                        "unexpected {} NAL unit: nalu_type = {nal_type}, ref_idc = {ref_idc}, nalu_size = {nal_size},processed bytes {processed_bytes}, payloadsize = {payload_size} nalus_count = {nalus_count}",
+                        if partitioned {
+                            "partitioned VCL"
+                        } else {
+                            "non-VCL"
+                        }
+                    ),
+                ),
+                MirrorDiagnostic::InvalidNaluFraming => {
+                    callbacks.log(MirrorLogLevel::Debug, "nalu marked as invalid")
+                }
             }
         }
         let mut unsupported_codec = false;
@@ -1012,6 +1034,99 @@ mod tests {
                     *level == MirrorLogLevel::Debug
                         && message.contains("prepended sps_pps timestamp does not match")
                         && message.contains("\n43\n42 , discarding")
+                })
+        );
+    }
+
+    #[test]
+    fn listener_logs_unexpected_h264_nal_at_the_source_level_and_offset() {
+        let (tx, rx) = mpsc::channel();
+        let logs = Arc::new(Mutex::new(Vec::new()));
+        let callbacks = Arc::new(Recorder {
+            events: tx,
+            logs: Arc::clone(&logs),
+        });
+        let clock: Arc<Mutex<Box<dyn NtpClock + Send>>> = Arc::new(Mutex::new(Box::new(TestClock)));
+        let mut receiver =
+            MirrorReceiver::new("127.0.0.1", 4, &AUDIO_KEY, clock, callbacks).unwrap();
+        receiver.init_aes(STREAM_ID);
+        let port = receiver.start(0, false).unwrap();
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        let sps = [0x67, 0x42, 0x00, 0x1e];
+        let pps = [0x68, 0xce, 0x06, 0xe2];
+        let mut codec = vec![0; 6];
+        codec.extend_from_slice(&(sps.len() as u16).to_be_bytes());
+        codec.extend_from_slice(&sps);
+        codec.push(1);
+        codec.extend_from_slice(&(pps.len() as u16).to_be_bytes());
+        codec.extend_from_slice(&pps);
+        send_fragmented(&mut stream, &wire_packet(1, 42, &codec));
+        send_fragmented(
+            &mut stream,
+            &wire_packet(0, 42, &encrypt(&[0, 0, 0, 1, 0x09])),
+        );
+
+        let configured = next_event(&rx);
+        assert!(matches!(configured, MirrorEvent::CodecConfigured { .. }));
+        let frame = next_event(&rx);
+        assert!(matches!(frame, MirrorEvent::VideoFrame(_)));
+        receiver.stop().unwrap();
+
+        assert!(
+            logs.lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .iter()
+                .any(|(level, message)| {
+                    *level == MirrorLogLevel::Info
+                        && message == "unexpected non-VCL NAL unit: nalu_type = 9, ref_idc = 0, nalu_size = 1,processed bytes 4, payloadsize = 5 nalus_count = 1"
+                })
+        );
+    }
+
+    #[test]
+    fn listener_logs_invalid_nalu_framing_before_forwarding_source_marker() {
+        let (tx, rx) = mpsc::channel();
+        let logs = Arc::new(Mutex::new(Vec::new()));
+        let callbacks = Arc::new(Recorder {
+            events: tx,
+            logs: Arc::clone(&logs),
+        });
+        let clock: Arc<Mutex<Box<dyn NtpClock + Send>>> = Arc::new(Mutex::new(Box::new(TestClock)));
+        let mut receiver =
+            MirrorReceiver::new("127.0.0.1", 4, &AUDIO_KEY, clock, callbacks).unwrap();
+        receiver.init_aes(STREAM_ID);
+        let port = receiver.start(0, false).unwrap();
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        let sps = [0x67, 0x42, 0x00, 0x1e];
+        let pps = [0x68, 0xce, 0x06, 0xe2];
+        let mut codec = vec![0; 6];
+        codec.extend_from_slice(&(sps.len() as u16).to_be_bytes());
+        codec.extend_from_slice(&sps);
+        codec.push(1);
+        codec.extend_from_slice(&(pps.len() as u16).to_be_bytes());
+        codec.extend_from_slice(&pps);
+        send_fragmented(&mut stream, &wire_packet(1, 42, &codec));
+        send_fragmented(
+            &mut stream,
+            &wire_packet(0, 42, &encrypt(&[0, 0, 0, 8, 0x65, 0xaa])),
+        );
+
+        assert!(matches!(
+            next_event(&rx),
+            MirrorEvent::CodecConfigured { .. }
+        ));
+        assert!(matches!(
+            next_event(&rx),
+            MirrorEvent::VideoFrame(VideoFrame { data, .. }) if data[0] == 1
+        ));
+        receiver.stop().unwrap();
+
+        assert!(
+            logs.lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .iter()
+                .any(|(level, message)| {
+                    *level == MirrorLogLevel::Debug && message == "nalu marked as invalid"
                 })
         );
     }

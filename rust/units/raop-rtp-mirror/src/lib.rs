@@ -77,6 +77,16 @@ pub enum MirrorDiagnostic {
         video_timestamp: u64,
         parameter_set_timestamp: u64,
     },
+    UnexpectedH264Nal {
+        partitioned: bool,
+        nal_type: u8,
+        ref_idc: u8,
+        nal_size: usize,
+        processed_bytes: usize,
+        payload_size: usize,
+        nalus_count: usize,
+    },
+    InvalidNaluFraming,
 }
 
 impl From<CryptoError> for MirrorError {
@@ -241,7 +251,11 @@ impl MirrorPacketProcessor {
         let mut data = Vec::with_capacity(prefix_len + payload.len());
         data.extend_from_slice(&self.parameter_sets);
         let mut decrypted = self.cipher.decrypt(payload)?;
-        let (nal_count, valid) = convert_length_prefixed_nalus(&mut decrypted, self.codec);
+        let (nal_count, valid) =
+            convert_length_prefixed_nalus(&mut decrypted, self.codec, &mut self.diagnostics);
+        if !valid {
+            self.diagnostics.push(MirrorDiagnostic::InvalidNaluFraming);
+        }
         data.extend_from_slice(&decrypted);
         let mut nal_count = nal_count;
         if !valid && !data.is_empty() {
@@ -412,7 +426,11 @@ fn h265_parameter<'a>(
     Some((payload.get(data_start..data_end)?, data_end))
 }
 
-fn convert_length_prefixed_nalus(payload: &mut [u8], codec: CodecState) -> (usize, bool) {
+fn convert_length_prefixed_nalus(
+    payload: &mut [u8],
+    codec: CodecState,
+    diagnostics: &mut Vec<MirrorDiagnostic>,
+) -> (usize, bool) {
     let mut offset = 0usize;
     let mut count = 0usize;
     // raop_rtp_mirror.c checks the decrypted body length, not the parameter-set prefix.
@@ -439,11 +457,22 @@ fn convert_length_prefixed_nalus(payload: &mut [u8], codec: CodecState) -> (usiz
         if nalu_first & 0x80 != 0 {
             return (count, false);
         }
-        let _nal_type = match codec {
-            CodecState::H264 => nalu_first & 0x1f,
-            CodecState::H265 => (nalu_first >> 1) & 0x3f,
-            CodecState::Unknown => nalu_first & 0x1f,
-        };
+        if matches!(codec, CodecState::H264 | CodecState::Unknown) {
+            let nal_type = nalu_first & 0x1f;
+            let ref_idc = nalu_first >> 5;
+            let partitioned = (2..=4).contains(&nal_type);
+            if partitioned || !matches!(nal_type, 1 | 5 | 6 | 7 | 8 | 14) {
+                diagnostics.push(MirrorDiagnostic::UnexpectedH264Nal {
+                    partitioned,
+                    nal_type,
+                    ref_idc,
+                    nal_size: nalu_len,
+                    processed_bytes: nalu_start,
+                    payload_size: payload.len(),
+                    nalus_count: count,
+                });
+            }
+        }
         if nalu_end == payload.len() {
             return (count, true);
         }
@@ -757,5 +786,53 @@ mod tests {
         };
         assert_eq!(frame.data[0], 1);
         assert_eq!(frame.nal_count, 0);
+        assert_eq!(
+            processor.take_diagnostics(),
+            [MirrorDiagnostic::InvalidNaluFraming]
+        );
+    }
+
+    #[test]
+    fn unexpected_h264_nal_types_emit_source_shaped_diagnostics() {
+        let mut processor = MirrorPacketProcessor::new(&AUDIO_KEY).unwrap();
+        processor.init_aes(STREAM_ID).unwrap();
+        processor.codec = CodecState::H264;
+        let mut clock = TestClock::default();
+        let body = [
+            0, 0, 0, 1, 0x09, // H.264 type 9: source logs unexpected non-VCL.
+            0, 0, 0, 2, 0x42, 0xaa, // H.264 type 2: source logs partitioned VCL.
+        ];
+        let mut encrypted = encrypt_payload(STREAM_ID, &body);
+        let header = header(0, encrypted.len(), 12);
+        let events = processor
+            .process_packet(&header, &mut encrypted, &mut clock, false)
+            .unwrap();
+        assert!(matches!(
+            events.as_slice(),
+            [MirrorEvent::VideoFrame(VideoFrame { nal_count: 2, .. })]
+        ));
+        assert_eq!(
+            processor.take_diagnostics(),
+            [
+                MirrorDiagnostic::UnexpectedH264Nal {
+                    partitioned: false,
+                    nal_type: 9,
+                    ref_idc: 0,
+                    nal_size: 1,
+                    processed_bytes: 4,
+                    payload_size: 11,
+                    nalus_count: 1,
+                },
+                MirrorDiagnostic::UnexpectedH264Nal {
+                    partitioned: true,
+                    nal_type: 2,
+                    ref_idc: 2,
+                    nal_size: 2,
+                    processed_bytes: 9,
+                    payload_size: 11,
+                    nalus_count: 2,
+                },
+            ]
+        );
     }
 }
