@@ -17,7 +17,7 @@ The timing service and audio callbacks are injected through `TimingClock` and `A
 ## Evidence
 
 - C oracle extracted the private `rtp_time_to_client_ntp` implementation from the unchanged source and matched all 3 checked-in vectors.
-- 15 Rust tests pass on Windows GNU, including AES-CBC fixture decryption, resend-window behavior, sync packet handling, ephemeral UDP start/stop, source-shaped socket and error diagnostics, per-frame DEBUG_DATA formatting, and a loopback sync-plus-audio exchange through the callback.
+- 17 Rust tests pass on Windows GNU, including AES-CBC fixture decryption, resend-window behavior, sync packet handling, ephemeral UDP start/stop, source-shaped socket and error diagnostics, fatal invalid-descriptor handling, per-frame DEBUG_DATA formatting, and a loopback sync-plus-audio exchange through the callback.
 - `cargo fmt --check`, Clippy with `-D warnings`, and release build pass on Windows GNU.
 - Linux cross-target `cargo check` stops in `openssl-sys`: this machine has no Linux OpenSSL sysroot/pkg-config setup. macOS and FreeBSD linked/source checks were not run for this isolated crate.
 
