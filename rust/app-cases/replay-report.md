@@ -1,6 +1,6 @@
 # App replay
 
-Build: `'C:\Users\Alphacomputer\AppData\Local\Temp\uxplayrusty-clean-replay.cmd'`
+Build: fresh Windows GNU release build with an empty `CARGO_TARGET_DIR`
 
 Passed: 1/1
 
