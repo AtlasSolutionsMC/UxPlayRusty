@@ -1,6 +1,6 @@
 # App replay
 
-Build: `'D:\Save\Uxplay\UxPlayRusty\rust\app\target\replay-launcher.exe'`
+Build: `'C:\Users\Alphacomputer\AppData\Local\Temp\uxplayrusty-clean-replay.cmd'`
 
 Passed: 1/1
 

@@ -1585,9 +1585,25 @@ fn audio_timestamp_with_option_delay(
 }
 
 fn address_length(address: &str) -> io::Result<usize> {
-    IpAddr::from_str(address)
-        .map(|address| if address.is_ipv4() { 4 } else { 16 })
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "remote address is not numeric"))
+    match IpAddr::from_str(address) {
+        Ok(address) => Ok(if address.is_ipv4() { 4 } else { 16 }),
+        Err(_) if crate::netutils::scoped_ipv6_socket_addr(address, 0).is_ok() => Ok(16),
+        Err(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "remote address is not numeric",
+        )),
+    }
+}
+
+#[cfg(test)]
+mod address_tests {
+    use super::address_length;
+
+    #[test]
+    fn link_local_ipv6_address_keeps_numeric_scope_as_ipv6() {
+        assert_eq!(address_length("fe80::1%7").unwrap(), 16);
+        assert!(address_length("fe80::1%en0").is_err());
+    }
 }
 
 fn bind_session_udp_socket(

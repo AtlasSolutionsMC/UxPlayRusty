@@ -178,6 +178,7 @@ pub struct ProtocolConnection {
     pairing_session: Option<PairingSession>,
     raop_state: RaopSessionState,
     password_authenticated: bool,
+    legacy_pin_password: Option<String>,
     media: Arc<SharedSessionMedia>,
     raop_media_registration: Option<RaopMediaRegistration>,
 }
@@ -221,7 +222,7 @@ impl ProtocolConnection {
         effects: Arc<dyn ProtocolEffectSink>,
         peer: SocketAddr,
     ) -> io::Result<Self> {
-        let peer_address = peer.ip().to_string();
+        let peer_address = source_peer_address(peer);
         let peer_address_length = match peer.ip() {
             IpAddr::V4(_) => 4,
             IpAddr::V6(_) => 16,
@@ -252,6 +253,7 @@ impl ProtocolConnection {
             pairing_session,
             raop_state: RaopSessionState::default(),
             password_authenticated: false,
+            legacy_pin_password: None,
             media,
             raop_media_registration: None,
         })
@@ -370,17 +372,33 @@ impl ProtocolConnection {
         let transition = match handler {
             Handler::Setup => {
                 let mut decisions = self.context.setup_decisions.clone();
-                if self.context.password_auth.required() {
-                    if let Some(device_id) =
-                        initial_setup_device_id(request.body().unwrap_or_default())
-                    {
+                if let Some(device_id) = initial_setup_device_id(request.body().unwrap_or_default())
+                {
+                    let legacy_pin_client = self.context.pin_mode && device_id.is_empty();
+                    let legacy_pin = if legacy_pin_client {
+                        Some(self.ensure_legacy_pin_password()?)
+                    } else {
+                        None
+                    };
+                    if self.context.password_auth.required() || legacy_pin_client {
                         let method = request.method().map_or(&[][..], |method| method.as_bytes());
-                        match self.context.password_auth.authorize(
-                            method,
-                            request.header(b"Authorization"),
-                            &device_id,
-                            &mut self.password_authenticated,
-                        )? {
+                        let decision = if let Some(pin) = legacy_pin.as_deref() {
+                            self.context.password_auth.authorize_with_pin_password(
+                                method,
+                                request.header(b"Authorization"),
+                                &device_id,
+                                &mut self.password_authenticated,
+                                pin,
+                            )?
+                        } else {
+                            self.context.password_auth.authorize(
+                                method,
+                                request.header(b"Authorization"),
+                                &device_id,
+                                &mut self.password_authenticated,
+                            )?
+                        };
+                        match decision {
                             AuthorizationDecision::Authorized => {
                                 decisions.authorized = true;
                             }
@@ -392,9 +410,6 @@ impl ProtocolConnection {
                                 }
                             }
                         }
-                    } else {
-                        // The C handler challenges only the first SETUP shape with ekey/eiv.
-                        decisions.authorized = true;
                     }
                 }
                 decisions.admit_client &= self.client_admitted(request.body().unwrap_or_default());
@@ -1180,24 +1195,40 @@ impl ProtocolConnection {
         assemble_session_response(request, response, false)
     }
 
-    fn dispatch_pair_pin_start(&self, request: &HttpRequest) -> io::Result<HttpReply> {
+    fn select_pairing_pin(&self) -> io::Result<u16> {
         let mut stored_pin = self
             .context
             .pairing_pin
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let pin = if *stored_pin > 9999 {
-            *stored_pin % 10000
-        } else {
-            let pin = random_pin().map_err(|error| {
-                io::Error::other(format!("pairing PIN generation failed: {error:?}"))
-            })?;
-            *stored_pin = pin;
-            pin
-        };
-        drop(stored_pin);
+        if *stored_pin > 9999 {
+            return Ok(*stored_pin % 10000);
+        }
+        let pin = random_pin().map_err(|error| {
+            io::Error::other(format!("pairing PIN generation failed: {error:?}"))
+        })?;
+        *stored_pin = pin;
+        Ok(pin)
+    }
+
+    fn ensure_legacy_pin_password(&mut self) -> io::Result<String> {
+        if let Some(pin) = self.legacy_pin_password.as_ref() {
+            return Ok(pin.clone());
+        }
+        let pin = self.select_pairing_pin()?;
+        let digits = format!("{pin:04}");
+        self.legacy_pin_password = Some(digits.clone());
         self.effects
-            .apply(HandlerEffect::DisplayPairingPin(format!("{pin:04}")))?;
+            .apply(HandlerEffect::DisplayPairingPin(digits.clone()))?;
+        Ok(digits)
+    }
+
+    fn dispatch_pair_pin_start(&mut self, request: &HttpRequest) -> io::Result<HttpReply> {
+        let pin = self.select_pairing_pin()?;
+        let digits = format!("{pin:04}");
+        self.legacy_pin_password = Some(digits.clone());
+        self.effects
+            .apply(HandlerEffect::DisplayPairingPin(digits))?;
         assemble_session_response(request, SessionResponse::default(), false)
     }
 
@@ -1373,6 +1404,55 @@ impl ProtocolConnection {
                     .allowed_clients
                     .iter()
                     .any(|item| item == &device_id))
+    }
+}
+
+/// Format a peer address the way `utils_ipaddress_to_string()` does. The scope
+/// identifier is required for link-local IPv6 NTP destinations; dropping it
+/// makes the address ambiguous on machines with more than one interface.
+fn source_peer_address(peer: SocketAddr) -> String {
+    match peer {
+        SocketAddr::V4(address) => address.ip().to_string(),
+        SocketAddr::V6(address) => {
+            let octets = address.ip().octets();
+            if address.scope_id() != 0 {
+                if octets[..8] != [0xfe, 0x80, 0, 0, 0, 0, 0, 0] {
+                    return String::new();
+                }
+                format!(
+                    "fe80::{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}%{}",
+                    octets[8],
+                    octets[9],
+                    octets[10],
+                    octets[11],
+                    octets[12],
+                    octets[13],
+                    octets[14],
+                    octets[15],
+                    address.scope_id()
+                )
+            } else {
+                format!(
+                    "{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                    octets[0],
+                    octets[1],
+                    octets[2],
+                    octets[3],
+                    octets[4],
+                    octets[5],
+                    octets[6],
+                    octets[7],
+                    octets[8],
+                    octets[9],
+                    octets[10],
+                    octets[11],
+                    octets[12],
+                    octets[13],
+                    octets[14],
+                    octets[15]
+                )
+            }
+        }
     }
 }
 
@@ -2123,12 +2203,12 @@ fn log_connection_addresses(
     log_at(
         logger,
         crate::logger::INFO,
-        format!("Local : {}", local.ip()),
+        format!("Local : {}", source_peer_address(local)),
     );
     log_at(
         logger,
         crate::logger::INFO,
-        format!("Remote: {}", peer.ip()),
+        format!("Remote: {}", source_peer_address(peer)),
     );
 }
 
@@ -2410,6 +2490,23 @@ mod tests {
         AesContext, AesMode, Direction, Ed25519Key, X25519Key, gcm_decrypt, gcm_encrypt, sha512,
     };
     use uxplay_pairing::port::{Pairing, PairingStatus, ed25519_pk_to_base64};
+
+    #[test]
+    fn source_peer_address_preserves_only_valid_link_local_scope_ids() {
+        let link_local = std::net::SocketAddrV6::new("fe80::1".parse().unwrap(), 7000, 0, 7);
+        assert_eq!(
+            source_peer_address(std::net::SocketAddr::V6(link_local)),
+            "fe80::0000:0000:0000:0001%7"
+        );
+
+        let global_with_scope =
+            std::net::SocketAddrV6::new("2001:db8::1".parse().unwrap(), 7000, 0, 7);
+        assert!(source_peer_address(std::net::SocketAddr::V6(global_with_scope)).is_empty());
+        assert_eq!(
+            source_peer_address("127.0.0.1:7000".parse().unwrap()),
+            "127.0.0.1"
+        );
+    }
 
     #[test]
     fn missing_device_id_follows_source_admission_rule_when_clients_are_restricted() {
@@ -3884,6 +3981,137 @@ mod tests {
                 .unwrap_or_else(std::sync::PoisonError::into_inner),
             vec![HandlerEffect::DisplayPairingPin("0042".into())]
         );
+    }
+
+    fn is_invalid_socket_error(error: &io::Error) -> bool {
+        #[cfg(windows)]
+        {
+            error.raw_os_error() == Some(10038)
+        }
+        #[cfg(unix)]
+        {
+            error.raw_os_error() == Some(libc::EBADF)
+        }
+        #[cfg(not(any(windows, unix)))]
+        {
+            error.kind() == io::ErrorKind::NotConnected
+        }
+    }
+
+    #[test]
+    fn classic_pin_mode_authenticates_device_id_less_setup_with_pair_pin() {
+        let effects = Arc::new(RecordingEffects::default());
+        let context = ProtocolContext {
+            pin_mode: true,
+            pairing_pin: Arc::new(Mutex::new(10_042)),
+            ..pairing_context()
+        };
+        let mut connection =
+            ProtocolConnection::new(context, effects.clone() as Arc<dyn ProtocolEffectSink>)
+                .unwrap();
+        let pin_start = parse(b"POST /pair-pin-start RTSP/1.0\r\nCSeq: 6\r\n\r\n");
+        connection.request(&pin_start).unwrap().unwrap();
+
+        let mut setup = plist::Dictionary::new();
+        setup.insert("eiv".into(), plist::Value::Data(vec![0; 16]));
+        setup.insert("ekey".into(), plist::Value::Data(vec![0; 72]));
+        setup.insert("timingPort".into(), plist::Value::from(5002));
+        setup.insert("timingProtocol".into(), plist::Value::String("None".into()));
+        let mut body = Vec::new();
+        plist::Value::Dictionary(setup)
+            .to_writer_binary(&mut body)
+            .unwrap();
+
+        let challenge = connection
+            .request(&setup_rtsp(&body, None, 74))
+            .unwrap()
+            .unwrap();
+        assert!(
+            challenge
+                .bytes
+                .starts_with(b"RTSP/1.0 401 Unauthorized\r\n")
+        );
+        let marker = b"nonce=\"";
+        let nonce_start = challenge
+            .bytes
+            .windows(marker.len())
+            .position(|window| window == marker)
+            .unwrap()
+            + marker.len();
+        let nonce = &challenge.bytes[nonce_start..nonce_start + 32];
+        let authorization = digest_header(b"SETUP", b"/", b"0042", nonce);
+        let reply = connection
+            .request(&setup_rtsp(&body, Some(&authorization), 75))
+            .unwrap()
+            .unwrap();
+        assert!(reply.bytes.starts_with(b"RTSP/1.0 200 OK\r\n"));
+        assert!(
+            effects
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .contains(&HandlerEffect::DisplayPairingPin("0042".into()))
+        );
+        connection.disconnected();
+    }
+
+    #[test]
+    fn classic_pin_mode_generates_a_pin_when_client_skips_pair_pin_start() {
+        let effects = Arc::new(RecordingEffects::default());
+        let context = ProtocolContext {
+            pin_mode: true,
+            ..pairing_context()
+        };
+        let mut connection =
+            ProtocolConnection::new(context, effects.clone() as Arc<dyn ProtocolEffectSink>)
+                .unwrap();
+        let mut setup = plist::Dictionary::new();
+        setup.insert("eiv".into(), plist::Value::Data(vec![0; 16]));
+        setup.insert("ekey".into(), plist::Value::Data(vec![0; 72]));
+        setup.insert("timingPort".into(), plist::Value::from(5002));
+        setup.insert("timingProtocol".into(), plist::Value::String("None".into()));
+        let mut body = Vec::new();
+        plist::Value::Dictionary(setup)
+            .to_writer_binary(&mut body)
+            .unwrap();
+
+        let challenge = connection
+            .request(&setup_rtsp(&body, None, 76))
+            .unwrap()
+            .unwrap();
+        assert!(
+            challenge
+                .bytes
+                .starts_with(b"RTSP/1.0 401 Unauthorized\r\n")
+        );
+        let pin = effects
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .iter()
+            .find_map(|effect| match effect {
+                HandlerEffect::DisplayPairingPin(pin) => Some(pin.clone()),
+                _ => None,
+            })
+            .expect("legacy setup displays the generated PIN");
+        assert_eq!(pin.len(), 4);
+        assert!(pin.bytes().all(|byte| byte.is_ascii_digit()));
+
+        let nonce_marker = b"nonce=\"";
+        let nonce_start = challenge
+            .bytes
+            .windows(nonce_marker.len())
+            .position(|window| window == nonce_marker)
+            .unwrap()
+            + nonce_marker.len();
+        let nonce = &challenge.bytes[nonce_start..nonce_start + 32];
+        let authorization = digest_header(b"SETUP", b"/", pin.as_bytes(), nonce);
+        let reply = connection
+            .request(&setup_rtsp(&body, Some(&authorization), 77))
+            .unwrap()
+            .unwrap();
+        assert!(reply.bytes.starts_with(b"RTSP/1.0 200 OK\r\n"));
+        connection.disconnected();
     }
 
     #[test]
@@ -5463,8 +5691,7 @@ mod tests {
             match event_channel.send_fcup_request("http://localhost/master.m3u8", "session-1", 4) {
                 Ok(()) => break,
                 Err(error)
-                    if error.kind() == io::ErrorKind::NotConnected
-                        && std::time::Instant::now() < deadline =>
+                    if is_invalid_socket_error(&error) && std::time::Instant::now() < deadline =>
                 {
                     thread::sleep(Duration::from_millis(1));
                 }
@@ -5478,13 +5705,15 @@ mod tests {
         worker.join().unwrap().unwrap();
         assert!(event_bytes.starts_with(b"POST /event HTTP/1.1\r\n"));
         assert_eq!(event_channel.connection_count(), 0);
-        assert_eq!(
-            event_channel
-                .send_fcup_request("http://localhost/next.m3u8", "session-1", 5)
-                .unwrap_err()
-                .kind(),
-            io::ErrorKind::NotConnected
-        );
+        let error = event_channel
+            .send_fcup_request("http://localhost/next.m3u8", "session-1", 5)
+            .unwrap_err();
+        #[cfg(windows)]
+        assert_eq!(error.raw_os_error(), Some(10038));
+        #[cfg(unix)]
+        assert_eq!(error.raw_os_error(), Some(libc::EBADF));
+        #[cfg(not(any(windows, unix)))]
+        assert_eq!(error.kind(), io::ErrorKind::NotConnected);
     }
 
     #[test]

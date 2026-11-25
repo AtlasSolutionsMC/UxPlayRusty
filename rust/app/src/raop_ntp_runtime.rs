@@ -1615,6 +1615,63 @@ mod tests {
     }
 
     #[test]
+    fn invalid_server_ref_and_duplicate_client_timestamp_are_rejected() {
+        let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
+        receiver
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let remote = receiver.local_addr().unwrap();
+        let (logger, messages) = test_logger();
+        let mut runtime = RaopNtpRuntime::new(
+            Some(logger),
+            "127.0.0.1",
+            4,
+            remote.port(),
+            TimeProtocol::Ntp,
+        )
+        .unwrap();
+        let mut local_port = 0;
+        runtime.start(&mut local_port).unwrap();
+
+        let mut packet = [0u8; 64];
+        let (length, source) = receiver.recv_from(&mut packet).unwrap();
+        assert_eq!(length, REQUEST_SIZE);
+        let client_timestamp = 0x0123_4567_89ab_cdefu64;
+
+        let mut invalid_response = [0u8; REQUEST_SIZE];
+        invalid_response[16..24]
+            .copy_from_slice(&client_timestamp.wrapping_sub(1 << 24).to_be_bytes());
+        invalid_response[24..32].copy_from_slice(&client_timestamp.to_be_bytes());
+        receiver.send_to(&invalid_response, source).unwrap();
+        let (length, _) = receiver.recv_from(&mut packet).unwrap();
+        assert_eq!(length, REQUEST_SIZE);
+        assert_eq!(read_u64_be(&packet, 8), client_timestamp);
+
+        let (length, source) = receiver.recv_from(&mut packet).unwrap();
+        assert_eq!(length, REQUEST_SIZE);
+        let matching_t1 = read_u64_be(&packet, 24);
+        let mut duplicate_response = [0u8; REQUEST_SIZE];
+        duplicate_response[8..16].copy_from_slice(&matching_t1.to_be_bytes());
+        duplicate_response[16..24]
+            .copy_from_slice(&client_timestamp.wrapping_sub(1 << 24).to_be_bytes());
+        duplicate_response[24..32].copy_from_slice(&client_timestamp.to_be_bytes());
+        receiver.send_to(&duplicate_response, source).unwrap();
+        let (length, _) = receiver.recv_from(&mut packet).unwrap();
+        assert_eq!(length, REQUEST_SIZE);
+        runtime.stop();
+
+        let messages = messages.lock().unwrap();
+        assert!(messages.iter().any(|(_, message)| {
+            message == "raop_ntp received NTP packet with invalid server ref: 0"
+        }));
+        assert!(messages.iter().any(|(_, message)| {
+            message
+                == &format!("raop_ntp received NTP packet with duplicate t3: {client_timestamp}")
+        }));
+        assert!(!runtime.sync_snapshot().clock.client_time_received);
+    }
+
+    #[test]
     fn failed_socket_start_is_retryable_without_publishing_a_new_port() {
         let mut runtime =
             RaopNtpRuntime::new(None, "127.0.0.1", 4, 6000, TimeProtocol::Ntp).unwrap();

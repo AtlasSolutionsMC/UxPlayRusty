@@ -119,6 +119,15 @@ GStreamer error (
    - `rust/app/src/protocol_connection.rs` (SETUP stream 110, FairPlay key, EIV)
    - เทียบกับ `lib/raop_rtp_mirror.c`, `lib/mirror_buffer.c`, `lib/raop_handlers.h`
 
+---
+
+## 6. Addendum หลังตรวจ source ต่อ (2026-11-26)
+
+- ข้อสรุปในหัวข้อ 3.1 ที่เขียนว่า `decryption of video packet failed` หมายถึง AES decrypt ผิดโดยตรงนั้นแรงเกินหลักฐาน: C ปล่อยข้อความนี้จาก `video_renderer.c` เมื่อ byte แรกของข้อมูลจาก mirror parser เป็น marker error; parser ตั้ง marker เมื่อ NAL length/forbidden-bit ไม่ถูกต้องหลังถอดรหัส ข้อความนี้จึงบอกว่า renderer input ใช้ไม่ได้ แต่ยังแยกไม่ได้ว่า key, encrypted bytes หรือ framing เป็นสาเหตุ ต้องเก็บ packet bytes และเทียบกับ C บน iPhone เครื่องเดิมก่อนแก้ crypto/parser
+- Rust แก้ pending-keystream continuation กรณี packet สั้นกว่า AES block เพื่อไม่อ่านเกิน input; `cargo check -p uxplay-mirror-buffer` และ format ผ่าน แต่ยังไม่มีหลักฐานว่าการแก้นี้แก้ real-device failure
+- พบช่องว่างแยกต่างหากใน RAOP link-local IPv6: C ส่ง `zone_id` จาก accepted socket ไปยัง NTP destination; Rust เคยทิ้ง scope ID. ตอนนี้ Rust คง `%<scope>` ไว้ใน remote address, logger ใช้ formatter ตาม C, และ address-length/RTP parsing รองรับรูปแบบนี้แล้ว; Windows GNU app `cargo check` กับ rustfmt ผ่าน แต่ real interface acceptance ยังไม่มี
+- สถานะจริงของ real-device issue จึงยังเปิด: ต้องมี full stderr, raw packet capture และ same-device C comparison. อย่าอ้างว่าปัญหา iPhone mirroring จบจาก synthetic fixture หรือจาก IPv6 scope fix นี้
+
 4. **ตรวจ reconnect state**  
    log มี connection request ซ้ำ 3 ครั้ง ต้องดูว่า key/CTR state ถูก reset ต่อ connection ใหม่หรือยังใช้ของเก่า
 
@@ -130,8 +139,8 @@ GStreamer error (
 ## 6. สถานะ process ตอนเขียนไฟล์นี้
 
 - Rust-owned server ยังรันอยู่: **PID 22432**, HTTP port **57788**
-- ยังไม่ได้ปิด เพื่อให้ผู้ใช้ยังลองต่อได้
-- ปิดได้ด้วย:
+- ข้อมูลข้างต้นเป็นสถานะขณะบันทึกไฟล์ (2026-11-23) เท่านั้น; ตรวจซ้ำวันที่ 2026-11-26 แล้ว **PID 22432 ไม่ได้รันและไม่มี listener บน port 57788**
+- คำสั่ง `taskkill` ด้านล่างจึงไม่จำเป็นกับสถานะปัจจุบัน:
 
 ```powershell
 taskkill /PID 22432 /T /F

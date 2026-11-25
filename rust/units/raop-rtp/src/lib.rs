@@ -739,11 +739,15 @@ fn parse_remote_ip(remote: &str, length: usize) -> io::Result<IpAddr> {
             .map(IpAddr::V4)
             .map_err(|_| invalid()),
         16 => {
-            let parsed: SocketAddr = format!("[{remote}]:0").parse().map_err(|_| invalid())?;
-            match parsed {
-                SocketAddr::V6(address) => Ok(IpAddr::V6(*address.ip())),
-                SocketAddr::V4(_) => Err(invalid()),
+            let (literal, scope) = remote
+                .rsplit_once('%')
+                .map_or((remote, None), |(literal, scope)| (literal, Some(scope)));
+            if scope.is_some_and(|scope| scope.parse::<u32>().is_err()) {
+                return Err(invalid());
             }
+            Ipv6Addr::from_str(literal)
+                .map(IpAddr::V6)
+                .map_err(|_| invalid())
         }
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -1253,6 +1257,16 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn scoped_ipv6_remote_address_is_accepted_only_with_numeric_zone() {
+        assert_eq!(
+            parse_remote_ip("fe80::1%7", 16).unwrap(),
+            IpAddr::V6("fe80::1".parse().unwrap())
+        );
+        assert!(parse_remote_ip("fe80::1%en0", 16).is_err());
+        assert!(parse_remote_ip("fe80::1%7", 4).is_err());
     }
 
     #[test]

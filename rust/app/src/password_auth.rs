@@ -68,7 +68,31 @@ impl PasswordAuth {
         device_id: &str,
         authenticated: &mut bool,
     ) -> io::Result<AuthorizationDecision> {
-        if !self.required() || *authenticated {
+        self.authorize_with_password(method, authorization, device_id, authenticated, None)
+    }
+
+    /// Authorize a legacy RAOP client with the PIN produced by `/pair-pin-start`.
+    /// The per-connection override keeps PIN-mode HAP clients on Pair Setup/Verify.
+    pub fn authorize_with_pin_password(
+        &self,
+        method: &[u8],
+        authorization: Option<&[u8]>,
+        device_id: &str,
+        authenticated: &mut bool,
+        pin: &str,
+    ) -> io::Result<AuthorizationDecision> {
+        self.authorize_with_password(method, authorization, device_id, authenticated, Some(pin))
+    }
+
+    fn authorize_with_password(
+        &self,
+        method: &[u8],
+        authorization: Option<&[u8]>,
+        device_id: &str,
+        authenticated: &mut bool,
+        password_override: Option<&str>,
+    ) -> io::Result<AuthorizationDecision> {
+        if (!self.required() && password_override.is_none()) || *authenticated {
             return Ok(AuthorizationDecision::Authorized);
         }
 
@@ -113,7 +137,10 @@ impl PasswordAuth {
                     .map(|password| password.digits.as_bytes())
                     .unwrap_or_default()
             } else {
-                self.password.as_deref().unwrap_or_default().as_bytes()
+                password_override
+                    .or(self.password.as_deref())
+                    .unwrap_or_default()
+                    .as_bytes()
             };
             let digest_valid = uxplay_pairing::port::digest_verify(method, authorization, password)
                 .map_err(|error| {
@@ -286,6 +313,33 @@ mod tests {
         };
         assert_ne!(value, refreshed);
         assert!(!authenticated);
+    }
+
+    #[test]
+    fn per_connection_pin_password_is_digest_checked_even_in_hap_pin_mode() {
+        let auth = PasswordAuth::new(1, None);
+        let mut authenticated = false;
+        let AuthorizationDecision::Challenge { value, .. } = auth
+            .authorize_with_pin_password(b"SETUP", None, "", &mut authenticated, "0042")
+            .unwrap()
+        else {
+            panic!("expected legacy PIN Digest challenge");
+        };
+        let nonce = authorization_nonce(value.as_bytes()).unwrap().to_vec();
+        let header = digest_header(b"SETUP", b"/", b"0042", &nonce);
+        assert_eq!(
+            auth.authorize_with_pin_password(
+                b"SETUP",
+                Some(&header),
+                "",
+                &mut authenticated,
+                "0042",
+            )
+            .unwrap(),
+            AuthorizationDecision::Authorized
+        );
+        assert!(authenticated);
+        assert!(!auth.required(), "HAP Setup stays on Pair Setup/Verify");
     }
 
     #[test]
