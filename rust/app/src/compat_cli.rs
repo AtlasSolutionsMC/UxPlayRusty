@@ -15,15 +15,14 @@ pub fn run_explicit_rc_compat(argv: &[OsString]) -> Option<ExitCode> {
     let binary = argv
         .first()
         .map_or_else(|| OsStr::new("uxplay"), OsString::as_os_str);
-    let args: Vec<String> = argv
-        .iter()
-        .skip(1)
-        .map(|arg| arg.to_string_lossy().into_owned())
-        .collect();
-    match explicit_rc(&args) {
+    match explicit_rc(argv) {
         RcSelection::Error { text, code } => {
             write_stdout(&text);
             Some(ExitCode::from(code))
+        }
+        RcSelection::NotFound(path) => {
+            write_stdout_bytes(&rc_not_found_message(&path));
+            Some(ExitCode::SUCCESS)
         }
         RcSelection::File(path) => action_from_rc(binary, &path),
         RcSelection::Default => None,
@@ -125,15 +124,16 @@ pub fn run_compat(argv: &[OsString]) -> Option<ExitCode> {
 enum RcSelection {
     Default,
     File(PathBuf),
+    NotFound(PathBuf),
     Error { text: String, code: u8 },
 }
 
-fn explicit_rc(args: &[String]) -> RcSelection {
-    for (index, arg) in args.iter().enumerate() {
-        if arg != "-rc" {
+fn explicit_rc(argv: &[OsString]) -> RcSelection {
+    for (index, arg) in argv.iter().enumerate().skip(1) {
+        if arg != OsStr::new("-rc") {
             continue;
         }
-        let Some(filename) = args.get(index + 1) else {
+        let Some(filename) = argv.get(index + 1) else {
             return RcSelection::Error {
                 text: "*** ERROR: option -rc requires a filename  (-rc <filename>)\n".into(),
                 code: 1,
@@ -141,17 +141,29 @@ fn explicit_rc(args: &[String]) -> RcSelection {
         };
         let path = PathBuf::from(filename);
         if !path.exists() {
-            return RcSelection::Error {
-                text: format!(
-                    "*** ERROR: startup file {filename} specified by option -rc was not found\n"
-                ),
-                // The reference exits with status zero for this particular error path.
-                code: 0,
-            };
+            return RcSelection::NotFound(path);
         }
         return RcSelection::File(path);
     }
     RcSelection::Default
+}
+
+fn rc_not_found_message(path: &Path) -> Vec<u8> {
+    let mut message = b"*** ERROR: startup file ".to_vec();
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        message.extend_from_slice(path.as_os_str().as_bytes());
+    }
+    #[cfg(windows)]
+    message.extend_from_slice(&crate::compat::c_runtime_output(&path.to_string_lossy()));
+    #[cfg(not(any(unix, windows)))]
+    message.extend_from_slice(path.to_string_lossy().as_bytes());
+    #[cfg(windows)]
+    message.extend_from_slice(b" specified by option -rc was not found\r\n");
+    #[cfg(not(windows))]
+    message.extend_from_slice(b" specified by option -rc was not found\n");
+    message
 }
 
 fn default_rc() -> Option<PathBuf> {
@@ -320,6 +332,10 @@ fn write_stdout(text: &str) {
     write_stream(io::stdout(), text);
 }
 
+fn write_stdout_bytes(bytes: &[u8]) {
+    let _ = io::stdout().write_all(bytes);
+}
+
 fn write_stderr(text: &str) {
     write_stream(io::stderr(), text);
 }
@@ -334,7 +350,11 @@ fn write_stream(mut stream: impl Write, text: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{c_unsigned, rc_options, valid_resolution, valid_unsigned};
+    use super::{
+        RcSelection, c_unsigned, explicit_rc, rc_not_found_message, rc_options, valid_resolution,
+        valid_unsigned,
+    };
+    use std::ffi::OsString;
 
     #[test]
     fn display_settings_follow_the_source_shape_and_ranges() {
@@ -365,5 +385,84 @@ mod tests {
             rc_options("# comment\nv\nn Screen\n"),
             ["-v", "-n", "Screen"]
         );
+    }
+
+    #[test]
+    fn explicit_rc_checks_the_native_path_and_formats_missing_path() {
+        let directory = std::env::temp_dir().join(format!(
+            "uxplay rc {} {}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("startup config.rc");
+        std::fs::write(&path, b"-n receiver\n").unwrap();
+        let argv = [
+            OsString::from("uxplay"),
+            OsString::from("-rc"),
+            path.as_os_str().to_owned(),
+        ];
+        assert!(matches!(explicit_rc(&argv), RcSelection::File(found) if found == path));
+
+        let missing = directory.join("missing config.rc");
+        let missing_argv = [
+            OsString::from("uxplay"),
+            OsString::from("-rc"),
+            missing.as_os_str().to_owned(),
+        ];
+        assert!(
+            matches!(explicit_rc(&missing_argv), RcSelection::NotFound(found) if found == missing)
+        );
+        let message = rc_not_found_message(&missing);
+        assert!(String::from_utf8_lossy(&message).contains("missing config.rc"));
+        #[cfg(windows)]
+        assert!(message.ends_with(b"specified by option -rc was not found\r\n"));
+        #[cfg(not(windows))]
+        assert!(message.ends_with(b"specified by option -rc was not found\n"));
+
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_dir(directory).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn explicit_rc_keeps_non_utf8_filename_bytes() {
+        use std::os::unix::ffi::OsStringExt;
+
+        let directory = std::env::temp_dir().join(format!(
+            "uxplay-rc-{}-{}",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let filename = OsString::from_vec(b"config-\xff.rc".to_vec());
+        let path = directory.join(&filename);
+        std::fs::write(&path, b"-n receiver\n").unwrap();
+
+        let argv = [OsString::from("uxplay"), OsString::from("-rc"), filename];
+        assert!(matches!(explicit_rc(&argv), RcSelection::File(found) if found == path));
+
+        let missing = directory.join(OsString::from_vec(b"missing-\xfe.rc".to_vec()));
+        assert!(matches!(
+            explicit_rc(&[
+                OsString::from("uxplay"),
+                OsString::from("-rc"),
+                missing.as_os_str().to_owned(),
+            ]),
+            RcSelection::NotFound(found) if found == missing
+        ));
+        let message = rc_not_found_message(&missing);
+        assert!(
+            message
+                .windows(b"missing-\xfe.rc".len())
+                .any(|window| window == b"missing-\xfe.rc")
+        );
+        assert!(message.ends_with(b" specified by option -rc was not found\n"));
+
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_dir(directory).unwrap();
     }
 }
