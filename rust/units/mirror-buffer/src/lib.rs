@@ -64,8 +64,13 @@ impl MirrorBuffer {
             let present = pending.min(input.len());
             let keystream_start = AES_KEY_BYTES - pending;
             if present < pending {
-                for index in 0..present {
-                    output[index] = input[index] ^ self.pending_keystream[keystream_start + index];
+                // C returns from inside its loop on the first iteration in this
+                // case. Its remaining malloc-backed output bytes are undefined;
+                // the source oracle zero-initializes them for deterministic
+                // comparison. Preserve the defined first byte and pending-count
+                // update without reading beyond this fragment.
+                if present > 0 {
+                    output[0] = input[0] ^ self.pending_keystream[keystream_start];
                 }
                 self.next_decrypt_count = pending - present;
                 return Ok(output);
@@ -159,16 +164,22 @@ mod tests {
     }
 
     #[test]
-    fn short_continuation_uses_only_present_input_bytes() {
+    fn short_continuation_preserves_only_the_defined_source_output() {
         let mut buffer = MirrorBuffer::new(&AUDIO_KEY).unwrap();
         buffer.init_aes(7).unwrap();
         let mut first = [0x5a; 3];
         buffer.decrypt(&mut first).unwrap();
         let pending_before = buffer.pending_bytes();
-        let mut short = [0xa5; 1];
+        let mut short = [0xa5; 2];
         let out = buffer.decrypt(&mut short).unwrap();
-        assert_eq!(out.len(), 1);
-        assert_eq!(buffer.pending_bytes(), pending_before - 1);
+        assert_eq!(out.len(), short.len());
+        assert_eq!(out[1], 0);
+        assert_eq!(buffer.pending_bytes(), pending_before - short.len());
+
+        let pending_before_empty = buffer.pending_bytes();
+        let empty = buffer.decrypt(&mut []).unwrap();
+        assert!(empty.is_empty());
+        assert_eq!(buffer.pending_bytes(), pending_before_empty);
     }
 
     fn hex(bytes: &[u8]) -> String {
