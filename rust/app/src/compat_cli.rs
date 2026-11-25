@@ -1,4 +1,4 @@
-//! Early CLI paths ported from `uxplay.cpp`; everything else still uses the recorded fallback.
+//! Source-compatible CLI paths implemented in Rust ahead of server startup.
 
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Write};

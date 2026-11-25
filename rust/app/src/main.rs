@@ -39,6 +39,7 @@ mod discovery_state;
 #[allow(dead_code)] // staged mDNS metadata unit; consumed by Rust service discovery
 mod discovery_txt;
 mod dmap_metadata;
+mod fallback_log;
 #[expect(
     dead_code,
     reason = "staged host MAC selection; consumed by Rust server startup"
@@ -78,7 +79,6 @@ mod ntp_filter;
 #[allow(dead_code)] // staged NTP math unit; consumed by the Rust RAOP timing session
 mod ntp_math;
 pub mod options;
-mod original;
 mod pairing_registry;
 mod password_auth;
 mod peer_to_peer;
@@ -149,11 +149,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    original::report_fallbacks();
+    fallback_log::report_fallbacks();
     let native_argv: Vec<OsString> = std::env::args_os().collect();
-    if std::env::var_os("UXPLAY_REFERENCE").as_deref() == Some(OsStr::new("1")) {
-        return original::run(&native_argv[1..]);
-    }
     // The C entry point receives argv in the active ANSI code page on Windows.
     let argv = compat::c_runtime_arguments(&native_argv);
     if let Some(code) = compat_cli::run_explicit_rc_compat(&argv) {
