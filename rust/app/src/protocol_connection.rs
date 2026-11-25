@@ -986,12 +986,13 @@ impl ProtocolConnection {
                     self.context.media_config.logger.as_deref(),
                 ) && let Some(logger) = &self.context.media_config.logger
                 {
+                    let error_message = error
+                        .raw_os_error()
+                        .map(|code| format!("{code}:{}", crate::compat::socket_error_message(code)))
+                        .unwrap_or_else(|| error.to_string());
                     logger.log(
                         crate::logger::ERR,
-                        format!(
-                            "fcup_request: send  error {}:{error}\n",
-                            error.raw_os_error().unwrap_or_default()
-                        ),
+                        format!("fcup_request: send  error {error_message}\n"),
                     );
                 }
             }
