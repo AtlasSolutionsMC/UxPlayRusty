@@ -1,0 +1,4 @@
+{"name":"hls-master-missing-current-video","method":"GET","path":"/master.m3u8"}
+{"name":"hls-media-missing-current-video","method":"GET","path":"/media.m3u8"}
+{"name":"play-missing-session","method":"POST","path":"/play"}
+{"name":"action-missing-current-video","method":"POST","path":"/action","headers":{"Content-Type":"application/x-apple-binary-plist","X-Apple-Session-ID":"session"},"body":"invalid"}

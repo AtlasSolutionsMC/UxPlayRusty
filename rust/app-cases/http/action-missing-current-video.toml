@@ -1,0 +1,11 @@
+[request]
+method = "POST"
+path = "/action"
+body = "invalid"
+
+[request.headers]
+Content-Type = "application/x-apple-binary-plist"
+X-Apple-Session-ID = "session"
+
+[response]
+status = 400

@@ -1,2 +1,14 @@
-build/
+# Cargo build products and local migration replay outputs
+**/target/
+/target/
+/baseline/
+*.rlib
+*.exe
+*.dll
+*.pdb
+
+# Local IDE and operating-system files
+.idea/
 .vscode/
+Thumbs.db
+Desktop.ini

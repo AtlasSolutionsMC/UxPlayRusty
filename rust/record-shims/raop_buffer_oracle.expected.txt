@@ -1,0 +1,28 @@
+DEQ initial empty
+ENQ short rc=-1
+ENQ header-only rc=0
+ENQ gap-first rc=1
+ENQ duplicate rc=0
+ENQ gap-third rc=1
+DEQ gap-first seq=10 ts=2882400001 len=4 data=00683400
+RESEND gap seq=11 count=1
+DEQ gap-wait empty
+DEQ gap-skip empty
+DEQ gap-last seq=12 ts=2882400003 len=4 data=00683400
+ENQ late-after-drain rc=0
+ENQ wrap-last rc=1
+ENQ wrap-zero rc=1
+DEQ wrap-last seq=65535 ts=4294901761 len=4 data=00683400
+DEQ wrap-zero seq=0 ts=2 len=4 data=00683400
+ENQ window-old rc=1
+ENQ window-boundary rc=1
+DEQ window-boundary seq=257 ts=257 len=4 data=00683400
+ENQ sequence-fallback rc=1
+DEQ sequence-fallback seq=258 ts=42 len=4 data=00683400
+ENQ full-prime rc=1
+DEQ full-prime seq=100 ts=100 len=4 data=00683400
+ENQ full-range count=255
+RESEND full seq=101 count=1
+DEQ full-window-head empty
+DEQ full-window-next seq=102 ts=102 len=4 data=00683400
+AES decrypt calls=0

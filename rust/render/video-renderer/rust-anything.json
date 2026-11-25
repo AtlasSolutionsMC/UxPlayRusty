@@ -1,0 +1,338 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay",
+  "unit": "renderers/video_renderer.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "video-renderer-rs",
+  "exports": [
+    {
+      "name": "video_renderer_pause",
+      "file": "renderers/video_renderer.c",
+      "line": 502,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_pause()"
+    },
+    {
+      "name": "video_renderer_resume",
+      "file": "renderers/video_renderer.c",
+      "line": 510,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_resume()"
+    },
+    {
+      "name": "video_renderer_start",
+      "file": "renderers/video_renderer.c",
+      "line": 525,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_start()"
+    },
+    {
+      "name": "waiting_for_x11_window",
+      "file": "renderers/video_renderer.c",
+      "line": 549,
+      "params": [],
+      "returns": "boolean",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "bool",
+      "prototype": "bool waiting_for_x11_window()"
+    },
+    {
+      "name": "video_renderer_cycle",
+      "file": "renderers/video_renderer.c",
+      "line": 572,
+      "params": [],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int video_renderer_cycle()"
+    },
+    {
+      "name": "video_renderer_flush",
+      "file": "renderers/video_renderer.c",
+      "line": 681,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_flush()"
+    },
+    {
+      "name": "video_renderer_hls_ready",
+      "file": "renderers/video_renderer.c",
+      "line": 684,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_hls_ready()"
+    },
+    {
+      "name": "video_renderer_stop",
+      "file": "renderers/video_renderer.c",
+      "line": 697,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_stop()"
+    },
+    {
+      "name": "video_renderer_set_device_model",
+      "file": "renderers/video_renderer.c",
+      "line": 708,
+      "params": [
+        {
+          "name": "model",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        },
+        {
+          "name": "name",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_set_device_model(const char *model, const char *name)"
+    },
+    {
+      "name": "video_renderer_set_track_metadata",
+      "file": "renderers/video_renderer.c",
+      "line": 714,
+      "params": [
+        {
+          "name": "title",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        },
+        {
+          "name": "artist",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        },
+        {
+          "name": "album",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_set_track_metadata(const char *title, const char *artist, const char *album)"
+    },
+    {
+      "name": "video_renderer_destroy",
+      "file": "renderers/video_renderer.c",
+      "line": 784,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_destroy()"
+    },
+    {
+      "name": "video_renderer_set_start",
+      "file": "renderers/video_renderer.c",
+      "line": 1181,
+      "params": [
+        {
+          "name": "position",
+          "ts_type": "number",
+          "optional": false,
+          "rest": false,
+          "native_type": "float"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_set_start(float position)"
+    },
+    {
+      "name": "video_renderer_seek",
+      "file": "renderers/video_renderer.c",
+      "line": 1187,
+      "params": [
+        {
+          "name": "position",
+          "ts_type": "number",
+          "optional": false,
+          "rest": false,
+          "native_type": "float"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_seek(float position)"
+    },
+    {
+      "name": "video_renderer_eos_watch",
+      "file": "renderers/video_renderer.c",
+      "line": 1213,
+      "params": [],
+      "returns": "boolean",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "bool",
+      "prototype": "bool video_renderer_eos_watch()"
+    },
+    {
+      "name": "video_renderer_hls_set_volume",
+      "file": "renderers/video_renderer.c",
+      "line": 1221,
+      "params": [
+        {
+          "name": "volume",
+          "ts_type": "number",
+          "optional": false,
+          "rest": false,
+          "native_type": "double"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void video_renderer_hls_set_volume(double volume)"
+    },
+    {
+      "name": "gstreamer_decoder_check",
+      "file": "renderers/video_renderer.c",
+      "line": 1233,
+      "params": [
+        {
+          "name": "decoder",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        }
+      ],
+      "returns": "boolean",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "bool",
+      "prototype": "bool gstreamer_decoder_check(const char *decoder)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "video_renderer_set_window_handle",
+      "file": "renderers/video_renderer.c",
+      "line": 46,
+      "reason": "uses `uintptr_t`, which is not a C scalar the bridge knows"
+    },
+    {
+      "name": "make_video_sink",
+      "file": "renderers/video_renderer.c",
+      "line": 198,
+      "reason": "returns a pointer (`GstElement*`): who frees it must be designed"
+    },
+    {
+      "name": "video_renderer_init",
+      "file": "renderers/video_renderer.c",
+      "line": 267,
+      "reason": "passes a pointer (`logger_t*`): ownership must be designed"
+    },
+    {
+      "name": "video_renderer_display_jpeg",
+      "file": "renderers/video_renderer.c",
+      "line": 613,
+      "reason": "passes a pointer (`const void*`): ownership must be designed"
+    },
+    {
+      "name": "video_renderer_render_buffer",
+      "file": "renderers/video_renderer.c",
+      "line": 626,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "video_renderer_choose_codec_and_size",
+      "file": "renderers/video_renderer.c",
+      "line": 1070,
+      "reason": "passes a pointer (`video_geometry_t*`): ownership must be designed"
+    },
+    {
+      "name": "video_get_playback_info",
+      "file": "renderers/video_renderer.c",
+      "line": 1134,
+      "reason": "passes a pointer (`double*`): ownership must be designed"
+    },
+    {
+      "name": "video_renderer_listen",
+      "file": "renderers/video_renderer.c",
+      "line": 1206,
+      "reason": "passes a pointer (`void*`): ownership must be designed"
+    }
+  ]
+}

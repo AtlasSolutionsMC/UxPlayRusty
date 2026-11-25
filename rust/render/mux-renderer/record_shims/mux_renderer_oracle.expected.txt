@@ -1,0 +1,45 @@
+CASE|h264-aac
+6|Mux renderer initialized: mux-h264-aac
+7|Mux renderer video codec: h265=false
+7|created Mux pipeline: appsrc name=video_src format=time is-live=true ! queue ! h264parse ! mux. appsrc name=audio_src format=time is-live=true ! queue ! aacparse ! queue ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-h264-aac.1.H264.AAC.mp4
+6|Started recording to: mux-h264-aac.1.H264.AAC.mp4
+6|Stopped recording
+CASE|h265-video
+6|audio rendering is disabled: video only will be recorded
+6|Mux renderer initialized: mux-h265-video
+7|Mux renderer video codec: h265=true
+7|created Mux pipeline: appsrc name=video_src format=time is-live=true ! queue ! h265parse ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-h265-video.1.H265.mp4
+6|Started recording to: mux-h265-video.1.H265.mp4
+6|Stopped recording
+CASE|alac-video-config
+6|Mux renderer initialized: mux-alac-video-config
+7|created Mux pipeline: appsrc name=audio_src format=time is-live=true ! queue ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-alac-video-config.1.ALAC.mp4
+6|Started recording to: mux-alac-video-config.1.ALAC.mp4
+6|Stopped recording
+CASE|codec-switch
+6|Mux renderer initialized: mux-codec-switch
+7|Mux renderer video codec: h265=true
+7|created Mux pipeline: appsrc name=video_src format=time is-live=true ! queue ! h265parse ! mux. appsrc name=audio_src format=time is-live=true ! queue ! aacparse ! queue ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-codec-switch.1.H265.AAC.mp4
+6|Started recording to: mux-codec-switch.1.H265.AAC.mp4
+7|Audio codec changed, recreating mux renderer
+6|Stopped recording
+7|created Mux pipeline: appsrc name=video_src format=time is-live=true ! queue ! h264parse ! mux. appsrc name=audio_src format=time is-live=true ! queue ! aacparse ! queue ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-codec-switch.2.H264.AAC.mp4
+6|Started recording to: mux-codec-switch.2.H264.AAC.mp4
+6|Stopped recording
+CASE|both-disabled
+6|both audio and video rendering are disabled: nothing to record: (not starting mux renderer)
+7|Mux renderer video codec: h265=false
+7|created Mux pipeline: mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=(NULL).1.mp4
+6|Started recording to: (NULL).1.mp4
+6|Stopped recording
+CASE|timestamps
+6|Mux renderer initialized: mux-timestamps
+7|Mux renderer video codec: h265=false
+7|created Mux pipeline: appsrc name=video_src format=time is-live=true ! queue ! h264parse ! mux. appsrc name=audio_src format=time is-live=true ! queue ! aacparse ! queue ! mux. mp4mux name=mux fragment-duration=2000 fragment-mode=first-moov-then-finalise ! filesink name=filesink location=mux-timestamps.1.H264.AAC.mp4
+6|Started recording to: mux-timestamps.1.H264.AAC.mp4
+7|Inserted 0.50 seconds of silence before audio
+6|Stopped recording
+TRACE|A|0|0|500000000
+TRACE|A|500000000|500000000|NONE
+TRACE|V|0|0|NONE
+TRACE|V|1250000000|1250000000|NONE

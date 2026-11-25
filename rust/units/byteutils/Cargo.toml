@@ -1,0 +1,21 @@
+[package]
+name = "byteutils-rs"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Safe Rust port of UxPlay byte and NTP timestamp helpers"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[features]
+shadow = []
+
+[dependencies]
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

@@ -1,0 +1,4 @@
+Imported uxplay_beacon_module_BleuIO
+=== detected BlueuIO 1. port: COM_TEST desc: Fake BleuIO hwid: USB VID:PID=2DCF:6001
+selected='COM_TEST'
+events=[('open', 'COM_TEST', 115200, 1), ('write', b'AT\r\n'), ('close',), ('close',)]

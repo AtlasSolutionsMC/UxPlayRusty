@@ -1,0 +1,40 @@
+[package]
+name = "uxplay-beacon"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Standalone UxPlay AirPlay BLE service discovery beacon"
+
+[[bin]]
+name = "uxplay-beacon"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ctrlc = "3"
+sysinfo = "0.37"
+serialport = { version = "4.10.1", default-features = false }
+uxplay-core = { path = "../core" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+indexmap = { version = "2", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+zbus = { version = "=6.5.0", default-features = false, features = ["proxy", "service", "tokio-multithread"] }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "sync"] }
+
+[target.'cfg(windows)'.dependencies]
+windy = "0.4.0"
+windows-registry = "0.100.0"
+windows = { version = "0.61", features = [
+    "Devices_Bluetooth_Advertisement",
+    "Foundation",
+    "Foundation_Collections",
+    "Storage_Streams",
+] }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unsafe_code = "forbid"

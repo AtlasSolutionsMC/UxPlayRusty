@@ -1,0 +1,75 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay\\lib\\playfair",
+  "unit": "sap_hash.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "sap-hash-rs",
+  "exports": [
+    {
+      "name": "rol8",
+      "file": "sap_hash.c",
+      "line": 9,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "unsigned char"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "unsigned char",
+      "prototype": "unsigned char rol8(unsigned char input, int count)"
+    },
+    {
+      "name": "rol8x",
+      "file": "sap_hash.c",
+      "line": 14,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "unsigned char"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t rol8x(unsigned char input, int count)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "sap_hash",
+      "file": "sap_hash.c",
+      "line": 20,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    }
+  ]
+}

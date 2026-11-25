@@ -1,0 +1,13 @@
+# Source-derived oracle fixtures from unchanged D:/Save/Uxplay/UxPlay/lib/.
+# Columns: name | input | source | handler response mutation
+set_property_known|PUT /setProperty?actionAtItemEnd|http_handlers.h:165-212|default status; Content-Type=text/x-apple-plist+xml; plist dict errorCode=0
+set_property_unknown|PUT /setProperty?unknown|http_handlers.h:165-212|default status; Content-Length=0; empty body
+get_property|POST /getProperty?anything|http_handlers.h:216-222|default response unchanged
+fp_setup2|POST /fp-setup2 with binary plist body|http_handlers.h:226-236|421 Misdirected Request; no headers after response reinitialization
+reverse_first|POST /reverse when EVENT count becomes 1|http_handlers.h:363-393|101 Switching Protocols; Connection=Upgrade; Upgrade=PTTH/1.0
+reverse_second|POST /reverse when EVENT count becomes 2|http_handlers.h:363-393|default response unchanged; connection still marked EVENT
+hls_no_video|HLS GET when current_video is -1|http_handlers.h:923-934|404 Not Found; no handler-added headers
+hls_missing_playlist|HLS GET with an active video but no stored playlist|http_handlers.h:944-993|404 Not Found; CORS headers and Date are still added
+hls_master|GET /master.m3u8 with stored master playlist|http_handlers.h:944-988|default 200; CORS headers and Date; Content-Type=application/x-mpegURL; charset=utf-8
+filter_master_avc_profile|AVC:720; 1080p and 720p avc1 streams at 30fps|airplay_video.c:970-1138|#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720,CODECS="avc1.640028"\nlow.m3u8\n
+master_uri_trailing_incomplete|valid media URI followed by configured URI prefix without a later m3u8|airplay_video.c:1255-1281|create_media_uri_table returns 1 before publishing the partially collected URI table; caller retains initialized num_uri=0 and starts playback without media FCUP requests

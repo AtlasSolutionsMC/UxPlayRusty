@@ -1,0 +1,6 @@
+[request]
+method = "GET"
+path = "/media.m3u8"
+
+[response]
+status = 404

@@ -1,0 +1,77 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay",
+  "unit": "lib/fairplay_v2/fairplay_v2.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "fairplay_v2",
+  "exports": [
+    {
+      "name": "fairplay_v2_init",
+      "file": "lib/fairplay_v2/fairplay_v2.c",
+      "line": 468,
+      "params": [],
+      "returns": "pointer",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "fairplay_v2_t *",
+      "prototype": "fairplay_v2_t *fairplay_v2_init(void)"
+    },
+    {
+      "name": "fairplay_v2_destroy",
+      "file": "lib/fairplay_v2/fairplay_v2.c",
+      "line": 483,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void fairplay_v2_destroy(fairplay_v2_t *fairplay)"
+    },
+    {
+      "name": "fairplay_v2_setup",
+      "file": "lib/fairplay_v2/fairplay_v2.c",
+      "line": 492,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_v2_setup(fairplay_v2_t *fairplay, const uint8_t request[16], uint8_t response[142])"
+    },
+    {
+      "name": "fairplay_v2_handshake",
+      "file": "lib/fairplay_v2/fairplay_v2.c",
+      "line": 521,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_v2_handshake(fairplay_v2_t *fairplay, const uint8_t request[164], uint8_t response[32])"
+    },
+    {
+      "name": "fairplay_v2_decrypt_key",
+      "file": "lib/fairplay_v2/fairplay_v2.c",
+      "line": 557,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_v2_decrypt_key(fairplay_v2_t *fairplay, const uint8_t encrypted_key[72], uint8_t raw_key[16])"
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

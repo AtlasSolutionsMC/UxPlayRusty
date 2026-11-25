@@ -1,0 +1,18 @@
+[package]
+name = "uxplay-stream-types"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[example]]
+name = "layout"
+path = "examples/layout.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"

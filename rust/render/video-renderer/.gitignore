@@ -1,0 +1,6 @@
+target/
+.rust-anything/
+record_shims/*.exe
+record_shims/*.o
+ruby/*.so
+ruby/*.bundle

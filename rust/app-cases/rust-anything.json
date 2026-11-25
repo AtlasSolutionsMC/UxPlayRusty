@@ -1,0 +1,19 @@
+{
+  "schema": "rust-anything/app-cases@1",
+  "name": "uxplay",
+  "run": [
+    "baseline/original-build/uxplay.exe"
+  ],
+  "normalizers": {
+    "uxplay": "\\S+[/\\\\]uxplay([.]exe)?"
+  },
+  "timeout_secs": 12,
+  "http": {
+    "args": [
+      "-p",
+      "tcp",
+      "64000,{port},64002",
+      "-hls"
+    ]
+  }
+}

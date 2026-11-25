@@ -1,0 +1,311 @@
+--ble-airplay--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtAirPlay</key>
+	<data>
+	A2ZvbwNiYXI=
+	</data>
+	<key>deviceID</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>pk</key>
+	<data>
+	AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+	</data>
+	<key>features</key>
+	<integer>1518337766</integer>
+	<key>name</key>
+	<string>UxPlay Test</string>
+	<key>pi</key>
+	<string>2e388006-13ba-4041-9a67-25dd4a43d536</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>statusFlags</key>
+	<integer>68</integer>
+	<key>keepAliveLowPower</key>
+	<true/>
+	<key>sourceVersion</key>
+	<string>220.68</string>
+	<key>keepAliveSendStatsAsBody</key>
+	<true/>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+</dict>
+</plist>
+--ble-airplay-bin--
+62706c6973743030dd01030506080a0c0e101214161702040407090b0d0f11131513185a747874416972506c61794803666f6f036261725864657669636549445f101130323a30303a30303a61353a63343a62385a6d61634164647265737352706b4f1020000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f586665617475726573125a7ffee6546e616d655b5578506c617920546573745270695f102432653338383030362d313362612d343034312d396136372d32356464346134336435333652767610025b737461747573466c61677310445f10116b656570416c6976654c6f77506f776572095d736f7572636556657273696f6e563232302e36385f10186b656570416c69766553656e6453746174734173426f6479556d6f64656c5a4170706c655456332c3200080023002e003700400054005f00620085008e0093009800a400a700ce00d100d300df00e100f500f60104010b0126012c0000000000000201000000000000001900000000000000000000000000000137
+--ble-raop--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtRAOP</key>
+	<data>
+	BHJhb3ABeA==
+	</data>
+	<key>deviceID</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>pk</key>
+	<data>
+	AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+	</data>
+	<key>features</key>
+	<integer>1518337766</integer>
+	<key>name</key>
+	<string>UxPlay Test</string>
+	<key>pi</key>
+	<string>2e388006-13ba-4041-9a67-25dd4a43d536</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>statusFlags</key>
+	<integer>68</integer>
+	<key>keepAliveLowPower</key>
+	<true/>
+	<key>sourceVersion</key>
+	<string>220.68</string>
+	<key>keepAliveSendStatsAsBody</key>
+	<true/>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+</dict>
+</plist>
+--ble-raop-bin--
+62706c6973743030dd01030506080a0c0e101214161702040407090b0d0f11131513185774787452414f50470472616f7001785864657669636549445f101130323a30303a30303a61353a63343a62385a6d61634164647265737352706b4f1020000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f586665617475726573125a7ffee6546e616d655b5578506c617920546573745270695f102432653338383030362d313362612d343034312d396136372d32356464346134336435333652767610025b737461747573466c61677310445f10116b656570416c6976654c6f77506f776572095d736f7572636556657273696f6e563232302e36385f10186b656570416c69766553656e6453746174734173426f6479556d6f64656c5a4170706c655456332c3200080023002b0033003c0050005b005e0081008a008f009400a000a300ca00cd00cf00db00dd00f100f201000107012201280000000000000201000000000000001900000000000000000000000000000133
+--ble-both--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtAirPlay</key>
+	<data>
+	A2ZvbwNiYXI=
+	</data>
+	<key>txtRAOP</key>
+	<data>
+	BHJhb3ABeA==
+	</data>
+	<key>deviceID</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>pk</key>
+	<data>
+	AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+	</data>
+	<key>features</key>
+	<integer>1518337766</integer>
+	<key>name</key>
+	<string>UxPlay Test</string>
+	<key>pi</key>
+	<string>2e388006-13ba-4041-9a67-25dd4a43d536</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>statusFlags</key>
+	<integer>68</integer>
+	<key>keepAliveLowPower</key>
+	<true/>
+	<key>sourceVersion</key>
+	<string>220.68</string>
+	<key>keepAliveSendStatsAsBody</key>
+	<true/>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+</dict>
+</plist>
+--ble-both-bin--
+62706c6973743030de01030507080a0c0e10121416181902040606090b0d0f11131517151a5a747874416972506c61794803666f6f036261725774787452414f50470472616f7001785864657669636549445f101130323a30303a30303a61353a63343a62385a6d61634164647265737352706b4f1020000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f586665617475726573125a7ffee6546e616d655b5578506c617920546573745270695f102432653338383030362d313362612d343034312d396136372d32356464346134336435333652767610025b737461747573466c61677310445f10116b656570416c6976654c6f77506f776572095d736f7572636556657273696f6e563232302e36385f10186b656570416c69766553656e6453746174734173426f6479556d6f64656c5a4170706c655456332c320008002500300039004100490052006600710074009700a000a500aa00b600b900e000e300e500f100f3010701080116011d0138013e0000000000000201000000000000001b00000000000000000000000000000149
+--ble-plain--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>deviceID</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>pk</key>
+	<data>
+	AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+	</data>
+	<key>features</key>
+	<integer>1518337766</integer>
+	<key>name</key>
+	<string>UxPlay Test</string>
+	<key>pi</key>
+	<string>2e388006-13ba-4041-9a67-25dd4a43d536</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>statusFlags</key>
+	<integer>68</integer>
+	<key>keepAliveLowPower</key>
+	<true/>
+	<key>sourceVersion</key>
+	<string>220.68</string>
+	<key>keepAliveSendStatsAsBody</key>
+	<true/>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+</dict>
+</plist>
+--ble-plain-bin--
+62706c6973743030dc01030406080a0c0e1012141502020507090b0d0f111311165864657669636549445f101130323a30303a30303a61353a63343a62385a6d61634164647265737352706b4f1020000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f586665617475726573125a7ffee6546e616d655b5578506c617920546573745270695f102432653338383030362d313362612d343034312d396136372d32356464346134336435333652767610025b737461747573466c61677310445f10116b656570416c6976654c6f77506f776572095d736f7572636556657273696f6e563232302e36385f10186b656570416c69766553656e6453746174734173426f6479556d6f64656c5a4170706c655456332c3200080021002a003e0049004c006f0078007d0082008e009100b800bb00bd00c900cb00df00e000ee00f5011001160000000000000201000000000000001700000000000000000000000000000121
+--content-type-other--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtAirPlay</key>
+	<data>
+	A2ZvbwNiYXI=
+	</data>
+</dict>
+</plist>
+--content-type-other-bin--
+62706c6973743030d101025a747874416972506c61794803666f6f03626172080b16000000000000010100000000000000030000000000000000000000000000001f
+--qualifier-airplay--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtAirPlay</key>
+	<data>
+	A2ZvbwNiYXI=
+	</data>
+</dict>
+</plist>
+--qualifier-airplay-bin--
+62706c6973743030d101025a747874416972506c61794803666f6f03626172080b16000000000000010100000000000000030000000000000000000000000000001f
+--qualifier-raop--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>txtRAOP</key>
+	<data>
+	BHJhb3ABeA==
+	</data>
+</dict>
+</plist>
+--qualifier-raop-bin--
+62706c6973743030d101025774787452414f50470472616f700178080b13000000000000010100000000000000030000000000000000000000000000001b
+--qualifier-invalid--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict/>
+</plist>
+--qualifier-invalid-bin--
+62706c6973743030d0080000000000000101000000000000000100000000000000000000000000000009
+--cseq--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>deviceID</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>pk</key>
+	<data>
+	AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+	</data>
+	<key>features</key>
+	<integer>1518337766</integer>
+	<key>name</key>
+	<string>UxPlay Test</string>
+	<key>pi</key>
+	<string>2e388006-13ba-4041-9a67-25dd4a43d536</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>statusFlags</key>
+	<integer>68</integer>
+	<key>keepAliveLowPower</key>
+	<true/>
+	<key>sourceVersion</key>
+	<string>220.68</string>
+	<key>keepAliveSendStatsAsBody</key>
+	<true/>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+	<key>initialVolume</key>
+	<real>-0.125</real>
+	<key>audioLatencies</key>
+	<array>
+		<dict>
+			<key>type</key>
+			<integer>100</integer>
+			<key>inputLatencyMicros</key>
+			<integer>0</integer>
+			<key>audioType</key>
+			<string>default</string>
+			<key>outputLatencyMicros</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>type</key>
+			<integer>101</integer>
+			<key>audioType</key>
+			<string>default</string>
+			<key>inputLatencyMicros</key>
+			<integer>0</integer>
+			<key>outputLatencyMicros</key>
+			<false/>
+		</dict>
+	</array>
+	<key>audioFormats</key>
+	<array>
+		<dict>
+			<key>audioOutputFormats</key>
+			<integer>67108860</integer>
+			<key>type</key>
+			<integer>100</integer>
+			<key>audioInputFormats</key>
+			<integer>67108860</integer>
+		</dict>
+		<dict>
+			<key>audioOutputFormats</key>
+			<integer>67108860</integer>
+			<key>type</key>
+			<integer>101</integer>
+			<key>audioInputFormats</key>
+			<integer>67108860</integer>
+		</dict>
+	</array>
+	<key>displays</key>
+	<array>
+		<dict>
+			<key>uuid</key>
+			<string>e0ff8a27-6738-3d56-8a16-cc53aacee925</string>
+			<key>widthPhysical</key>
+			<integer>0</integer>
+			<key>heightPhysical</key>
+			<integer>0</integer>
+			<key>width</key>
+			<integer>1920</integer>
+			<key>height</key>
+			<integer>1080</integer>
+			<key>widthPixels</key>
+			<integer>1920</integer>
+			<key>heightPixels</key>
+			<integer>1080</integer>
+			<key>rotation</key>
+			<false/>
+			<key>refreshRate</key>
+			<real>0.016666666666666666</real>
+			<key>maxFPS</key>
+			<integer>30</integer>
+			<key>overscanned</key>
+			<true/>
+			<key>features</key>
+			<integer>14</integer>
+		</dict>
+	</array>
+</dict>
+</plist>
+--cseq-bin--
+62706c6973743030df101001030406080a0c0e101214151719262d02020507090b0d0f11131116181a272e5864657669636549445f101130323a30303a30303a61353a63343a62385a6d61634164647265737352706b4f1020000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f586665617475726573125a7ffee6546e616d655b5578506c617920546573745270695f102432653338383030362d313362612d343034312d396136372d32356464346134336435333652767610025b737461747573466c61677310445f10116b656570416c6976654c6f77506f776572095d736f7572636556657273696f6e563232302e36385f10186b656570416c69766553656e6453746174734173426f6479556d6f64656c5a4170706c655456332c325d696e697469616c566f6c756d6522be0000005e617564696f4c6174656e63696573a21b24d41c1e20221d1f2123547479706510645f1012696e7075744c6174656e63794d6963726f73100059617564696f547970655764656661756c745f10136f75747075744c6174656e63794d6963726f7308d41c201e2225211f2310655c617564696f466f726d617473a2282cd3291c2b2a1d2a5f1012617564696f4f7574707574466f726d6174731203fffffc5f1011617564696f496e707574466f726d617473d3291c2b2a252a58646973706c617973a12fdc303233343638393a3b3d3f06311f1f35373537233c3e114054757569645f102465306666386132372d363733382d336435362d386131362d6363353361616365653932355d7769647468506879736963616c5e686569676874506879736963616c557769647468110780566865696768741104385b7769647468506978656c735c686569676874506978656c7358726f746174696f6e5b7265667265736852617465233f91111111111111566d6178465053101e5b6f7665727363616e6e6564100e0008002b0034004800530056007900820087008c0098009b00c200c500c700d300d500e900ea00f800ff011a0120012b0139013e014d01500159015e01600175017701810189019f01a001a901ab01b801bb01c201d701dc01f001f702000202021b0220024702550264026a026d0274027702830290029902a502ae02b502b702c300000000000002010000000000000041000000000000000000000000000002c5

@@ -1,0 +1,62 @@
+--server-info--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>features</key>
+	<integer>639</integer>
+	<key>macAddress</key>
+	<string>02:00:00:a5:c4:b8</string>
+	<key>model</key>
+	<string>AppleTV3,2</string>
+	<key>osBuildVersion</key>
+	<string>12B435</string>
+	<key>protovers</key>
+	<string>1.0</string>
+	<key>srcvers</key>
+	<string>220.68</string>
+	<key>vv</key>
+	<integer>2</integer>
+	<key>deviceid</key>
+	<string>02:00:00:a5:c4:b8</string>
+</dict>
+</plist>
+--playback-info--
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>duration</key>
+	<real>60</real>
+	<key>position</key>
+	<real>12.5</real>
+	<key>rate</key>
+	<real>1</real>
+	<key>readyToPlay</key>
+	<integer>1</integer>
+	<key>playbackBufferEmpty</key>
+	<integer>0</integer>
+	<key>playbackBufferFull</key>
+	<integer>0</integer>
+	<key>playbackLikelyToKeepUp</key>
+	<integer>1</integer>
+	<key>loadedTimeRanges</key>
+	<array>
+		<dict>
+			<key>duration</key>
+			<real>47.5</real>
+			<key>start</key>
+			<real>12.5</real>
+		</dict>
+	</array>
+	<key>seekableTimeRanges</key>
+	<array>
+		<dict>
+			<key>duration</key>
+			<real>60</real>
+			<key>start</key>
+			<real>0.0</real>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,3 @@
+wrap-forward,123592839
+wrap-negative-clamp,0
+before-sync,0

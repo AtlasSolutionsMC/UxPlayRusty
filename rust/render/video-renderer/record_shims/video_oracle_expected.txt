@@ -1,0 +1,8 @@
+﻿h264-default|1|appsrc name=video_source ! queue ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! fakesink name=fakesink_h264 sync=true
+mirror-h265-jpeg-flip|1|appsrc name=video_source ! queue ! h264parse ! avdec_h264 ! videoflip video-direction=GST_VIDEO_ORIENTATION_90R ! videoconvert ! videoscale ! fakesink name=fakesink_h264 sync=true
+mirror-h265-jpeg-flip|2|appsrc name=video_source ! queue ! h265parse ! avdec_h265 ! videoflip video-direction=GST_VIDEO_ORIENTATION_90R ! videoconvert ! videoscale ! fakesink name=fakesink_h265 sync=true
+mirror-h265-jpeg-flip|3|appsrc name=video_source ! jpegdec  ! videoflip video-direction=GST_VIDEO_ORIENTATION_90R ! videoconvert ! videoscale !  imagefreeze allow-replace=TRUE ! textoverlay name=metadata_overlay ! fakesink name=fakesink_jpeg sync=false
+rtp-h265-jpeg|1|appsrc name=video_source ! queue ! h264parse ! rtph264pay pt=96 ! fakesink
+rtp-h265-jpeg|2|appsrc name=video_source ! queue ! h265parse ! rtph265pay pt=96 ! fakesink
+rtp-h265-jpeg|3|appsrc name=video_source ! jpegdec  ! videoconvert ! videoscale !  imagefreeze allow-replace=TRUE ! textoverlay name=metadata_overlay ! fakesink name=fakesink_jpeg sync=false
+sink-options|1|appsrc name=video_source ! queue ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! fakesink name=fakesink_h264 qos=true sync=false

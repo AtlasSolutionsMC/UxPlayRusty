@@ -1,0 +1,110 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay",
+  "unit": "renderers/audio_renderer.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "audio-renderer-rs",
+  "exports": [
+    {
+      "name": "gstreamer_init",
+      "file": "renderers/audio_renderer.c",
+      "line": 124,
+      "params": [],
+      "returns": "boolean",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "bool",
+      "prototype": "bool gstreamer_init()"
+    },
+    {
+      "name": "audio_renderer_stop",
+      "file": "renderers/audio_renderer.c",
+      "line": 245,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void audio_renderer_stop()"
+    },
+    {
+      "name": "audio_renderer_set_volume",
+      "file": "renderers/audio_renderer.c",
+      "line": 378,
+      "params": [
+        {
+          "name": "volume",
+          "ts_type": "number",
+          "optional": false,
+          "rest": false,
+          "native_type": "double"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void audio_renderer_set_volume(double volume)"
+    },
+    {
+      "name": "audio_renderer_flush",
+      "file": "renderers/audio_renderer.c",
+      "line": 392,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void audio_renderer_flush()"
+    },
+    {
+      "name": "audio_renderer_destroy",
+      "file": "renderers/audio_renderer.c",
+      "line": 395,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void audio_renderer_destroy()"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "audio_renderer_init",
+      "file": "renderers/audio_renderer.c",
+      "line": 129,
+      "reason": "passes a pointer (`logger_t*`): ownership must be designed"
+    },
+    {
+      "name": "audio_renderer_start",
+      "file": "renderers/audio_renderer.c",
+      "line": 289,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "audio_renderer_render_buffer",
+      "file": "renderers/audio_renderer.c",
+      "line": 311,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "audio_renderer_listen",
+      "file": "renderers/audio_renderer.c",
+      "line": 442,
+      "reason": "passes a pointer (`void*`): ownership must be designed"
+    }
+  ]
+}

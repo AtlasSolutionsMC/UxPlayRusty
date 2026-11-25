@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 506, in <module>
+    use_device  = find_device(device_address)
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay_beacon_module_HCI.py", line 255, in find_device
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+FileNotFoundError: [Errno 2] No such file or directory: 'sudo'

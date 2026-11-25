@@ -1,0 +1,99 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay",
+  "unit": "renderers/mux_renderer.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "mux-renderer-rs",
+  "exports": [
+    {
+      "name": "mux_renderer_choose_audio_codec",
+      "file": "renderers/mux_renderer.c",
+      "line": 201,
+      "params": [
+        {
+          "name": "audio_ct",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "unsigned char"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void mux_renderer_choose_audio_codec(unsigned char audio_ct)"
+    },
+    {
+      "name": "mux_renderer_choose_video_codec",
+      "file": "renderers/mux_renderer.c",
+      "line": 216,
+      "params": [
+        {
+          "name": "is_h265",
+          "ts_type": "boolean",
+          "optional": false,
+          "rest": false,
+          "native_type": "bool"
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void mux_renderer_choose_video_codec(bool is_h265)"
+    },
+    {
+      "name": "mux_renderer_stop",
+      "file": "renderers/mux_renderer.c",
+      "line": 298,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void mux_renderer_stop(void)"
+    },
+    {
+      "name": "mux_renderer_destroy",
+      "file": "renderers/mux_renderer.c",
+      "line": 337,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void mux_renderer_destroy(void)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "mux_renderer_init",
+      "file": "renderers/mux_renderer.c",
+      "line": 58,
+      "reason": "passes a pointer (`logger_t*`): ownership must be designed"
+    },
+    {
+      "name": "mux_renderer_push_video",
+      "file": "renderers/mux_renderer.c",
+      "line": 227,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "mux_renderer_push_audio",
+      "file": "renderers/mux_renderer.c",
+      "line": 251,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    }
+  ]
+}

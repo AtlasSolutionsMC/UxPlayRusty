@@ -1,0 +1,3 @@
+beacon_is_running=True
+module_global_advertised_port=None
+changed_port_matches=True

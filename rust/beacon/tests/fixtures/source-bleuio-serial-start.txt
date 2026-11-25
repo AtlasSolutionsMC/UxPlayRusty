@@ -1,0 +1,6 @@
+Imported uxplay_beacon_module_BleuIO
+Connecting to BleuIO dongle on COM_TEST ....
+beacon_on: Serial port error: mock permission denied
+result=7100 exit=None
+state port=7100 address='192.0.2.8'
+events=[('open', 'COM_TEST', 115200, 1)]

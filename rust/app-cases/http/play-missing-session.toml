@@ -1,0 +1,6 @@
+[request]
+method = "POST"
+path = "/play"
+
+[response]
+status = 404

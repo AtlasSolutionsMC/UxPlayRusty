@@ -1,0 +1,4 @@
+bin.name = "uxplay"
+args = ["-r", "X"]
+status.code = 1
+fs.sandbox = true

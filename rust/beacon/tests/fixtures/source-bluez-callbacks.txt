@@ -1,0 +1,8 @@
+AirPlay Service-Discovery beacon advertisement unregistered
+AirPlay Service_Discovery Advertisement (None:7100) registered
+state after late success: port=7100, address=None
+AirPlay Service-Discovery beacon advertisement unregistered
+state after late error: port=None, address=None
+/org/bluez/airplay_service_discovery_advertisement2: D-Bus Released! (Bluetooth USB adapter removed?)
+Stopping ...
+Release exit: 1

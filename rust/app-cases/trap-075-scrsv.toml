@@ -1,0 +1,4 @@
+bin.name = "uxplay"
+args = ["-scrsv", "-9223372036854775808"]
+status.code = 1
+fs.sandbox = true

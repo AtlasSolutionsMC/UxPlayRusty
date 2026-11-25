@@ -1,0 +1,7 @@
+Imported uxplay_beacon_module_BleuIO
+Will use BLE module uxplay_beacon_module_BleuIO.py
+=== detected BlueuIO 1. port: COM_TEST desc: Fake BleuIO hwid: USB VID:PID=2DCF:6001
+Error: A required device was NOT found at  COM_MISSING given as an optional argument
+(Note: required devices WERE found and are listed above)
+exit=1
+events=[('open', 'COM_TEST', 115200, 1), ('write', b'AT\r\n'), ('close',), ('close',)]

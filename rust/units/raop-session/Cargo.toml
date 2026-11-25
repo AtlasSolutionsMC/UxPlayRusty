@@ -1,0 +1,22 @@
+[package]
+name = "uxplay-raop-session"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-only"
+description = "State transitions and typed effects for RAOP session handlers"
+
+[dependencies]
+fairplay-playfair-rs = { path = "../fairplay-playfair" }
+plist = "1.10.4"
+sha2 = "0.10"
+uxplay-pairing-unit = { path = "../pairing" }
+uxplay-raop-rtp = { path = "../raop-rtp" }
+uxplay-raop-rtp-mirror = { path = "../raop-rtp-mirror" }
+zeroize = "1"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"

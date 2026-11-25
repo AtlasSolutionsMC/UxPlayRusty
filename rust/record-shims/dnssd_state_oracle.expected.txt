@@ -1,0 +1,5 @@
+trim error=0 name=4c6976696e6720526f6f6d hw=001122aabbff pin=255 features=000000005a7ffee6
+local error=6
+embedded error=6
+empty error=0 name= hw= pin=0 features=000000005a7ffee6
+features value=800000015a7ffee4

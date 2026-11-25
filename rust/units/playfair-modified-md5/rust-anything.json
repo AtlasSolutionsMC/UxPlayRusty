@@ -1,0 +1,193 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay\\lib\\playfair",
+  "unit": "modified_md5.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "modified-md5-rs",
+  "exports": [
+    {
+      "name": "F",
+      "file": "modified_md5.c",
+      "line": 14,
+      "params": [
+        {
+          "name": "B",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "C",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "D",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t F(uint32_t B, uint32_t C, uint32_t D)"
+    },
+    {
+      "name": "G",
+      "file": "modified_md5.c",
+      "line": 19,
+      "params": [
+        {
+          "name": "B",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "C",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "D",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t G(uint32_t B, uint32_t C, uint32_t D)"
+    },
+    {
+      "name": "H",
+      "file": "modified_md5.c",
+      "line": 24,
+      "params": [
+        {
+          "name": "B",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "C",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "D",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t H(uint32_t B, uint32_t C, uint32_t D)"
+    },
+    {
+      "name": "I",
+      "file": "modified_md5.c",
+      "line": 29,
+      "params": [
+        {
+          "name": "B",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "C",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "D",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t I(uint32_t B, uint32_t C, uint32_t D)"
+    },
+    {
+      "name": "rol",
+      "file": "modified_md5.c",
+      "line": 35,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t rol(uint32_t input, int count)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "swap",
+      "file": "modified_md5.c",
+      "line": 40,
+      "reason": "passes a pointer (`uint32_t*`): ownership must be designed"
+    },
+    {
+      "name": "modified_md5",
+      "file": "modified_md5.c",
+      "line": 48,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    }
+  ]
+}

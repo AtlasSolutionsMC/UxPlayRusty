@@ -1,0 +1,35 @@
+POST /event HTTP/1.1
+X-Apple-Session-ID: session-1
+Content-Type: text/x-apple-plist+xml
+Content-Length: 884
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>sessionID</key>
+	<integer>1</integer>
+	<key>type</key>
+	<string>unhandledURLRequest</string>
+	<key>request</key>
+	<dict>
+		<key>FCUP_Response_ClientInfo</key>
+		<integer>1</integer>
+		<key>FCUP_Response_ClientRef</key>
+		<integer>40030004</integer>
+		<key>FCUP_Response_RequestID</key>
+		<integer>7</integer>
+		<key>FCUP_Response_URL</key>
+		<string>http://localhost:7000/master.m3u8</string>
+		<key>sessionID</key>
+		<integer>1</integer>
+		<key>FCUP_Response_Headers</key>
+		<dict>
+			<key>X-Playback-Session-Id</key>
+			<string>session-1</string>
+			<key>User-Agent</key>
+			<string>AppleCoreMedia/1.0.0.11B554a (Apple TV; U; CPU OS 7_0_4 like Mac OS X; en_us</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

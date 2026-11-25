@@ -1,0 +1,6 @@
+bin.name = "uxplay"
+args = ["-h"]
+env.add.UXPLAYRC = "case.rc"
+status.code = 0
+fs.sandbox = true
+fs.base = "uxplayrc-env-precedence.in"

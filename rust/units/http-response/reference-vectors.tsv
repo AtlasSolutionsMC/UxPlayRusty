@@ -1,0 +1,6 @@
+case\tinput\toriginal_bytes_or_check
+status_binary_body\tHTTP/1.1 200 OK + Content-Type: application/octet-stream + body=A\0B\tHTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 3\r\n\r\nA\0B
+empty_with_content_type\tHTTP/1.1 204 No Content + Content-Type: text/plain\tHTTP/1.1 204 No Content\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n
+empty_without_content_type\tHTTP/1.1 204 No Content + X-Test: yes\tHTTP/1.1 204 No Content\r\nX-Test: yes\r\n\r\n
+reinitialized_reverse_request\tPOST /pair-setup PTTH/1.0\tPOST /pair-setup PTTH/1.0\r\n
+buffer_growth\t1800-byte X-Long header + 3000-byte body\t4851 bytes; full C differential comparison

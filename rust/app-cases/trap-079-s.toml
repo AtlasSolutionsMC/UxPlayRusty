@@ -1,0 +1,4 @@
+bin.name = "uxplay"
+args = ["-s", "日本語", "-fps", "bad"]
+status.code = 1
+fs.sandbox = true

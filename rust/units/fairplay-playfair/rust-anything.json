@@ -1,0 +1,77 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay",
+  "unit": "lib/fairplay_playfair.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "fairplay_playfair",
+  "exports": [
+    {
+      "name": "fairplay_init",
+      "file": "lib/fairplay_playfair.c",
+      "line": 52,
+      "params": [],
+      "returns": "pointer",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "fairplay_t *",
+      "prototype": "fairplay_t *fairplay_init(logger_t *logger)"
+    },
+    {
+      "name": "fairplay_destroy",
+      "file": "lib/fairplay_playfair.c",
+      "line": 139,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "void",
+      "prototype": "void fairplay_destroy(fairplay_t *fp)"
+    },
+    {
+      "name": "fairplay_setup",
+      "file": "lib/fairplay_playfair.c",
+      "line": 63,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_setup(fairplay_t *fp, const unsigned char req[16], unsigned char res[142])"
+    },
+    {
+      "name": "fairplay_handshake",
+      "file": "lib/fairplay_playfair.c",
+      "line": 95,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_handshake(fairplay_t *fp, const unsigned char req[164], unsigned char res[32])"
+    },
+    {
+      "name": "fairplay_decrypt",
+      "file": "lib/fairplay_playfair.c",
+      "line": 121,
+      "params": [],
+      "returns": "number",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int fairplay_decrypt(fairplay_t *fp, const unsigned char input[72], unsigned char output[16])"
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

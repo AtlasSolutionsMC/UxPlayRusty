@@ -1,0 +1,6 @@
+[request]
+method = "GET"
+path = "/rust-anything-missing"
+
+[response]
+status = 404

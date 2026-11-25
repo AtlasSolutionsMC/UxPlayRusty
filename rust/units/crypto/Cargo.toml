@@ -1,0 +1,21 @@
+[package]
+name = "uxplay-crypto"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "uxplay_crypto"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+libc = "0.2"
+openssl = "0.10"
+openssl-sys = "0.9"
+foreign-types = "0.3"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "warn"

@@ -1,0 +1,14 @@
+[package]
+name = "uxplay-mirror-buffer"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+uxplay-crypto = { path = "../crypto" }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"

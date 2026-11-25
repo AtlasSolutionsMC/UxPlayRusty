@@ -1,0 +1,35 @@
+usage: uxplay-beacon.py [-h] [--file FILE] [--path PATH] [--ipv4 IPV4]
+                        [--advmin ADVMIN] [--advmax ADVMAX] [--index INDEX]
+                        [--device DEVICE]
+                        [{BleuIO,HCI,None}]
+
+A program that runs an AirPlay service discovery BLE beacon.
+
+positional arguments:
+  {BleuIO,HCI,None}  
+                     Allows choice of alternative Bluetooth implementations, supporting the BleuIO
+                     USB Bluetooth LE serial device, and direct access to the Bluetooth Host
+                     Controller Interface (HCI, Linux/*BSD only). (If not supplied) the default
+                     native Linux (BlueZ) or Windows (winrt) modules will be used as appropriate.
+                     On systems other than Windows or Linux, BleuIO will be the default choice.
+                     The HCI module requires elevated privileges to be granted to users.
+
+options:
+  -h, --help         show this help message and exit
+  --file FILE        beacon startup file (Default: ~/.uxplay.beacon).
+  --path PATH        path to AirPlay server BLE beacon information file (default: ~/.uxplay.ble).
+  --ipv4 IPV4        ipv4 address of AirPlay server (default: use gethostbyname).
+  --advmin ADVMIN    The minimum Advertising Interval (>= 100) units=msec, (default 100, BlueZ, BleuIO only).
+  --advmax ADVMAX    The maximum Advertising Interval (>= advmin, <= 10240) units=msec, (default 100, BlueZ, BleuIO only).
+  --index INDEX      use index >= 0 to distinguish multiple AirPlay Service Discovery beacons, (default 0, BlueZ only). 
+  --device DEVICE    Specify an address for a required device (default None, automatic detection will be attempted).
+
+    Example: python beacon.py --ipv4 192.168.1.100 --advmax 200 --path = ~/my_ble
+
+    Optional arguments in the beacon startup file (if present) will be processed first,
+    and will be overridden by any command-line entries.
+    Format: one entry (key, value) (or just ble_type) per line, e.g.:
+      BleuIO
+      --ipv4   192.168.1.100   
+    (lines starting with with # are ignored)
+    

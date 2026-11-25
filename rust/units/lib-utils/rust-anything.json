@@ -1,0 +1,112 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlayRusty\\rust\\staging\\utils-only",
+  "unit": "utils.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "utils-rs",
+  "exports": [
+    {
+      "name": "parse_int",
+      "file": "utils.c",
+      "line": 351,
+      "params": [
+        {
+          "name": "str",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false,
+          "native_type": "const char*"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "int",
+      "prototype": "int parse_int(const char * str)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "utils_strsep",
+      "file": "utils.c",
+      "line": 28,
+      "reason": "passes a pointer (`char**`): ownership must be designed"
+    },
+    {
+      "name": "utils_read_file",
+      "file": "utils.c",
+      "line": 46,
+      "reason": "passes a pointer (`char**`): ownership must be designed"
+    },
+    {
+      "name": "utils_hwaddr_raop",
+      "file": "utils.c",
+      "line": 93,
+      "reason": "passes a pointer (`char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_hwaddr_airplay",
+      "file": "utils.c",
+      "line": 117,
+      "reason": "passes a pointer (`char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_parse_hex",
+      "file": "utils.c",
+      "line": 144,
+      "reason": "passes a pointer (`int*`): ownership must be designed"
+    },
+    {
+      "name": "utils_hex_to_string",
+      "file": "utils.c",
+      "line": 181,
+      "reason": "passes a pointer (`const unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_data_to_string",
+      "file": "utils.c",
+      "line": 191,
+      "reason": "passes a pointer (`const unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_data_to_text",
+      "file": "utils.c",
+      "line": 221,
+      "reason": "returns a pointer (`char*`): who frees it must be designed"
+    },
+    {
+      "name": "ntp_timestamp_to_time",
+      "file": "utils.c",
+      "line": 233,
+      "reason": "passes a pointer (`char*`): ownership must be designed"
+    },
+    {
+      "name": "ntp_timestamp_to_seconds",
+      "file": "utils.c",
+      "line": 245,
+      "reason": "passes a pointer (`char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_ipaddress_to_string",
+      "file": "utils.c",
+      "line": 253,
+      "reason": "passes a pointer (`const unsigned char*`): ownership must be designed"
+    },
+    {
+      "name": "utils_strip_data_from_plist_xml",
+      "file": "utils.c",
+      "line": 279,
+      "reason": "passes a pointer (`char*`): ownership must be designed"
+    },
+    {
+      "name": "gmt_time_string",
+      "file": "utils.c",
+      "line": 339,
+      "reason": "returns a pointer (`const char*`): who frees it must be designed"
+    }
+  ]
+}

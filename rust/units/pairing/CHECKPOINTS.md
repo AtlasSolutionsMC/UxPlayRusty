@@ -1,0 +1,9 @@
+# Pairing unit checkpoints
+
+1. Read `rust-anything/SKILL.md`, `rust/research/crypto.md`, ADR-001 through ADR-008, and the original `lib/pairing.c` / `pairing.h`. Recorded the 20 exported behaviors and state/crypto/SRP transitions in `BEHAVIOR.md`.
+2. Created an isolated `uxplay-pairing-unit` crate. The API owns persistent Ed25519 identity and session state, composes the completed crypto and SRP units, uses bounded slices, and clears fixed-size key material on drop.
+3. Implemented nonce, digest auth, X25519/Ed25519 verify handshake, server signature, pair-setup SRP offer/proof, AES-GCM key authentication/reply, client metadata, base64, and random PIN paths. Preserved the source's exposed padded-salt prefix quirk and status codes.
+4. Added unit cases for the RFC digest vector, invalid requests, state and nonce constraints, handshake/signature failure paths, SRP offer and proof failure, pair-setup tag failure/state consumption, base64, and persistent key reload.
+5. Formatting and Cargo metadata checks passed. Cargo test/clippy stopped before compiling the unit because the Windows GNU toolchain cannot locate OpenSSL or pkg-config. The MSVC toolchain is also missing rustfmt and `link.exe`.
+6. Tried `mcp__rust_anything__gate`; it requires bridge-generated `rust-anything.json`, but rust-anything's current C bridge generator does not scaffold this stateful C unit. The unit remained ungated pending a C/OpenSSL toolchain.
+7. Located the installed MSYS2 UCRT OpenSSL/GCC toolchain. Added `reference/pairing_oracle.c` and its runner against the unchanged `pairing.c`, `crypto.c`, `srp.c`, and `utils.c`; all 10 deterministic C/Rust rows match. Windows GNU tests pass 9/9, Clippy with `-D warnings` and fmt pass. Added the Windows GNU OpenSSL `bcrypt` link-argument fix to the crypto/SRP/pairing crates. `GATE_NOTES.md` records the remaining bridge and protocol-replay limitations; this unit is still not gate-complete.

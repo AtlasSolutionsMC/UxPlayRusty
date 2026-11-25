@@ -1,0 +1,31 @@
+[package]
+name = "fairplay-playfair-rs"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Rust port of UxPlay's legacy PlayFair adapter and decrypt path"
+license = "GPL-3.0-only"
+
+[lib]
+name = "fairplay_playfair"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[[bin]]
+name = "fairplay_playfair_oracle"
+path = "src/bin/fairplay_playfair_oracle.rs"
+required-features = ["oracle"]
+
+[features]
+oracle = []
+
+[dependencies]
+fairplay-v2-rs = { path = "../fairplay-v2" }
+modified-md5-rs = { path = "../playfair-modified-md5" }
+sap-hash-rs = { path = "../playfair-sap-hash" }
+zeroize = "1"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "warn"

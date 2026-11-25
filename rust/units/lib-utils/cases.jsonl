@@ -1,0 +1,27 @@
+{"fn": "parse_int", "args": [""], "ok": -1}
+{"fn": "parse_int", "args": ["0"], "ok": 0}
+{"fn": "parse_int", "args": ["-0"], "ok": 0}
+{"fn": "parse_int", "args": ["+0"], "ok": 0}
+{"fn": "parse_int", "args": ["+42"], "ok": 42}
+{"fn": "parse_int", "args": ["00"], "ok": 0}
+{"fn": "parse_int", "args": ["42"], "ok": 42}
+{"fn": "parse_int", "args": ["010"], "ok": 10}
+{"fn": "parse_int", "args": ["2147483646"], "ok": 2147483646}
+{"fn": "parse_int", "args": ["2147483647"], "ok": 2147483647}
+{"fn": "parse_int", "args": ["2147483648"], "ok": 2147483647}
+{"fn": "parse_int", "args": ["-1"], "ok": -1}
+{"fn": "parse_int", "args": ["-2147483648"], "ok": -1}
+{"fn": "parse_int", "args": [" 42"], "ok": 42}
+{"fn": "parse_int", "args": ["\t+9"], "ok": 9}
+{"fn": "parse_int", "args": ["\r\n7"], "ok": 7}
+{"fn": "parse_int", "args": ["\u000b9"], "ok": 9}
+{"fn": "parse_int", "args": ["\f8"], "ok": 8}
+{"fn": "parse_int", "args": ["+"], "ok": -1}
+{"fn": "parse_int", "args": ["-"], "ok": -1}
+{"fn": "parse_int", "args": ["  "], "ok": -1}
+{"fn": "parse_int", "args": ["42 "], "ok": -1}
+{"fn": "parse_int", "args": ["0x2a"], "ok": -1}
+{"fn": "parse_int", "args": ["1_000"], "ok": -1}
+{"fn": "parse_int", "args": ["9.0"], "ok": -1}
+{"fn": "parse_int", "args": ["１２"], "ok": -1}
+{"fn": "parse_int", "args": ["999999999999999999999999999999999999999999999999999999999999"], "ok": 2147483647}

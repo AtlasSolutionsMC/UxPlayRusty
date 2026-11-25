@@ -1,0 +1,5 @@
+Imported uxplay_beacon_module_BleuIO
+response='OK'
+written=b'AT\r\n'
+read_calls=3
+readline_elapsed_gt_timeout=True

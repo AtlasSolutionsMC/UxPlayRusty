@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 533, in <module>
+    main(path, ipv4_str, advmin, advmax, index)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 195, in main
+    on_timeout(file_path)
+    ~~~~~~~~~~^^^^^^^^^^^
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 174, in on_timeout
+    check_pending()
+    ~~~~~~~~~~~~~^^
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 119, in check_pending
+    start_beacon()
+    ~~~~~~~~~~~~^^
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay-beacon.py", line 78, in start_beacon
+    setup_beacon(ipv4_str, port, advmin, advmax, index)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay_beacon_module_HCI.py", line 105, in setup_beacon
+    result = le_cmd(hcicmd, args)
+  File "D:\Save\Uxplay\UxPlay\Bluetooth_LE_beacon\uxplay_beacon_module_HCI.py", line 76, in le_cmd
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'sudo'

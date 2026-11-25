@@ -1,0 +1,20 @@
+[package]
+name = "uxplay-pairing-unit"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "uxplay_pairing"
+crate-type = ["rlib"]
+
+[dependencies]
+uxplay-crypto = { path = "../crypto" }
+uxplay-srp-unit = { path = "../srp" }
+openssl = "0.10"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "warn"

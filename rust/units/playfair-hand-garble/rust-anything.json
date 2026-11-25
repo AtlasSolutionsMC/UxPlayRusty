@@ -1,0 +1,103 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\Save\\Uxplay\\UxPlay\\lib\\playfair",
+  "unit": "hand_garble.c",
+  "language": "c",
+  "kind": "c-abi",
+  "crate_name": "hand-garble-rs",
+  "exports": [
+    {
+      "name": "weird_ror8",
+      "file": "hand_garble.c",
+      "line": 9,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint8_t"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t weird_ror8(uint8_t input, int count)"
+    },
+    {
+      "name": "weird_rol8",
+      "file": "hand_garble.c",
+      "line": 17,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint8_t"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t weird_rol8(uint8_t input, int count)"
+    },
+    {
+      "name": "weird_rol32",
+      "file": "hand_garble.c",
+      "line": 24,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "uint8_t"
+        },
+        {
+          "name": "count",
+          "ts_type": "int",
+          "optional": false,
+          "rest": false,
+          "native_type": "int"
+        }
+      ],
+      "returns": "int",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false,
+      "native_return": "uint32_t",
+      "prototype": "uint32_t weird_rol32(uint8_t input, int count)"
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "garble",
+      "file": "hand_garble.c",
+      "line": 33,
+      "reason": "passes a pointer (`unsigned char*`): ownership must be designed"
+    }
+  ]
+}

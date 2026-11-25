@@ -1,0 +1,10 @@
+public_key	e38257d8fafae4fdb7facbd829670de33268eb4e5b6ef62717d02552270d2cfa
+init_result	0
+initial_status	-1
+initial_secret_status	0
+initial_secret_buffer	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+nonce_status	0
+nonce	96af4c52662889650a5315dbe80cbbbbd65f4b49538925d9104b6d7965c34da9
+setup_status	0
+digest_valid	1
+digest_bad_password	0

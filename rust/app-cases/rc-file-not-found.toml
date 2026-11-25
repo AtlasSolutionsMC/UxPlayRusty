@@ -1,0 +1,4 @@
+bin.name = "uxplay"
+args = ["-rc", "uxplay-missing-rc-20261121.conf"]
+status.code = 0
+fs.sandbox = true

@@ -1,0 +1,10 @@
+record-latency|500000|22050
+record-latency|-1|4154504685
+flush|missing|-1
+flush|seq=123tail|123
+flush|seq= +7tail|7
+flush|seq=tail|0
+flush|RTP-Info: seq=5|-1
+teardown|96,110|audio
+teardown|110|mirror
+teardown|none|all

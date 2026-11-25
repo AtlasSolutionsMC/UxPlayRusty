@@ -1,0 +1,10 @@
+Imported uxplay_beacon_module_BleuIO
+beacon_on: Serial port error: mock permission denied
+
+  The user does not have sufficient privileges to access this serial port:
+  On Linux, the user should be added to the "dialout" or "uucp" group
+  On BSD systems, the necesary group is usually the "dialer" group.
+  The correct group can be found using  "ls -l COM_TEST"
+result=None exit=1
+state port=None address=None
+events=[('open', 'COM_TEST', 115200, 1)]

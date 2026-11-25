@@ -1,0 +1,27 @@
+{"fn":"parse_int","args":[""]}
+{"fn":"parse_int","args":["0"]}
+{"fn":"parse_int","args":["-0"]}
+{"fn":"parse_int","args":["+0"]}
+{"fn":"parse_int","args":["+42"]}
+{"fn":"parse_int","args":["00"]}
+{"fn":"parse_int","args":["42"]}
+{"fn":"parse_int","args":["010"]}
+{"fn":"parse_int","args":["2147483646"]}
+{"fn":"parse_int","args":["2147483647"]}
+{"fn":"parse_int","args":["2147483648"]}
+{"fn":"parse_int","args":["-1"]}
+{"fn":"parse_int","args":["-2147483648"]}
+{"fn":"parse_int","args":[" 42"]}
+{"fn":"parse_int","args":["\t+9"]}
+{"fn":"parse_int","args":["\r\n7"]}
+{"fn":"parse_int","args":["\u000b9"]}
+{"fn":"parse_int","args":["\f8"]}
+{"fn":"parse_int","args":["+"]}
+{"fn":"parse_int","args":["-"]}
+{"fn":"parse_int","args":["  "]}
+{"fn":"parse_int","args":["42 "]}
+{"fn":"parse_int","args":["0x2a"]}
+{"fn":"parse_int","args":["1_000"]}
+{"fn":"parse_int","args":["9.0"]}
+{"fn":"parse_int","args":["１２"]}
+{"fn":"parse_int","args":["999999999999999999999999999999999999999999999999999999999999"]}

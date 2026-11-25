@@ -1,0 +1,73 @@
+[package]
+name = "uxplay"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Rust-owned UxPlay AirPlay receiver and migration front door"
+
+[features]
+# Uses linked libdns_sd on Unix or dynamically loads Bonjour dnssd.dll on Windows.
+external-dns-sd = []
+# Matches macOS's default Bonjour backend and enables its optional P2P/AWDL flags.
+apple-p2p = ["external-dns-sd"]
+# Enables the source-compatible Linux/BSD D-Bus screensaver inhibitor.
+dbus-screensaver = ["dep:dbus"]
+
+[[bin]]
+name = "uxplay"
+path = "src/main.rs"
+
+[dependencies]
+clap = "4"
+httparse = "1.10.1"
+socket2 = { version = "0.6", features = ["all"] }
+glib = "0.22.11"
+gstreamer = "0.25.4"
+ctrlc = "3"
+http-response-rs = { path = "../units/http-response" }
+plist = "1.10.4"
+getrandom = "0.4.3"
+uxplay-airplay-http-handlers = { path = "../units/airplay-http-handlers" }
+uxplay-raop-session = { path = "../units/raop-session" }
+uxplay-raop-rtp = { path = "../units/raop-rtp" }
+uxplay-raop-rtp-mirror = { path = "../units/raop-rtp-mirror" }
+audio-renderer-rs = { path = "../render/audio-renderer" }
+video-renderer-rs = { path = "../render/video-renderer" }
+mux-renderer-rs = { path = "../render/mux-renderer" }
+fairplay-playfair-rs = { path = "../units/fairplay-playfair" }
+uxplay-pairing-unit = { path = "../units/pairing" }
+uxplay-core = { path = "../core" }
+compat-rs = { path = "../units/compat" }
+
+[build-dependencies]
+pkg-config = "0.3"
+
+[dev-dependencies]
+openssl = "0.10"
+uxplay-crypto = { path = "../units/crypto" }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+dbus = { version = "0.9", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Performance",
+    "Win32_System_SystemInformation",
+] }
+
+[workspace]
