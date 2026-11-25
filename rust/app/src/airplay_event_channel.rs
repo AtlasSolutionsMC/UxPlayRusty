@@ -41,7 +41,7 @@ impl AirPlayEventChannel {
         }
     }
 
-    #[allow(dead_code)] // Called by the HLS playlist workflow once /play is wired.
+    #[allow(dead_code)] // Convenience API used by the protocol integration tests.
     pub fn send_fcup_request(
         &self,
         media_url: &str,
@@ -71,12 +71,12 @@ impl AirPlayEventChannel {
             );
         }
         let Some(writer) = writer else {
-            return Err(io::Error::new(
-                io::ErrorKind::NotConnected,
-                "AirPlay reverse-HTTP connection is not established",
-            ));
+            return Err(invalid_socket_error());
         };
-        lock(&writer).write_all(&request)?;
+        // The C source performs one `send()` and treats any nonnegative byte
+        // count as success. Preserve that partial-send behavior instead of
+        // retrying the remainder as `write_all()` would.
+        let sent = lock(&writer).write(&request)?;
         if let Some(logger) = logger {
             if logger.level() >= crate::logger::DEBUG {
                 let mut readable = Vec::with_capacity(request.len() + 1);
@@ -91,12 +91,28 @@ impl AirPlayEventChannel {
             logger.log(
                 crate::logger::DEBUG,
                 format!(
-                    "fcup_request: send sent Request of {} bytes from socket {socket_id}\n",
-                    request.len()
+                    "fcup_request: send sent Request of {sent} bytes from socket {socket_id}\n"
                 ),
             );
         }
         Ok(())
+    }
+}
+
+fn invalid_socket_error() -> io::Error {
+    #[cfg(windows)]
+    {
+        // send(INVALID_SOCKET, ...) returns WSAENOTSOCK.
+        io::Error::from_raw_os_error(10038)
+    }
+    #[cfg(unix)]
+    {
+        // send(-1, ...) returns EBADF.
+        io::Error::from_raw_os_error(libc::EBADF)
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        io::Error::new(io::ErrorKind::NotConnected, "invalid socket")
     }
 }
 
@@ -119,7 +135,7 @@ fn source_socket_id(stream: &TcpStream) -> i32 {
 }
 
 /// Build the source's XML-plist FCUP event wrapped in a reverse-HTTP request.
-#[allow(dead_code)] // Kept independently testable before /play is wired.
+#[allow(dead_code)] // The wire encoder is also exercised directly by the oracle tests.
 pub fn fcup_request_bytes(
     media_url: &str,
     client_session_id: &str,
