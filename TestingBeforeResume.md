@@ -26,7 +26,7 @@ Expanded the unchanged C/llhttp differential to 776 byte classifications: every 
 
 ### Latest 2026-11-26 upstream `get_ports` port-list correction
 
-Reviewed the three upstream commits. Rust already has client-name CR/LF stripping, missing-DeviceID admission and legacy PIN per-session Digest auth. Rust port parsing now matches updated C validation: digit-only, unique explicit and auto-expanded port lists, with the `all 3 distinct ports` message. Focused test and both Windows GNU all-target/Clippy/fmt gates pass; Linux run `45835282498` passes all workflow stages. Rust branch ancestry merge `7e882b3` plus `bd96523` makes `FDH2/UxPlay:master` behind count zero while keeping `uxplay.cpp` absent from the standalone target tree.
+Reviewed the three upstream commits. Rust already has client-name CR/LF stripping, missing-DeviceID admission and legacy PIN per-session Digest auth. Rust port parsing now matches updated C validation: digit-only, unique explicit and auto-expanded port lists, with the `all 3 distinct ports` message. Focused test and both Windows GNU all-target/Clippy/fmt gates pass. The binary returns exit 1 with matching diagnostics for `80,80,80` and `6000,6000`; CLI fixtures cover these cases. Linux run `45835282498` passes all workflow stages. Rust branch ancestry merge `7e882b3` plus `bd96523` makes `FDH2/UxPlay:master` behind count zero while keeping `uxplay.cpp` absent from the standalone target tree.
 
 ## 1. สิ่งที่ทำใน session นี้
 

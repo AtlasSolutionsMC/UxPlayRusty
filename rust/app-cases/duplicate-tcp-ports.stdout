@@ -1,0 +1,1 @@
+*** ERROR: invalid "-p 6000,6000", all 3 distinct ports must be in range [1024,65535]

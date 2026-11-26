@@ -1,1 +1,1 @@
-*** ERROR: invalid "-p 80,80,80", all 3 ports must be in range [1024,65535]
+*** ERROR: invalid "-p 80,80,80", all 3 distinct ports must be in range [1024,65535]
