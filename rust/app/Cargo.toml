@@ -3,7 +3,7 @@ name = "uxplay"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "Rust-owned UxPlay AirPlay receiver and migration front door"
+description = "Standalone Rust UxPlay AirPlay receiver"
 
 [features]
 # Uses linked libdns_sd on Unix or dynamically loads Bonjour dnssd.dll on Windows.
