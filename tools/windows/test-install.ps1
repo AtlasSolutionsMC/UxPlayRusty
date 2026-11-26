@@ -49,6 +49,22 @@ try {
     }
     Write-Output 'PASS install files, Start Menu shortcut, startup Run value, and config setting'
 
+    $appPath = Join-Path $install 'uxplay.exe'
+    $originalPath = $env:Path
+    try {
+        $env:Path = ($originalPath -split ';' | Where-Object {
+            $_ -notmatch '(?i)(\\|/)MSYS2(\\|/)|^[A-Z]:\\msys64(\\|$)'
+        }) -join ';'
+        $help = Start-Process -FilePath $appPath -ArgumentList '-h' -WindowStyle Hidden -Wait -PassThru
+        $helpExitCode = $help.ExitCode
+    } finally {
+        $env:Path = $originalPath
+    }
+    if ($helpExitCode -ne 0) {
+        throw "Installed uxplay.exe -h failed without MSYS2 PATH (exit $helpExitCode)."
+    }
+    Write-Output 'PASS installed uxplay -h without MSYS2 PATH'
+
     $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @(
         '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
     ) -Wait -PassThru
@@ -61,6 +77,24 @@ try {
     if (-not $hadShortcut -and (Test-Path $shortcut)) { throw 'The Start Menu shortcut remains after uninstall.' }
     Write-Output 'PASS uninstall files, startup cleanup, and Add/Remove Programs cleanup'
 } finally {
+    $installFull = [IO.Path]::GetFullPath($install)
+    if (Test-Path -LiteralPath $installFull) {
+        if (-not $installFull.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to clean an install directory outside TEMP: $installFull"
+        }
+        $cleanupUninstaller = Join-Path $installFull 'unins000.exe'
+        if (Test-Path -LiteralPath $cleanupUninstaller) {
+            $cleanup = Start-Process -FilePath $cleanupUninstaller -ArgumentList @(
+                '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+            ) -Wait -PassThru
+            if ($cleanup.ExitCode -ne 0) {
+                throw "Cleanup uninstaller exited with code $($cleanup.ExitCode)."
+            }
+        }
+        if (Test-Path -LiteralPath $installFull) {
+            throw "Temporary install directory remains after cleanup: $installFull"
+        }
+    }
     if ($hadConfig -and (Test-Path (Join-Path $backupRoot 'config.toml'))) {
         Copy-Item (Join-Path $backupRoot 'config.toml') $config -Force
     }

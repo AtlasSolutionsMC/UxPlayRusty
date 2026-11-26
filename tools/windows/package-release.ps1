@@ -2,7 +2,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Msys2Root,
 
-    [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'dist\windows')
+    [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'dist\windows'),
+
+    [string]$InnoSetupCompiler = (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -178,9 +180,9 @@ Set-Content -LiteralPath (Join-Path $stage 'BUILD-INFO.txt') -Encoding utf8 -Val
     "MSYS2 UCRT64 runtime files: $($bundled.Count) DLLs, $($pluginFiles.Count) plugins"
 )
 
-$compiler = Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'
-if (-not (Test-Path -LiteralPath $compiler)) { throw "Inno Setup 6 compiler not found at '$compiler'." }
-& $compiler (Join-Path $PSScriptRoot 'UxPlay.iss')
+$compilerPath = (Resolve-Path -LiteralPath $InnoSetupCompiler -ErrorAction SilentlyContinue).Path
+if (-not $compilerPath) { throw "Inno Setup 6 compiler not found at '$InnoSetupCompiler'." }
+& $compilerPath (Join-Path $PSScriptRoot 'UxPlay.iss')
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
 
 $setup = Join-Path $outputRoot 'Setup.exe'

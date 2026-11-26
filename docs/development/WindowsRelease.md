@@ -45,8 +45,8 @@ tray interaction, GPU rendering quality, BLE radio behavior or a clean Windows
 installation.
 
 The install smoke installs silently to a temporary directory, checks the
-Start Menu shortcut, startup config and Run registration, uninstalls, and
-checks cleanup:
+Start Menu shortcut, startup config and Run registration, runs the installed
+`uxplay.exe -h` with MSYS2 removed from `PATH`, uninstalls, and checks cleanup:
 
 ```powershell
 .\tools\windows\test-install.ps1 -Setup .\dist\windows\Setup.exe
@@ -58,6 +58,14 @@ config, BLE handoff, startup value and UxPlay shortcut. This checks installer
 plumbing on the development machine, not the required clean-machine acceptance
 flow. The final release still needs installation, sign-in startup, tray/media
 operation and uninstall on a clean Windows system.
+
+The `Windows installer smoke` workflow builds a provisional installer on one
+fresh GitHub-hosted Windows runner, then transfers it as a one-day workflow
+artifact to a separate fresh Windows runner for install, startup-registration,
+installed CLI and uninstall checks. The artifact is temporary CI handoff only;
+it is not a release upload. This provides a clean OS install gate while real
+AirPlay devices, tray interaction and BLE radio behavior remain separate manual
+acceptance checks.
 
 `third-party-licenses/` contains license texts installed by MSYS2 when
 available. Some installed packages supply SPDX metadata but no separate text;

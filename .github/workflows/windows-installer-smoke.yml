@@ -1,0 +1,97 @@
+name: Windows installer smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - windows-delivery
+    paths:
+      - '.github/workflows/windows-installer-smoke.yml'
+      - 'rust/**'
+      - 'tools/windows/**'
+      - 'docs/development/WindowsRelease.md'
+      - 'Map2Window.md'
+      - 'README.md'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    runs-on: windows-2025
+    steps:
+      - name: Keep MSYS2 checkout line endings stable
+        shell: pwsh
+        run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2 UCRT64
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-gstreamer
+            mingw-w64-ucrt-x86_64-gst-plugins-base
+            mingw-w64-ucrt-x86_64-gst-plugins-good
+            mingw-w64-ucrt-x86_64-gst-plugins-bad
+            mingw-w64-ucrt-x86_64-gst-libav
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-libplist
+            mingw-w64-ucrt-x86_64-libmicrodns
+
+      - name: Install Rust GNU toolchain
+        shell: pwsh
+        run: rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal --component clippy,rustfmt
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build provisional installer
+        shell: pwsh
+        env:
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          $compilerCandidates = @(
+            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
+            (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+          )
+          $compiler = $compilerCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+          if (-not $compiler) { throw 'Could not locate ISCC.exe after installing Inno Setup.' }
+          .\tools\windows\package-release.ps1 -Msys2Root $env:MSYS2_ROOT -InnoSetupCompiler $compiler
+
+      - name: Smoke bundled runtime
+        shell: pwsh
+        env:
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: .\tools\windows\smoke-runtime.ps1 -StageDirectory .\dist\windows\stage -Msys2Root $env:MSYS2_ROOT
+
+      - name: Transfer installer to fresh Windows runner
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup-smoke
+          path: dist/windows/Setup.exe
+          retention-days: 1
+
+  clean-machine-install:
+    needs: build-installer
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download provisional installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-setup-smoke
+          path: dist/windows
+
+      - name: Install, launch without MSYS2, and uninstall
+        shell: pwsh
+        run: .\tools\windows\test-install.ps1 -Setup .\dist\windows\Setup.exe
