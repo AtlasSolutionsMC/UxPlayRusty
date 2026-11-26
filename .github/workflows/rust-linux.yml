@@ -59,6 +59,31 @@ jobs:
           home="$(mktemp -d)"
           env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -h >/dev/null
           env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
+          python3 - <<'PY'
+          import os
+          import subprocess
+          import tempfile
+
+          executable = os.fsencode("rust/app/target/release/uxplay")
+          with tempfile.TemporaryDirectory(prefix="uxplay-argv-smoke-") as home:
+              env = os.environ.copy()
+              env.pop("UXPLAYRC", None)
+              env["HOME"] = home
+              env["XDG_CONFIG_HOMEDIR"] = home
+              result = subprocess.run(
+                  [executable, b"\xff"],
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  check=False,
+              )
+          assert result.returncode == 0, result.returncode
+          assert result.stdout == b"", result.stdout
+          assert result.stderr == (
+              b'Error: detected a non-ascii or non-UTF-8 string "\xff"'
+              b"while parsing input arguments"
+          ), result.stderr
+          PY
 
       - name: Smoke Rust server endpoint
         run: |
