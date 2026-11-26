@@ -63,5 +63,12 @@ operation and uninstall on a clean Windows system.
 available. Some installed packages supply SPDX metadata but no separate text;
 those packages receive a `LICENSE-REFERENCE.txt`, and their package version,
 SPDX declaration and upstream URL are recorded in `THIRD-PARTY-NOTICES.txt`.
-Review notices and any source-distribution obligations before publishing the
-installer.
+The current UCRT64 bundle includes GPL-labeled FFmpeg, x264 and x265 runtime
+packages; the staged `avcodec-63.dll` imports the x264 and x265 DLLs. Their
+staged directories contain `LICENSE-REFERENCE.txt` rather than the package
+license text or corresponding source. FFmpeg documents that enabling GPL parts
+makes GPL apply to FFmpeg and describes distributing the exact matching source
+and build information ([FFmpeg legal considerations](https://www.ffmpeg.org/legal.html)).
+Treat `Setup.exe` as provisional: do not publish it until the exact source/build
+inputs and notices are resolved for the runtime, or the runtime is rebuilt with
+a reviewed license profile.
