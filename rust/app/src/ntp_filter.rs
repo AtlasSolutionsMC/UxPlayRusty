@@ -124,12 +124,17 @@ pub fn estimate(
     });
     let best_sample = *valid.first()?;
 
-    let mut total_filter_dispersion = 0.0;
-    let mut inverse_two_pow_n = 0.5;
-    for sample in &valid {
-        total_filter_dispersion += sample.dispersion_seconds * inverse_two_pow_n;
-        inverse_two_pow_n *= 0.5;
-    }
+    // Match the source implementation exactly: `double inverse_two_pow_n[8] = { 1.0 }`
+    // zero-initializes the remaining seven entries, and the following loop only divides
+    // those zeros. The C filter therefore weights the best sample by 1/2 and every other
+    // sample by zero. Although the apparent intent is geometric rank weighting, changing
+    // this changes root_distance and can change the externally visible is_synced flag.
+    let inverse_two_pow_n = [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    let total_filter_dispersion = valid
+        .iter()
+        .zip(inverse_two_pow_n)
+        .map(|(sample, weight)| sample.dispersion_seconds * weight)
+        .sum::<f64>();
     let root_distance_seconds = total_filter_dispersion + best_sample.delay_seconds * 0.5;
     let is_synced = root_distance_seconds <= NTP_MAX_ROOT_DISTANCE_SECONDS;
 
@@ -204,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn filter_sorts_by_delay_and_weights_dispersion_by_rank() {
+    fn filter_preserves_c_zero_initialized_dispersion_weights() {
         let now = q32(100);
         let mut samples = [NtpSample::empty(); NTP_SAMPLE_COUNT];
         samples[0] = sample(now, 0.4, 0.3, 0.1);
@@ -212,12 +217,12 @@ mod tests {
         samples[2] = sample(now, 0.8, 0.2, -0.4);
 
         let result = estimate(&mut samples, now, None).expect("three valid samples");
-        // Delay order is .1, .2, .3. Weighted dispersion is
-        // .2/2 + .8/4 + .4/8 = .35; root distance adds .1/2 = .4.
+        // Delay order is .1, .2, .3. In C the {1.0} initializer leaves the
+        // remaining weights zero; total dispersion is .2/2 and root distance .15.
         assert_eq!(result.valid_sample_count, 3);
         assert_eq!(result.best_sample.offset_seconds, 0.2);
-        assert!((result.root_distance_seconds - 0.4).abs() < 1e-15);
-        assert_eq!(result.root_distance_nanoseconds, 400_000_000);
+        assert!((result.root_distance_seconds - 0.15).abs() < 1e-15);
+        assert_eq!(result.root_distance_nanoseconds, 150_000_000);
         assert_eq!(result.sync_offset_nanoseconds, 200_000_000);
         assert!(result.is_synced);
     }
