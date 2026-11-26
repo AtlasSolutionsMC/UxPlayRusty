@@ -617,9 +617,16 @@ impl BeaconManager {
 }
 
 #[cfg(windows)]
+fn beacon_companion_command(executable: &Path, handoff_path: &Path) -> std::process::Command {
+    let mut command = std::process::Command::new(executable);
+    command.arg("--path").arg(handoff_path);
+    command
+}
+
+#[cfg(windows)]
 fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
     use std::os::windows::process::CommandExt;
-    use std::process::{Command, Stdio};
+    use std::process::Stdio;
     use std::time::Instant;
 
     let handoff_path = PathBuf::from(options.ble_filename.as_ref()?);
@@ -638,10 +645,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         return None;
     }
 
-    let child = Command::new(&executable)
-        .arg("WinRt")
-        .arg("--path")
-        .arg(&handoff_path)
+    let child = beacon_companion_command(&executable, &handoff_path)
         .current_dir(executable.parent().unwrap_or_else(|| Path::new(".")))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -720,6 +724,26 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         stop_requested,
         worker,
     })
+}
+
+#[cfg(all(test, windows))]
+mod beacon_companion_tests {
+    use super::beacon_companion_command;
+    use std::path::Path;
+
+    #[test]
+    fn companion_uses_windows_default_backend_instead_of_hidden_cli_value() {
+        let command = beacon_companion_command(
+            Path::new("uxplay-beacon.exe"),
+            Path::new("runtime/uxplay.ble"),
+        );
+        let arguments = command
+            .get_args()
+            .map(|argument| argument.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert_eq!(arguments, ["--path", "runtime/uxplay.ble"]);
+    }
 }
 
 #[cfg(windows)]

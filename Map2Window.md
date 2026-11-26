@@ -117,3 +117,11 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - After renderer-mode integration, renderer tests pass 18/18; app tests pass 553 default (437+10+99+7). App/renderer formatting and Clippy gates pass. Help smoke exits 0; the help snapshots now include `-renderer <auto|d3d11|vulkan>`. The app test suite with external DNS-SD previously passed 555 before the final renderer enum consistency test was added; that test is renderer-only.
 - Still required for milestone 3: actual D3D11 playback on a Windows GPU and repeated real-iPhone A/B playback/latency/quality evidence. Those are not implied by these local pipeline tests or plugin inventory.
 - Still required for milestone 4: drive the new renderer through the UxPlay app with real mirror caps, resize/fullscreen, client disconnect/reconnect and teardown; compare its latency/output with D3D11; and persist/select renderer through the user config in milestone 5.
+
+### 2026-11-27 — BLE companion CLI regression fix
+
+- Traced the Windows app-to-beacon launch arguments: the app passed positional `WinRt`, but Clap marks that backend value as skipped from the public CLI while Windows already chooses WinRT as its native default. This could make the companion exit before starting the advertiser.
+- Removed the explicit backend argument and added a Windows-only regression test for the exact companion command line (`--path <handoff>` only). This preserves the Windows default backend and the handoff path.
+- App rustfmt and `git diff --check` pass. This shell currently has the Windows GNU Rust toolchain but no MSYS2 UCRT64 executables on `PATH` (`gcc`, `pkg-config`, `dlltool` not found), so app/beacon test compilation could not run locally. Record test status only after hosted Windows CI or a restored UCRT64 environment.
+- Extended the existing Windows installer workflow to run the focused app regression and beacon test suite on its UCRT64 runner before packaging; hosted results are pending the push.
+- BLE radio stop behavior remains unaccepted; this argument fix addresses a separate startup-path defect and does not claim to fix publisher shutdown.
