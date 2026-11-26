@@ -4,6 +4,8 @@
 Create a standalone Rust replacement for the reference project at `D:\Save\Uxplay\UxPlay`, preserving all agreed features, supported platforms, and externally visible behavior. Use the `rust-anything` whole-app workflow and retain the original project as reference.
 
 ## Latest Resume State
+- Continuation 2026-11-26: re-read the `rust-anything` whole-app workflow and revalidated target `HEAD` equals `origin/master` at `f43aada`; target worktree is clean and the original C checkout remains separate. `rust-anything map --json --crates rust/units .` still reports 0 ports and misclassifies staging/reference/oracle folders, so its generated rewrite was restored; keep the manual `rust/MAP.md` authoritative. A fresh C/Rust review of the NTP exchange loop found no additional mismatch after the weight fix. Next unblocked priority: extend source-differential coverage for remaining `lib/http_request.c` / llhttp-compatible request edges, then continue subsystem acceptance.
+
 - Resume 2026-11-26: fixed NTP root-distance parity in local Rust `ntp_filter.rs`. C aggregate initialization `{ 1.0 }` zeroes the remaining rank weights, so only best-sample dispersion contributes; Rust now reproduces `[0.5, 0, ...]`. A compiled C reproduction confirmed the weights. Windows GNU focused regression, app all-target tests (431 + 10/98/7 auxiliary suites), Clippy (`-D warnings`) and fmt pass. Pushed as `d9db3e4`; Linux run `45827934540` passes format, default and external-DNS-SD tests/Clippy/release builds, CLI and server smokes.
 
 
