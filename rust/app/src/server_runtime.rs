@@ -807,10 +807,10 @@ mod hls_lifecycle_tests {
         let renderer_logs = Arc::new(Mutex::new(Vec::<String>::new()));
         let callback_logs = Arc::clone(&renderer_logs);
         logger.set_callback(Some(Arc::new(move |level, message| {
-            callback_logs.lock().unwrap().push(format!(
-                "{level}: {}",
-                String::from_utf8_lossy(message)
-            ));
+            callback_logs
+                .lock()
+                .unwrap()
+                .push(format!("{level}: {}", String::from_utf8_lossy(message)));
         })));
         let options = Options {
             use_audio: false,
