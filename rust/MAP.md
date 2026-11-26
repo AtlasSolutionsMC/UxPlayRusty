@@ -120,10 +120,10 @@ Statuses: `pending` until the original is recorded, ported, diffed, benchmarked 
 | 0 | `lib/byteutils.c` | complete: all ten exports pass five GCC vectors each, Rust tests and linked C ABI smoke |
 | 0 | `lib/compat.c` | partial: Windows `wsa_strerror` uses `FormatMessageA` with source buffer retention and LF truncation; four C oracle rows pass, and the existing crate is now wired into startup/IPv6 socket diagnostics; the manual platform unit still has no rust-anything behavior gate |
 | 0 | `lib/fcup_request.h` | partial: app FCUP plist and complete reverse-HTTP request are byte-for-byte matched against the unchanged `create_fcup_request()` plus `http_response.c` C oracle. `AirPlayEventChannel` performs the source's single `send()` equivalent, preserves nonnegative partial-send success and byte count, and maps missing sockets to `WSAENOTSOCK`/`EBADF`. The app logger now has a focused assertion for the full C-shaped send-error code/message/newline on Windows and Unix (current GNU Windows test passes). |
-| 0 | `lib/global.h` | pending |
-| 0 | `lib/sockets.h` | pending |
+| 0 | `lib/global.h` | runtime-covered: model/version, legacy User-Agent exception and six-byte hardware-address limit are represented in Rust response/discovery/session code and source-derived packet/auth tests; `DECRYPTION_TEST` is fixed at 0 in C and has no active runtime path. Values remain distributed across app modules rather than one config module. |
+| 0 | `lib/sockets.h` | runtime-covered: C socket macros are replaced by `std::net`, `libc` and Windows socket APIs; the Windows `wsa_strerror` behavior is wired through the compatibility crate and error diagnostics. App socket/session tests and Linux/Windows build gates cover these paths; no public C macro ABI remains. |
 | 0 | `lib/stream.h` | claimed by `/root/port_stream_types` (2026-11-22) |
-| 0 | `lib/threads.h` | pending |
+| 0 | `lib/threads.h` | runtime-covered: pthread create/join/sleep/mutex/condition wrappers are replaced by Rust threads, join handles, synchronization and durations across discovery, media and server workers. Lifecycle tests cover normal startup/shutdown; injected OS thread-creation failure parity remains unverified. |
 | 0 | `lib/utils.c` | complete: all 14 exports pass `rust-anything gate`; 19 linked C ABI pointer checks pass |
 | 0 | `lib/srp.c` | partial: isolated `rust/units/srp` has a C differential, 3 passing Rust tests, Clippy/build/fmt; Windows GNU OpenSSL linking is fixed; generic rust-anything gate remains incomplete; see `research/crypto.md` and unit notes |
 | 0 | `lib/fairplay_v2/fairplay_v2.c` | partial: all five ABI exports implemented in `rust/units/fairplay-v2`; 2 Rust tests, C transcript oracle and ABI smoke pass; rust-anything gate lacks pointer-lifecycle cases; see `research/crypto.md` and unit notes |
@@ -249,3 +249,6 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — Linux gates and standalone CLI smoke green
 - Ubuntu run `45805967580` succeeded on `2a1de15c0e75f0f9f122aaa84226b8b3773cd322`: fmt, all-target tests and Clippy (`-D warnings`) for embedded mDNS and `external-dns-sd`, both release builds, and release binary `-h`/`-v` smoke passed. The HLS EOS timeout from the preceding run did not recur; the instrumented test passed in both modes.
 - Added push `paths-ignore: **/*.md` so checkpoint/MAP-only commits do not start the full native dependency workflow. The workflow-file change itself is included in the next validation run.
+
+### 2026-11-26 — C infrastructure headers reconciled
+- `global.h`, `sockets.h`, and `threads.h` are now recorded as runtime-covered rather than pending: constants/macro behavior is represented in app protocol/discovery/session, `std::net`/platform socket APIs, and Rust thread/synchronization paths. No standalone callable C ABI remains for these headers. OS thread-creation failure parity is still unverified.
