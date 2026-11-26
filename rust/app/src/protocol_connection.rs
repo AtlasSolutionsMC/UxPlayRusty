@@ -1343,6 +1343,15 @@ impl ProtocolConnection {
         let mut adjusted_audio_format = None;
         for effect in effects {
             match effect {
+                SessionEffect::LogSetupPorts => {
+                    if let Some(logger) = self.context.media_config.logger.as_ref() {
+                        let timing_port = lock(&self.media.0).setup_ports().0.unwrap_or_default();
+                        logger.log(
+                            crate::logger::DEBUG,
+                            format!("eport = 0, tport = {timing_port}"),
+                        );
+                    }
+                }
                 SessionEffect::Log { level, message } => {
                     if let Some(logger) = self.context.media_config.logger.as_ref() {
                         logger.log(

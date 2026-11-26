@@ -132,6 +132,7 @@ pub enum SessionEffect {
         public_key_base64: String,
         name: String,
     },
+    LogSetupPorts,
     StartTiming {
         remote_address: String,
         remote_port: u16,
@@ -487,10 +488,7 @@ pub fn setup(
             Value::from(u64::from(context.ports.timing_local)),
         );
         response_plist.insert("eventPort".into(), Value::from(0));
-        transition.effects.push(SessionEffect::Log {
-            level: SessionLogLevel::Debug,
-            message: format!("eport = 0, tport = {}", context.ports.timing_local),
-        });
+        transition.effects.push(SessionEffect::LogSetupPorts);
     }
 
     if let Some(streams) = request_dict
@@ -1046,10 +1044,7 @@ mod tests {
             level: SessionLogLevel::Debug,
             message: "timing_rport = 7000".into(),
         }));
-        assert!(transition.effects.contains(&SessionEffect::Log {
-            level: SessionLogLevel::Debug,
-            message: "eport = 0, tport = 7001".into(),
-        }));
+        assert!(transition.effects.contains(&SessionEffect::LogSetupPorts));
         assert!(transition.effects.iter().any(|effect| matches!(
             effect,
             SessionEffect::Log {
@@ -1161,7 +1156,6 @@ mod tests {
                     SessionLogLevel::Error,
                     "Client did not supply timing_rport, may be using unsupported AirPlay2 \"Remote Control\" protocol",
                 ),
-                (SessionLogLevel::Debug, "eport = 0, tport = 7001"),
                 (SessionLogLevel::Debug, "type = 110"),
                 (
                     SessionLogLevel::Debug,

@@ -1027,6 +1027,7 @@ impl SessionMedia {
             }
             SessionEffect::ReportClientRequest { .. }
             | SessionEffect::RegisterClient { .. }
+            | SessionEffect::LogSetupPorts
             | SessionEffect::GetAudioFormat { .. }
             | SessionEffect::Log { .. } => {
                 return Err(io::Error::new(
