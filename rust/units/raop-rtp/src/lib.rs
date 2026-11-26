@@ -83,7 +83,7 @@ struct PendingEvents {
     progress: Option<(u32, u32, u32)>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 struct SyncState {
     initial_sync: bool,
     client_ntp_sync: u64,
@@ -410,6 +410,7 @@ fn run_audio_thread(
                     control_peer = Some(peer);
                 }
                 log_control_packet(&control_packet[..len], lock(&sync).initial_sync, &logger);
+                let previous_sync = *lock(&sync);
                 if let Err(error) = process_control_packet(
                     &control_packet[..len],
                     &mut queue,
@@ -424,6 +425,13 @@ fn run_audio_thread(
                     running.store(false, Ordering::Release);
                     break;
                 }
+                log_sync_packet(
+                    &control_packet[..len],
+                    previous_sync,
+                    *lock(&sync),
+                    clock.as_ref(),
+                    &logger,
+                );
             }
             Err(error) if is_select_failure(&error) => {
                 log_select_error(&logger, &error);
@@ -578,6 +586,37 @@ fn process_control_packet(
         sync.client_ntp_sync = clock.timestamp_to_nanoseconds(adjusted);
     }
     Ok(())
+}
+
+fn log_sync_packet(
+    packet: &[u8],
+    previous: SyncState,
+    current: SyncState,
+    clock: &dyn TimingClock,
+    logger: &Option<LogCallback>,
+) {
+    if packet.get(1).map(|byte| byte & !0x80) != Some(0x54) || packet.len() < 20 {
+        return;
+    }
+
+    let offset_change = (current.client_ntp_sync as f64
+        - current.rtp_clock_rate * f64::from(current.rtp_sync))
+        - (previous.client_ntp_sync as f64
+            - previous.rtp_clock_rate * f64::from(previous.rtp_sync));
+    let local_sync_time = clock.convert_remote_time_ns(u64::from(current.rtp_sync));
+    log(
+        logger,
+        LOGGER_DEBUG,
+        format!(
+            "raop_rtp sync: ntp = {:8.6}, ntp_start_time {:8.6}\nts_client = {:8.6} sync_rtp={} offset change = {:8.6}\n{}",
+            local_sync_time as f64 / 1e9,
+            current.ntp_start_time as f64 / 1e9,
+            current.client_ntp_sync as f64 / 1e9,
+            current.rtp_sync,
+            offset_change / 1e9,
+            packet_to_string(packet, 20),
+        ),
+    );
 }
 
 fn log_control_packet(packet: &[u8], initial_sync: bool, logger: &Option<LogCallback>) {
@@ -1692,5 +1731,32 @@ mod tests {
         assert!(state.initial_sync);
         assert_eq!(state.rtp_sync, 0x7654_3210);
         assert_eq!(state.client_ntp_sync, 0x1234_5678_9abc_def0);
+
+        let (logger, events) = collecting_runtime_logger();
+        let previous = SyncState {
+            ntp_start_time: 1_500_000_000,
+            rtp_clock_rate: (1_000_000_000 / 44_100) as f64,
+            ..SyncState::default()
+        };
+        let mut state = previous;
+        process_control_packet(&packet, &mut queue, &mut state, &clock).unwrap();
+        log_sync_packet(&packet, previous, state, &clock, &Some(logger));
+        assert_eq!(
+            lock(&events).as_slice(),
+            [(
+                LOGGER_DEBUG,
+                format!(
+                    "raop_rtp sync: ntp = {:.6}, ntp_start_time {:8.6}\nts_client = {:8.6} sync_rtp={} offset change = {:8.6}\n{}",
+                    (u64::from(0x7654_3210_u32) + 1_000) as f64 / 1e9,
+                    1.5,
+                    0x1234_5678_9abc_def0_u64 as f64 / 1e9,
+                    0x7654_3210_u32,
+                    (0x1234_5678_9abc_def0_u64 as f64
+                        - previous.rtp_clock_rate * f64::from(0x7654_3210_u32))
+                        / 1e9,
+                    packet_to_string(&packet, 20),
+                ),
+            )]
+        );
     }
 }
