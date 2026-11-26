@@ -367,7 +367,8 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
 mod tests {
     use super::*;
 
-    const C_ORACLE: &str = include_str!("../../record-shims/raop_info_oracle.expected.txt");
+    const C_ORACLE: &str =
+        include_str!("../../../tools/record-shims/raop_info_oracle.expected.txt");
 
     fn context() -> InfoContext<'static> {
         InfoContext {

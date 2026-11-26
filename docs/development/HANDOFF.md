@@ -18,17 +18,17 @@
 - Latest local source-unit differential: `lib/stream.h` Windows x64 C/Rust layout oracle matches both structs; crate tests pass 1/1 and Clippy passes. Other native ABI targets remain unverified.
 - Latest local renderer slice: generated HEVC decodes through appsrc/h265parse/avdec_h265 to fakesink, and the mirror callback finalizes an H.265 MP4 with `ftyp`/`moov`/`mdat`. Windows GNU renderer tests pass 13/13; app tests pass 431 plus 10/98/7 auxiliary suites; Clippy (`-D warnings`) and fmt pass. Linux CI also passes the app H.265 mux integration in both DNS-SD modes.
 - Remaining acceptance: retest iPhone video after the SHA-512 correction with full stderr/raw packets and same-device C comparison; complete full Unix option/runtime, DNS-SD, X11, native macOS/BSD and media/device runtime; validate real A/V; packaging and final clean build/tree sync. Vulkan remains a post-interoperability experiment. Do not change validated crypto/parser framing without captured evidence.
-- Before resuming, read `TestingBeforeResume.md`, `rust/MAP.md`, `rust/DECISIONS.md` and the latest Checkpoints state. The `Historical acceptance notes` below retain prior session details.
+- Before resuming, read `docs/history/TestingBeforeResume.md`, `docs/development/MAP.md`, `docs/architecture/DECISIONS.md` and the latest Checkpoints state. The `Historical acceptance notes` below retain prior session details.
 
 ## Historical acceptance notes
 - External acceptance still needed: live Apple pairing/FairPlay and audio/video playback, BLE radios, native Linux/macOS/BSD plus Bonjour/D-Bus paths, real A/V timing, and a valid AAC-ELD fixture for mixed MP4.
-- Upstream source was fetched read-only into Git metadata and is ahead by two commits; the C worktree remains unchanged. Missing-DeviceID admission and client-name CR/LF sanitation are now ported with regressions; PIN-mode auth behavior was already equivalent. Research report: `rust/research/iphone-mirroring-vulkan-feasibility.md`.
+- Upstream source was fetched read-only into Git metadata and is ahead by two commits; the C worktree remains unchanged. Missing-DeviceID admission and client-name CR/LF sanitation are now ported with regressions; PIN-mode auth behavior was already equivalent. Research report: `docs/research/iphone-mirroring-vulkan-feasibility.md`.
 - Native Windows toolchain: prepend `%LOCALAPPDATA%\Programs\MSYS2\ucrt64\bin` to `PATH`, set `RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu`, and set `CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER` to that MSYS2 `gcc.exe`.
-- Decisions and remaining acceptance are in `rust/DECISIONS.md` and `rust/MAP.md`; chronological evidence remains in this file below.
+- Decisions and remaining acceptance are in `docs/architecture/DECISIONS.md` and `docs/development/MAP.md`; chronological evidence remains in this file below.
 
 ## Resume next
 
-- Read `TestingBeforeResume.md`, `rust/MAP.md`, this handoff, `rust/DECISIONS.md` and the latest `Checkpoints.md` state.
-- Continue with one source-led, locally verifiable protocol/runtime gap. Start with the remaining RAOP/HTTP edge rows in `rust/MAP.md`; do not spend time on Vulkan or native iPhone Mirroring before AirPlay media interoperability works.
-- The last device report is `rust/research/iphone-mirroring-vulkan-feasibility.md`; real iPhone validation still needs full log, encrypted packet capture and C-vs-Rust comparison.
+- Read `docs/history/TestingBeforeResume.md`, `docs/development/MAP.md`, this handoff, `docs/architecture/DECISIONS.md` and the latest `docs/development/Checkpoints.md` state.
+- Continue with one source-led, locally verifiable protocol/runtime gap. Start with the remaining RAOP/HTTP edge rows in `docs/development/MAP.md`; do not spend time on Vulkan or native iPhone Mirroring before AirPlay media interoperability works.
+- The last device report is `docs/research/iphone-mirroring-vulkan-feasibility.md`; real iPhone validation still needs full log, encrypted packet capture and C-vs-Rust comparison.
 - Before completion, perform the requested empty-target clean build, verify a whole-tree mirror to the target Git repo (deletions included), then push and verify remote HEAD.

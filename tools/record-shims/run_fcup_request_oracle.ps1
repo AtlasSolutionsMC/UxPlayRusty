@@ -1,8 +1,9 @@
 $ErrorActionPreference = 'Stop'
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $cc = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64\bin\cc.exe'
 $bin = Split-Path $cc
 $source = Join-Path $PSScriptRoot 'fcup_request_oracle.c'
-$referenceInclude = 'D:\Save\Uxplay\UxPlay\lib'
+$referenceInclude = Join-Path (Join-Path (Split-Path -Parent $repoRoot) 'UxPlay') 'lib'
 $responseSource = Join-Path $referenceInclude 'http_response.c'
 $exe = Join-Path $env:TEMP "fcup_request_oracle_$PID.exe"
 $expected = Join-Path $PSScriptRoot 'fcup_request.expected.xml'

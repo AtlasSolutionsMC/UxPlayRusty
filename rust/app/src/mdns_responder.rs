@@ -917,7 +917,8 @@ mod tests {
     use crate::discovery_services::{ServiceNames, ServiceTxtRecords};
     use crate::mdns_wire::{DNS_CLASS_IN, DNS_TYPE_ANY};
 
-    const ORACLE: &str = include_str!("../../record-shims/mdns_response_oracle.expected.txt");
+    const ORACLE: &str =
+        include_str!("../../../tools/record-shims/mdns_response_oracle.expected.txt");
 
     fn oracle_row(label: &str) -> Vec<&str> {
         ORACLE

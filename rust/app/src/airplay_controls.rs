@@ -500,7 +500,8 @@ mod tests {
             ("negative-infinity", b"-INFmore"),
             ("nan-payload", b"NaN(payload)"),
         ];
-        let expected = include_str!("../../record-shims/airplay_control_oracle.expected.txt");
+        let expected =
+            include_str!("../../../tools/record-shims/airplay_control_oracle.expected.txt");
 
         for line in expected
             .lines()

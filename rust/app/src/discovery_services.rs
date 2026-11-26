@@ -349,7 +349,7 @@ mod tests {
     use super::*;
 
     const C_ORACLE: &str =
-        include_str!("../../record-shims/discovery_services_oracle.expected.txt");
+        include_str!("../../../tools/record-shims/discovery_services_oracle.expected.txt");
 
     fn hex(bytes: &[u8]) -> String {
         const HEX: &[u8; 16] = b"0123456789abcdef";

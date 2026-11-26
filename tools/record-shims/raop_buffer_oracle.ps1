@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$referenceRoot = 'D:\Save\Uxplay\UxPlay'
-$msysBin = 'C:\Users\Alphacomputer\AppData\Local\Programs\MSYS2\ucrt64\bin'
+$referenceRoot = Join-Path (Split-Path -Parent $repoRoot) 'UxPlay'
+$msysBin = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64\bin'
 $cc = Join-Path $msysBin 'cc.exe'
 $shimDir = $PSScriptRoot
 $libDir = Join-Path $referenceRoot 'lib'

@@ -55,7 +55,8 @@ mod tests {
 
     #[test]
     fn matches_the_checked_in_c_oracle() {
-        for row in include_str!("../../../record-shims/compat_oracle.expected.txt").lines() {
+        for row in include_str!("../../../../tools/record-shims/compat_oracle.expected.txt").lines()
+        {
             let (code, expected_hex) = row.split_once('\t').unwrap();
             let (pairs, remainder) = expected_hex.as_bytes().as_chunks::<2>();
             assert!(remainder.is_empty());

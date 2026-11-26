@@ -2694,8 +2694,9 @@ mod tests {
 
     #[test]
     fn single_byte_request_classification_matches_c_oracle() {
-        const ORACLE: &str =
-            include_str!("../../record-shims/http_request_target_byte_oracle.expected.tsv");
+        const ORACLE: &str = include_str!(
+            "../../../tools/record-shims/http_request_target_byte_oracle.expected.tsv"
+        );
 
         for line in ORACLE.lines() {
             let mut columns = line.split('\t');

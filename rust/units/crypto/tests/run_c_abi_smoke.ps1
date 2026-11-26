@@ -1,11 +1,12 @@
 $ErrorActionPreference = 'Stop'
 
 $crate = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$sourceLib = 'D:\Save\Uxplay\UxPlay\lib'
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
+$sourceLib = Join-Path (Join-Path (Split-Path -Parent $repoRoot) 'UxPlay') 'lib'
 $output = Join-Path $crate 'target\debug'
-$msysRoot = 'C:\Users\Alphacomputer\AppData\Local\Programs\MSYS2\ucrt64'
+$msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64'
 $msysBin = Join-Path $msysRoot 'bin'
-$env:PATH = "C:\Users\Alphacomputer\.cargo\bin;$msysBin;$env:PATH"
+$env:PATH = "$msysBin;$env:PATH"
 $env:RUSTUP_TOOLCHAIN = 'stable-x86_64-pc-windows-gnu'
 $env:PKG_CONFIG_PATH = Join-Path $msysRoot 'lib\pkgconfig'
 $manifest = Join-Path $crate 'Cargo.toml'

@@ -306,7 +306,7 @@ mod tests {
             + "\n";
         assert_eq!(
             actual,
-            include_str!("../../record-shims/netutils_oracle.expected.txt")
+            include_str!("../../../tools/record-shims/netutils_oracle.expected.txt")
         );
     }
 }

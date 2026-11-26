@@ -3,7 +3,7 @@
 Run from PowerShell with:
 
 ```powershell
-& .\rust\record-shims\raop_buffer_oracle.ps1
+& .\tools\record-shims\raop_buffer_oracle.ps1
 ```
 
 The harness compiles the unchanged `lib/raop_buffer.c` and `lib/byteutils.c` from the UxPlay

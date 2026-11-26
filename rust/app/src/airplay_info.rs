@@ -189,7 +189,7 @@ mod tests {
     use super::*;
 
     const C_PLIST_ORACLE: &str =
-        include_str!("../../record-shims/http_info_plist_oracle.expected.txt");
+        include_str!("../../../tools/record-shims/http_info_plist_oracle.expected.txt");
 
     fn oracle_section(name: &str) -> String {
         let normalized = C_PLIST_ORACLE.replace("\r\n", "\n");

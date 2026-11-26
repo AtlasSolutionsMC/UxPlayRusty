@@ -296,7 +296,7 @@ mod tests {
         logger.log(ERR, "callback-replaced");
 
         let actual = events.lock().unwrap();
-        let expected = include_str!("../../record-shims/logger_oracle.expected.txt");
+        let expected = include_str!("../../../tools/record-shims/logger_oracle.expected.txt");
         let expected_rows = expected
             .lines()
             .filter(|line| !line.is_empty() && !line.starts_with('#'));

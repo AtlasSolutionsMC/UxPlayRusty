@@ -264,7 +264,7 @@ mod tests {
             fcup_request_bytes("http://localhost:7000/master.m3u8", "session-1", 7).unwrap();
         assert_eq!(
             bytes,
-            include_bytes!("../../record-shims/fcup_request.expected.bin"),
+            include_bytes!("../../../tools/record-shims/fcup_request.expected.bin"),
             "FCUP request wire bytes must match create_fcup_request() and http_response.c"
         );
         let head_end = bytes
@@ -275,7 +275,7 @@ mod tests {
         let body = &bytes[head_end + 4..];
         assert_eq!(
             body,
-            include_bytes!("../../record-shims/fcup_request.expected.xml"),
+            include_bytes!("../../../tools/record-shims/fcup_request.expected.xml"),
             "FCUP XML must match the unchanged C create_fcup_request() output byte for byte"
         );
         assert!(headers.starts_with(b"POST /event HTTP/1.1\r\nX-Apple-Session-ID: "));

@@ -1,8 +1,15 @@
-param([switch]$Record)
+param(
+    [switch] $Record,
+    [string] $ReferenceRoot,
+    [string] $Compiler = (Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64\bin\gcc.exe')
+)
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$source = 'D:\Save\Uxplay\UxPlay'
-$gcc = 'C:\Users\Alphacomputer\AppData\Local\Programs\MSYS2\ucrt64\bin\gcc.exe'
+if (-not $ReferenceRoot) {
+    $ReferenceRoot = Join-Path (Split-Path -Parent $repo) 'UxPlay'
+}
+$source = (Resolve-Path $ReferenceRoot).Path
+$gcc = $Compiler
 $executable = Join-Path $env:TEMP 'uxplay_compat_oracle.exe'
 $actual = Join-Path $env:TEMP 'uxplay_compat_oracle.actual.txt'
 $expected = Join-Path $PSScriptRoot 'compat_oracle.expected.txt'

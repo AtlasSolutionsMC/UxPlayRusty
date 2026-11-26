@@ -419,7 +419,8 @@ fn starts_ascii_case_insensitive(input: &[u8], start: usize, needle: &[u8]) -> b
 mod tests {
     use super::*;
 
-    const C_ORACLE: &str = include_str!("../../record-shims/raop_parameters_oracle.expected.txt");
+    const C_ORACLE: &str =
+        include_str!("../../../tools/record-shims/raop_parameters_oracle.expected.txt");
 
     fn oracle_records(kind: &str) -> Vec<Vec<String>> {
         C_ORACLE

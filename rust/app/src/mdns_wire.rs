@@ -320,7 +320,7 @@ fn c_string_prefix(bytes: &[u8]) -> &[u8] {
 mod tests {
     use super::*;
 
-    const ORACLE: &str = include_str!("../../record-shims/mdns_wire_oracle.expected.txt");
+    const ORACLE: &str = include_str!("../../../tools/record-shims/mdns_wire_oracle.expected.txt");
 
     fn oracle(label: &str) -> Vec<&str> {
         ORACLE

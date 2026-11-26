@@ -1,7 +1,8 @@
 param([switch]$Record)
 
-$source = 'D:\Save\Uxplay\UxPlay\lib'
-$msys = 'C:\Users\Alphacomputer\AppData\Local\Programs\MSYS2\ucrt64'
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
+$source = Join-Path (Join-Path (Split-Path -Parent $repoRoot) 'UxPlay') 'lib'
+$msys = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64'
 $gcc = Join-Path $msys 'bin\gcc.exe'
 $pkgConfig = Join-Path $msys 'bin\pkg-config.exe'
 $exe = Join-Path $env:TEMP 'uxplay_pairing_oracle.exe'

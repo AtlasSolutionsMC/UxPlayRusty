@@ -2,6 +2,8 @@
 **/target/
 /target/
 /baseline/
+/build/
+/dist/
 *.rlib
 *.exe
 *.dll

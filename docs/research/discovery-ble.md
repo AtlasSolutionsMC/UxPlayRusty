@@ -70,4 +70,3 @@ For replay compatibility, compare parsed plist trees and HTTP framing first, the
 3. Let each backend own startup, async status/registration callbacks, stop/unregister, adapter/device discovery, and platform error translation. Use `cfg(target_os)` plus Cargo feature flags so Windows-only WinRT APIs and Linux-only BlueZ APIs do not leak into portable modules.
 4. Keep CLI options and emitted status/error/exit behavior at the shared boundary. Acceptance should compare emitted service records, parsed binary plist fixtures, BLE payload bytes, CLI stdout/stderr/exit codes, and start/stop cleanup against the source modes.
 5. Keep backend integration separate from the protocol layer: embedded mDNS/plist/payload construction can be Rust-only; native DNS-SD delegates to Bonjour/WinDNS/Avahi; BlueZ and WinRT delegate to OS Bluetooth services; BleuIO needs external serial hardware; HCI needs OS-specific low-level access and privileges.
-

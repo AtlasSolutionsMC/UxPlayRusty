@@ -1,6 +1,6 @@
 # Rendering and GStreamer research
 
-Date: 2026-11-21  
+Date: 2026-11-21
 Scope: replace UxPlay's `renderers/` code in a standalone Rust application while retaining its current GStreamer pipeline behavior on Linux, macOS, BSD/Unix, and Windows.
 
 ## Source behavior to preserve

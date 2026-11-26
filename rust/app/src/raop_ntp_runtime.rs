@@ -1444,7 +1444,8 @@ mod tests {
     use std::net::UdpSocket;
     use std::sync::Mutex as StdMutex;
 
-    const C_ORACLE: &str = include_str!("../../record-shims/raop_ntp_runtime_oracle.expected.txt");
+    const C_ORACLE: &str =
+        include_str!("../../../tools/record-shims/raop_ntp_runtime_oracle.expected.txt");
     type TestLogEvents = Arc<StdMutex<Vec<(i32, String)>>>;
 
     fn hex(bytes: &[u8]) -> String {

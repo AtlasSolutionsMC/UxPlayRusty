@@ -8,10 +8,6 @@
 
 ## Current authoritative state — 2026-11-26
 
-### Workspace branch snapshot — 2026-11-26
-
-The user clarified that the source folder to publish is the old local workspace at `D:\Save\Uxplay\UxPlayRusty`. Branch `Workspace` was created from target `master` commit `61ff297`. The old workspace is not a Git checkout and contains about 25 GB of build outputs; only tracked source/documentation is represented. A normalized comparison found no Rust source changes beyond the formatting-only RAOP session edit already present on `master`. The stale old README and Linux workflow were not copied; the current README and newer beacon-cache workflow are retained. Old build directories, target folders, compiled libraries/binaries, CMake build products and `.rust-anything` tool outputs stay out of Git. The old app replay report is retained in `rust/app-cases/replay-report.md`. No tests/builds were rerun while assembling this documentation snapshot.
-
 ### Windows-first checkpoint — 2026-11-26
 
 The user requested that migration work focus on Windows first, then pause. Current Windows GNU acceptance on this host is complete for the locally verifiable scope:
@@ -24,7 +20,7 @@ The user requested that migration work focus on Windows first, then pause. Curre
 
 This does not close all Windows real-world acceptance: Bonjour `dnssd.dll` is absent, so the external-DNS-SD feature build compiles but its runtime exits with loader error 3; physical BLE adapter behavior and AirPlay interoperability on an iPhone have not been exercised. The iPhone capture cannot be supplied, so avoid speculative protocol edits. The Windows GNU build is verified, not MSVC. Do not run the final empty-target whole-project build or replace/push the entire target Git tree yet; those remain for completion of the full migration.
 
-The Linux CI hang is now localized from run `45848982191`: `backend::hci::tests::check_output_merges_stdout_and_stderr_in_write_order` exceeded 60 seconds, after five older checkout-path traceback fixture failures were also logged; the latter are fixed in commit `b049535`. Linux follow-up is paused under the user's Windows-first instruction. The old D: working tree remains outside Git; the formatter-only `raop-session` adjustment is present on target `master` at `61ff297`. Resume by reading `Checkpoints.md` and this file, then continue with Windows only if new Windows evidence/blockers appear; otherwise wait for explicit continuation to the remaining platforms and final Git delivery.
+The Linux CI hang is now localized from run `45848982191`: `backend::hci::tests::check_output_merges_stdout_and_stderr_in_write_order` exceeded 60 seconds, after five older checkout-path traceback fixture failures were also logged; the latter are fixed in commit `b049535`. Linux follow-up is paused under the user's Windows-first instruction. The current D: working tree is not a Git repository; the formatter-only `raop-session` adjustment has not been copied into the clean publication clone. Resume by reading `docs/development/Checkpoints.md` and this file, then continue with Windows only if new Windows evidence/blockers appear; otherwise wait for explicit continuation to the remaining platforms and final Git delivery.
 
 Latest CI follow-up: Linux workflow commit `ba46aacf30060d9b44f9cb36d41541a9304b4e9d` now includes `rust/beacon -> target` in the Rust cache alongside `rust/app -> target`, matching macOS. Run `45854188225` entered the standalone BLE test step at 15:58:18 UTC; `45851683522` has remained there since 15:43:19 UTC and `45848982191` since 15:27:21 UTC. None has completed yet. This may shorten fresh compiles; the old run duration cause is still unknown.
 
@@ -32,12 +28,12 @@ Resume update: the user cannot send the requested iPhone stderr/packet capture. 
 
 The macOS workflow was published as `d40cf2c`; Linux acceptance run `45837953213` passed and macOS run `45837953181` is queued. Both workflows now gate the BLE crate, whose Windows GNU tests pass 73/73; its 10-case Python replay and BlueZ callback fixture match the reference, Clippy/fmt pass, and all-target checks pass for macOS/Linux/FreeBSD. Physical BLE testing remains open. Live GitHub compare confirms `master` is 0 commits behind `FDH2/UxPlay:master`; the supplied 95-ahead/3-behind view predates merge `7e882b3`.
 
-Latest continuation: target `master` is `108 ahead / 0 behind` `FDH2/UxPlay:master` at docs commit `2b6b63db4c009321cb56ea0ff7cbc2782d26490f`; the latest code is `97bb3ebce760ef57ab2c93b419ddeeb2e949fed6`, and remote HEAD matches the docs commit. Linux run `45848982191` is running at dependency installation and macOS run `45848982170` is queued. Older Linux run `45846214749` is still in “Test standalone BLE beacon” without logs; its paired macOS run `45846214713` was cancelled while queued with no steps, so it is not a compile result. The mixed-mux AAC-ELD fixture and integration tests remain as documented in `Checkpoints.md` and the feature matrix. The user cannot provide full iPhone stderr/packet captures now, so the reported real-client frame failure stays open; do not change crypto/parser behavior without evidence. The original C reference is unchanged.
+Latest continuation: target `master` is `108 ahead / 0 behind` `FDH2/UxPlay:master` at docs commit `2b6b63db4c009321cb56ea0ff7cbc2782d26490f`; the latest code is `97bb3ebce760ef57ab2c93b419ddeeb2e949fed6`, and remote HEAD matches the docs commit. Linux run `45848982191` is running at dependency installation and macOS run `45848982170` is queued. Older Linux run `45846214749` is still in “Test standalone BLE beacon” without logs; its paired macOS run `45846214713` was cancelled while queued with no steps, so it is not a compile result. The mixed-mux AAC-ELD fixture and integration tests remain as documented in `docs/development/Checkpoints.md` and the feature matrix. The user cannot provide full iPhone stderr/packet captures now, so the reported real-client frame failure stays open; do not change crypto/parser behavior without evidence. The original C reference is unchanged.
 
 Latest source batch: compared RAOP RTP control-sync logging in unchanged `lib/raop_rtp.c` with `rust/units/raop-rtp/src/lib.rs`. C logs every valid sync packet's converted local NTP anchor, RTP thread start time, client timestamp, RTP sync timestamp, offset change from previous/current anchors, and the packet bytes grouped at 20 bytes per line. Rust previously logged only the first-sync notice; it now emits this full DEBUG row after applying each sync packet. The focused regression passes; Windows GNU RTP tests pass 17/17, app suites pass 434 + 10/99/7 and 436 + 10/99/7 with `external-dns-sd`, fmt and both Clippy modes pass. Code commit `97bb3eb` and docs commit `2b6b63d` are pushed; live compare is 108 ahead / 0 behind. Linux run `45848982191` is in progress at dependency installation, macOS `45848982170` is queued; the prior Linux run `45846214749` is still in the BLE beacon test step without logs. The user cannot provide iPhone packet captures now; real-client video remains unresolved. This is source-compatible diagnostic coverage, not evidence that live AirPlay A/V sync works.
 
 
-This file begins with a historical snapshot from 2026-11-23; use the later addenda and current `README.md`/`rust/MAP.md` for present behavior. The Rust executable is now the only application path: the C launcher/fallback and `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER` selectors are absent. `fallback_log` only reports the migration harness counter. Do not follow the old fallback instructions in the historical snapshot below.
+This file begins with a historical snapshot from 2026-11-23; use the later addenda and current `README.md`/`docs/development/MAP.md` for present behavior. The Rust executable is now the only application path: the C launcher/fallback and `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER` selectors are absent. `fallback_log` only reports the migration harness counter. Do not follow the old fallback instructions in the historical snapshot below.
 
 Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in README and the latest checkpoint. Linux run `45826231365` for commit `f6aa6d6` passes fmt, all-target tests, Clippy (`-D warnings`), embedded/external DNS-SD release builds, clean-HOME CLI smoke, raw `0xFF` argv, all three native `-rc` byte/config smokes, SETUP timing/stream/FairPlay/User-Agent diagnostics, and loopback `/server-info` 200/plist/SIGINT endpoint smoke with video disabled. Run `45818167471` failed only because its comment fixture wrote `-v` instead of the rc syntax `v`; corrected fixture passed in `45819281259`. A small follow-up routes `eport/tport` logging through an ordered effect after timing socket bind, so an ephemeral port reports its actual value; Windows GNU session tests pass 11/11, the app transcript passes 1/1, and app/session Clippy/fmt pass. Linux CI for this final log-order adjustment is pending. Earlier attempts identified and fixed smoke setup issues: `-vs 0` skips renderer initialization; `-hls` is needed for no-CSeq HTTP; Python `urllib` lowercases `X-Apple-Session-ID`, so the smoke sends raw HTTP to preserve the C-compatible exact-case lookup. A focused source audit found a production mismatch in new-protocol SETUP: unchanged `lib/crypto.c::sha_init()` uses SHA-512, but Rust `raop-session` used SHA-256 for `clear FairPlay key || Pair Verify ECDH secret`. Rust now uses SHA-512 and truncates to the first 16 bytes, matching C. C selects old-protocol clients with both `strstr("AirMyPC/2.0;xxx", user_agent)` and `strstr(user_agent, "AirMyPC")`; Rust now preserves both checks, including `AirMyPC/7200`. HEVC media is locally verified through GStreamer decode and H.265-only MP4 finalization; Linux run `45826231365` also passes the H.265 MP4 integration test in embedded and external DNS-SD modes. The real iPhone video issue remains unresolved without full stderr, raw packet capture and same-device C comparison. The two current upstream UxPlay commits are in a separate detached worktree; the original C checkout is unchanged.
 
@@ -47,7 +43,7 @@ A fresh comparison with lib/raop_ntp.c found that double inverse_two_pow_n[RAOP_
 
 ### 2026-11-26 follow-up — HTTP request-target C differential
 
-Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 byte values embedded in a URL, seven line-ending boundary cases, and one request split across two reads. This found that llhttp accepts a bare LF request-line delimiter before protocol text, but does not normalize LF after the protocol token; a lone CR inside the URL is classified as `HPE_INVALID_URL`. Rust now follows that behavior. Windows GNU parser tests pass 60/60, HTTP transport 99/99, all-target tests pass 432 + 10/99/7 default and 434 + 10/99/7 with `external-dns-sd`; Clippy (`-D warnings`) and fmt pass in both modes. Linux run `45832729499` passes format, all-target tests/Clippy in both DNS-SD modes, release builds and endpoint smoke. The C oracle generator is `rust/record-shims/run_http_request_target_byte_oracle.ps1`.
+Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 byte values embedded in a URL, seven line-ending boundary cases, and one request split across two reads. This found that llhttp accepts a bare LF request-line delimiter before protocol text, but does not normalize LF after the protocol token; a lone CR inside the URL is classified as `HPE_INVALID_URL`. Rust now follows that behavior. Windows GNU parser tests pass 60/60, HTTP transport 99/99, all-target tests pass 432 + 10/99/7 default and 434 + 10/99/7 with `external-dns-sd`; Clippy (`-D warnings`) and fmt pass in both modes. Linux run `45832729499` passes format, all-target tests/Clippy in both DNS-SD modes, release builds and endpoint smoke. The C oracle generator is `tools/record-shims/run_http_request_target_byte_oracle.ps1`.
 
 ### Latest 2026-11-26 parser expansion
 
@@ -60,7 +56,7 @@ Reviewed the three upstream commits. Rust already has client-name CR/LF strippin
 ## 1. สิ่งที่ทำใน session นี้
 
 ### 1.1 ตรวจสถานะพอร์ตก่อนรัน (snapshot วันที่ 2026-11-23)
-- อ่าน `rust/MAP.md`, `Checkpoints.md` → `Latest Resume State`, `rust/HANDOFF.md`, `README.md`
+- อ่าน `docs/development/MAP.md`, `docs/development/Checkpoints.md` → `Latest Resume State`, `docs/development/HANDOFF.md`, `README.md`
 - สรุปได้ว่าโปรเจกต์อยู่ใน阶段 **ยังไม่ cutover**:
   - 45 C units: complete 7, partial 27, pending 10, claimed 1
   - (historical; superseded) startup ปกติยัง fallback ไป `baseline/original-build/uxplay.exe`
@@ -128,7 +124,7 @@ GStreamer error (
 1. **`decryption of video packet failed` ซ้ำจำนวนมากในรอบแรก**
    - หมายถึง AES mirror decryption ใน path ของ Rust ไม่ตรงกับสิ่งที่ iPhone ส่ง
    - การ decrypt ใช้ข้อมูลจาก SETUP/FairPlay/Pair Verify ได้แก่ media key, EIV, `streamConnectionID` และ mirror AES-CTR state
-   - นี่คือ release blocker ตาม `rust/MAP.md` → Critical-path priority #1 (cryptography / encrypted video) และ feature matrix แถว **Encrypted screen mirroring and video**
+   - นี่คือ release blocker ตาม `docs/development/MAP.md` → Critical-path priority #1 (cryptography / encrypted video) และ feature matrix แถว **Encrypted screen mirroring and video**
 
 2. **mirror worker หยุด (`running is no longer true`) หลังเริ่ม stream**
    - อาจเป็นผลต่อเนื่องจาก decrypt fail หรือเป็น GStreamer pipeline error อีกชั้นหนึ่ง
@@ -137,7 +133,7 @@ GStreamer error (
    - ต้องได้ full message ก่อนวินิจฉัยว่าเป็น codec caps / plugin / bus error หรือ shutdown หลัง decrypt fail
 
 ### บริบทสำคัญ
-- 本地ทดสอบใน `Checkpoints.md` เคยผ่านด้วย fixture สynthetic:
+- 本地ทดสอบใน `docs/development/Checkpoints.md` เคยผ่านด้วย fixture สynthetic:
   - SPS/PPS/IDR จาก fixture → `h264parse ! avdec_h264 ! fakesink`
   -encrypted RTP → decrypt → `.h264` dump ตรงตาม fixture
 - อย่างไรก็ตาม MAP ระบุชัดว่า local simulation **ไม่ได้พิสูจน์ Apple interoperability**
@@ -204,7 +200,7 @@ taskkill /PID 22432 /T /F
 ## 7. ไฟล์ที่เกี่ยวข้อง
 
 - `D:\Save\Uxplay\UxPlayRusty\rust\MAP.md` — ledger หลัก / Critical-path priorities / Feature acceptance matrix
-- `D:\Save\Uxplay\UxPlayRusty\Checkpoints.md` → `Latest Resume State`
+- `D:\Save\Uxplay\UxPlayRusty\docs/development/Checkpoints.md` → `Latest Resume State`
 - `D:\Save\Uxplay\UxPlayRusty\rust\app\src\main.rs` — Rust-only startup; no reference-launch or environment selector remains
 - `D:\Save\Uxplay\UxPlayRusty\rust\app-cases\http\raw-byte-diff.ps1` — วิธี start server และรัน HTTP differential
 - `D:\Save\Uxplay\UxPlayRusty\rust\units\raop-rtp-mirror\`
@@ -220,7 +216,7 @@ taskkill /PID 22432 /T /F
 
 ## 9. Addendum: RAOP header limits and CSeq (2026-11-26)
 
-- Before editing, read this file, `rust/MAP.md` and the latest checkpoint. Compared `lib/raop.c`, `utils.c::parse_int`, and `http_request.c::http_request_header_get_size` with the Rust request adapter and response builder.
+- Before editing, read this file, `docs/development/MAP.md` and the latest checkpoint. Compared `lib/raop.c`, `utils.c::parse_int`, and `http_request.c::http_request_header_get_size` with the Rust request adapter and response builder.
 - Ported the 20-field / 64-byte name / 1024-byte value limits before connection classification, returning the source 431 response; invalid CSeq now logs the source message and yields no reply. Valid decimal CSeq is normalized for regular replies and the single-RAOP-client 409 response.
 - Windows GNU default/`external-dns-sd` app gates pass (426/428 app tests plus 10/98/7 auxiliary targets), both Clippy modes with warnings denied pass, and formatting is clean. Focused request/response tests cover accepted and rejected field-count/name/value boundaries, drop, normalization, and strtol range behavior.
 - The C reference checkout remains unchanged. Continue local handler/runtime work; final clean build and target Git sync/push remain at the end. The real-device mirroring issue and native Unix runtime are still unresolved.
@@ -284,7 +280,7 @@ taskkill /PID 22432 /T /F
 
 - To honor the request to pull the two upstream UxPlay commits without changing the C reference checkout, created detached worktree `D:\Save\Uxplay\UxPlay-upstream-20261126` at upstream `fbd040e70e754e01fa7e6df810fecd08b6484ada`. The original `D:\Save\Uxplay\UxPlay` stays on its prior `master`; its untracked probe artifacts predate this task.
 - Both commits only change `uxplay.cpp`: PIN password callback sentinel `-2`, missing-DeviceID admission under `-restrict`, and CR/LF sanitization of pairing-register client names. Rust already implements these source behaviors. No merge to the reference or Rust code change was needed.
-- Resume by reading this section and `Checkpoints.md` first. Target Rusty `master` last verified at `dc0f914c204f8628fb5023be5854cb10fb1178eb`; the current local workflow is still untracked in the target review clone because Git writes lack the `workflow` scope. GitHub reports no Actions run yet.
+- Resume by reading this section and `docs/development/Checkpoints.md` first. Target Rusty `master` last verified at `dc0f914c204f8628fb5023be5854cb10fb1178eb`; the current local workflow is still untracked in the target review clone because Git writes lack the `workflow` scope. GitHub reports no Actions run yet.
 - Static placeholder scan of integrated app/renderer/beacon source found no `todo!` or `unimplemented!`; the only FIXME is the intentional C-compatible `playlistInsert` no-op. This does not close native OS, live Apple-client, Linux CI, or release packaging acceptance.
 
 ## 19. Addendum: current startup documentation reconciliation (2026-11-26)
@@ -294,7 +290,7 @@ taskkill /PID 22432 /T /F
 
 ## 20. Addendum: resumed acceptance blocker audit (2026-11-26)
 
-- Re-read this file and `Checkpoints.md` before continuing. Target `master` is now verified at `e7834a62a3c23ab8fff6834bc52bbbcbe9d6462a`; local HEAD matches remote. `.github/workflows/rust-linux.yml` is the sole untracked path. GitHub CLI scope remains `repo` only (no `workflow`); the Actions API returns `total_count: 0`.
+- Re-read this file and `docs/development/Checkpoints.md` before continuing. Target `master` is now verified at `e7834a62a3c23ab8fff6834bc52bbbcbe9d6462a`; local HEAD matches remote. `.github/workflows/rust-linux.yml` is the sole untracked path. GitHub CLI scope remains `repo` only (no `workflow`); the Actions API returns `total_count: 0`.
 - Rechecked for Docker, Podman, WSL, Linux GCC/Clang, Zig and cross-build wrappers; none are installed. This host cannot provide the native Linux app build/runtime gate.
 - Targeted static review found no `todo!`/`unimplemented!` in integrated app/renderer/beacon code and no obvious unhandled protocol session effect; the only FIXME is the source-compatible `playlistInsert` no-op. Avoid speculative parser/crypto changes without a source discrepancy.
 - Remaining concrete blockers: authorization to publish `.github/workflows/rust-linux.yml` and inspect/fix the resulting Linux Actions run; full iPhone stderr/raw packets and same-device C comparison for the reported mirror frame failure; native supported-OS/device/release acceptance. The migration is not complete.
@@ -307,7 +303,7 @@ taskkill /PID 22432 /T /F
 
 ## 22. Addendum: Linux test portability fixes (2026-11-26)
 
-- The second Ubuntu run compiled and executed 426 tests; 424 passed and two failed for platform-specific reasons. `fcup_request.expected.bin` had been treated as text by Git, converting the unchanged C HTTP CRLF fixture to LF on Linux even though `http_response.c` writes CRLF bytes explicitly. Marked `rust/record-shims/*.bin` as `-text` so the fixture stays byte-exact on every host.
+- The second Ubuntu run compiled and executed 426 tests; 424 passed and two failed for platform-specific reasons. `fcup_request.expected.bin` had been treated as text by Git, converting the unchanged C HTTP CRLF fixture to LF on Linux even though `http_response.c` writes CRLF bytes explicitly. Marked `tools/record-shims/*.bin` as `-text` so the fixture stays byte-exact on every host.
 - Fixed the Unix non-UTF-8 `-rc` test to pass the absolute temp-file path it created; the previous test wrote under a temp directory but invoked `-rc` with only the basename.
 - Next: sync these changes, push a checkpoint, and inspect the full Ubuntu rerun through tests, Clippy and both release configurations. Linux acceptance is still open.
 - Linux Clippy fixes are in `rust/app/src/host_identity.rs`, `pairing_registry.rs`, and `server_runtime.rs`; rerun native CI for both DNS-SD modes.
@@ -315,7 +311,7 @@ taskkill /PID 22432 /T /F
 
 ### 2026-11-26 — Linux CI green
 - Ubuntu 24.04 workflow run `45801697290` succeeded on commit `5b8fec0e8572e6ed9c114128085743d9e7096f04`: format, all-target tests, Clippy (`-D warnings`) and optimized release builds all passed for embedded mDNS and `external-dns-sd`.
-- Linux CI acceptance for those two configurations is closed. Native Linux device/runtime validation and macOS/BSD acceptance remain open. Resume by reading this file and `Checkpoints.md`; the published target `master` is at the above commit.
+- Linux CI acceptance for those two configurations is closed. Native Linux device/runtime validation and macOS/BSD acceptance remain open. Resume by reading this file and `docs/development/Checkpoints.md`; the published target `master` is at the above commit.
 
 ### 2026-11-26 — Linux release CLI smoke
 - Run `45803017972` passed all Linux gates on code commit `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`, including external-DNS-SD Clippy after converting the narrow Unix suppression to `#[expect(dead_code)]` for non-test binaries only.

@@ -8,7 +8,7 @@ implementation and source compatibility over general debugging, optimization or 
 Reference project (READ ONLY): `D:\Save\Uxplay\UxPlay`
 Rust project: `D:\Save\Uxplay\UxPlayRusty`
 
-This file is Agent Two's own journal. Main Agent history in `Checkpoints.md` is preserved
+This file is Agent Two's own journal. Main Agent history in `docs/development/Checkpoints.md` is preserved
 unchanged; detailed Agent Two work lives here.
 
 ---
@@ -17,12 +17,12 @@ unchanged; detailed Agent Two work lives here.
 
 | Record | State found |
 |---|---|
-| `rust/MAP.md` | Present, 74,718 bytes, last write 2026-11-23 05:47. Read Persistent Goal Execution Policy, Critical-path priorities, Current proof, Analyzer units ledger, Manual units, Feature acceptance matrix. |
-| `Checkpoints.md` | Present, 253,383 bytes, last write 2026-11-23 05:47. Read `Latest Resume State` (lines 6–17) and the recent 2026-11-23 entries. |
-| `TestingBeforeResume.md` | Present, 150 lines. Earlier real-iPhone test session; documents `*** ERROR decryption of video packet failed` and a truncated `GStreamer error (` line. |
-| `AgentsTwo.md` | **Did not exist.** Created by this session before any implementation change. |
-| `rust/PORT_MAP.md` | Present but reports 0/12. MAP line 78 documents this as a known source-association false negative. **Not used as a completion metric.** |
-| `rust/HANDOFF.md` | Present, older (2026-11-22 13:06). Superseded by MAP + Checkpoints. |
+| `docs/development/MAP.md` | Present, 74,718 bytes, last write 2026-11-23 05:47. Read Persistent Goal Execution Policy, Critical-path priorities, Current proof, Analyzer units ledger, Manual units, Feature acceptance matrix. |
+| `docs/development/Checkpoints.md` | Present, 253,383 bytes, last write 2026-11-23 05:47. Read `Latest Resume State` (lines 6–17) and the recent 2026-11-23 entries. |
+| `docs/history/TestingBeforeResume.md` | Present, 150 lines. Earlier real-iPhone test session; documents `*** ERROR decryption of video packet failed` and a truncated `GStreamer error (` line. |
+| `docs/history/AgentsTwo.md` | **Did not exist.** Created by this session before any implementation change. |
+| `docs/development/PORT_MAP.md` | Present but reports 0/12. MAP line 78 documents this as a known source-association false negative. **Not used as a completion metric.** |
+| `docs/development/HANDOFF.md` | Present, older (2026-11-22 13:06). Superseded by MAP + Checkpoints. |
 
 No Git metadata exists in `D:\Save\Uxplay\UxPlayRusty`. All change tracking in this file is an
 explicit filesystem ledger. No commit or clean-tree claim is made.
@@ -162,7 +162,7 @@ Observable consequence: after a second SETUP carrying a different `streamConnect
 different FairPlay-derived key) while the mirror worker is still alive, every decrypted payload is
 garbage, its first byte is non-zero, and the renderer logs
 `*** ERROR decryption of video packet failed ` repeatedly — exactly the shape reported in
-`TestingBeforeResume.md`.
+`docs/history/TestingBeforeResume.md`.
 
 **Status of the iPhone hypothesis:** this code divergence is verified by reading both sources. It is
 **not yet** a verified root cause of the user's iPhone failure, because (a) the tested binary predates
@@ -251,16 +251,16 @@ reproduction, and C-reference device comparison. They are not reported as passed
 
 | Path | Change | Status |
 |---|---|---|
-| `AgentsTwo.md` | created and updated (this file) | documentation only |
+| `docs/history/AgentsTwo.md` | created and updated (this file) | documentation only |
 | `rust/units/raop-rtp-mirror/src/runtime.rs` | live re-key delivery + `LiveProcessor` + regression test | implementation, all gates passed |
-| `rust/MAP.md` | appended verified Agent Two evidence to the `mirror_buffer.c`, `raop_rtp_mirror.c` and encrypted-mirroring matrix entries | record update, no status promotion |
-| `Checkpoints.md` | added an attributed Agent Two checkpoint section | record update, Main Agent history preserved |
+| `docs/development/MAP.md` | appended verified Agent Two evidence to the `mirror_buffer.c`, `raop_rtp_mirror.c` and encrypted-mirroring matrix entries | record update, no status promotion |
+| `docs/development/Checkpoints.md` | added an attributed Agent Two checkpoint section | record update, Main Agent history preserved |
 
 No other implementation file changed. Reference project `D:\Save\Uxplay\UxPlay`: **untouched**.
 Verified timestamps of `lib/raop_rtp_mirror.c`, `lib/mirror_buffer.c`, `lib/raop_handlers.h`
 remain 2026-11-21 19:16:19 after the work.
 
-`rust/MAP.md` and `Checkpoints.md` were updated only with verified facts for this batch. Main Agent
+`docs/development/MAP.md` and `docs/development/Checkpoints.md` were updated only with verified facts for this batch. Main Agent
 retains ownership of completion and cutover decisions; no source unit was promoted to `complete`.
 
 ---
@@ -270,7 +270,7 @@ retains ownership of completion and cutover decisions; no source unit was promot
 | ID | Class | Item |
 |---|---|---|
 | D1 | P2 (record, do not chase) | Real-iPhone `decryption of video packet failed` + truncated `GStreamer error (`. Needs a current-build reproduction with full stderr captured, and a same-device C-reference comparison. The earlier tested binary predates current source. The source divergence fixed here is a plausible contributor but **not** a confirmed root cause of that device log. |
-| D2 | P2 | `TestingBeforeResume.md` §6 still states PID 22432 is running. That process was killed and verified gone (no `uxplay` process, port 57788 free). The document is stale on that point; left unchanged because it belongs to the earlier session's record. |
+| D2 | P2 | `docs/history/TestingBeforeResume.md` §6 still states PID 22432 is running. That process was killed and verified gone (no `uxplay` process, port 57788 free). The document is stale on that point; left unchanged because it belongs to the earlier session's record. |
 | D3 | P3 | `rust/units/sap-hash` generated duplicate crate noted in MAP line 64; already implemented, no action. |
 | D4 | P1 for Main Agent | App two-mode tests, Clippy, rustfmt and both release builds now pass in this batch (525/527). The mirror C oracle and real-device reproduction of this fix have not been run. Do not promote `lib/raop_rtp_mirror.c` or `lib/mirror_buffer.c` to `complete` without live-client evidence. |
 
@@ -299,8 +299,8 @@ worker's AES-CTR state, matching `raop_rtp_mirror_init_aes` → `mirror_buffer_i
 reference. One deterministic regression proves both successful new-stream decryption and rejection
 of stale-stream data.
 
-**Modified files:** `rust/units/raop-rtp-mirror/src/runtime.rs`, `AgentsTwo.md` (created),
-`rust/MAP.md`, `Checkpoints.md`.
+**Modified files:** `rust/units/raop-rtp-mirror/src/runtime.rs`, `docs/history/AgentsTwo.md` (created),
+`docs/development/MAP.md`, `docs/development/Checkpoints.md`.
 
 **Verification evidence:** mirror crate tests 11/11 pass (baseline 10/10); crate fmt/Clippy exit 0;
 negative control reproduced the failed-decryption marker when the fix was removed; app all-target
@@ -324,5 +324,5 @@ untouched.
 
 **Important decisions:** chose source-parity fix over broad debugging; preserved public APIs; used a
 shared re-key slot rather than a second CTR stream on startup; did not weaken assertions; did not
-modify Main Agent's MAP/Checkpoints or `TestingBeforeResume.md`; no Git commit or clean-tree claim
+modify Main Agent's MAP/Checkpoints or `docs/history/TestingBeforeResume.md`; no Git commit or clean-tree claim
 (no Git metadata exists).
