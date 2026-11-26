@@ -175,10 +175,10 @@ fn c_string_prefix(value: &str) -> &str {
 #[cfg(unix)]
 fn local_timestamp() -> String {
     // SAFETY: a null pointer requests the current epoch seconds without writing through it.
-    let mut epoch = unsafe { libc::time(std::ptr::null_mut()) };
+    let epoch = unsafe { libc::time(std::ptr::null_mut()) };
     let mut local = std::mem::MaybeUninit::<libc::tm>::uninit();
     // SAFETY: `epoch` and the writable `tm` storage are valid for `localtime_r`.
-    if unsafe { libc::localtime_r(&mut epoch, local.as_mut_ptr()) }.is_null() {
+    if unsafe { libc::localtime_r(&epoch, local.as_mut_ptr()) }.is_null() {
         return String::new();
     }
     // SAFETY: localtime_r returned a non-null pointer and initialized the tm value.

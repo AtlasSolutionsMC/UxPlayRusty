@@ -114,7 +114,7 @@ fn find_unix_mac_address() -> Option<MacAddress> {
             let link = unsafe { &*entry.ifa_addr.cast::<libc::sockaddr_ll>() };
             let mut octets = [0; 6];
             for (target, source) in octets.iter_mut().zip(link.sll_addr.iter()) {
-                *target = *source as u8;
+                *target = *source;
             }
             if octets.iter().any(|octet| *octet != 0) {
                 return Some(MacAddress(octets));

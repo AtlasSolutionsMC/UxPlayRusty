@@ -1361,7 +1361,7 @@ fn home_directory() -> Option<PathBuf> {
         }
         // SAFETY: pw_dir points to the NUL-terminated path stored in the passwd entry.
         let bytes = unsafe { CStr::from_ptr(path) }.to_bytes();
-        return Some(PathBuf::from(std::ffi::OsStr::from_bytes(bytes)));
+        Some(PathBuf::from(std::ffi::OsStr::from_bytes(bytes)))
     }
     #[cfg(not(unix))]
     None

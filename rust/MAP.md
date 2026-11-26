@@ -225,3 +225,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 - Run `45798765738` compiled successfully and ran 426 unit tests (424 passed). Two tests exposed fixture/test portability issues. The FCUP `.bin` oracle was normalized by Git as text, although unchanged `http_response.c` emits explicit CRLF; `rust/record-shims/*.bin` is now marked `-text` to preserve exact wire bytes. The Unix invalid-UTF-8 `-rc` test wrote into a temporary directory but passed only a basename; it now passes the created absolute path.
 - Next: publish this checkpoint and inspect the complete CI rerun. Linux Clippy and release gates have not yet run successfully.
 - Follow-up: `.gitattributes` also sets `-diff` for these `.bin` oracle fixtures, so whitespace checks do not misread HTTP CRLF as trailing spaces.
+
+### 2026-11-26 — Linux Clippy portability follow-up
+- CI run `45799885614` passed format and embedded-mDNS tests, then exposed three Clippy findings only present on Unix targets. Removed the redundant Linux byte cast, made `localtime_r`'s epoch reference immutable, and used the Unix `home_directory()` block's tail expression. These are source-shape changes only; release and external-DNS-SD gates remain unverified.
+- Continue with the current Linux workflow until all two-mode test, Clippy and release build steps pass.

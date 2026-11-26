@@ -265,3 +265,4 @@ taskkill /PID 22432 /T /F
 - The second Ubuntu run compiled and executed 426 tests; 424 passed and two failed for platform-specific reasons. `fcup_request.expected.bin` had been treated as text by Git, converting the unchanged C HTTP CRLF fixture to LF on Linux even though `http_response.c` writes CRLF bytes explicitly. Marked `rust/record-shims/*.bin` as `-text` so the fixture stays byte-exact on every host.
 - Fixed the Unix non-UTF-8 `-rc` test to pass the absolute temp-file path it created; the previous test wrote under a temp directory but invoked `-rc` with only the basename.
 - Next: sync these changes, push a checkpoint, and inspect the full Ubuntu rerun through tests, Clippy and both release configurations. Linux acceptance is still open.
+- Linux Clippy fixes are in `rust/app/src/host_identity.rs`, `pairing_registry.rs`, and `server_runtime.rs`; rerun native CI for both DNS-SD modes.
