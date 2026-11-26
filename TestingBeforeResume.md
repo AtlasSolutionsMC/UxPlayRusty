@@ -18,7 +18,7 @@ A fresh comparison with lib/raop_ntp.c found that double inverse_two_pow_n[RAOP_
 
 ### 2026-11-26 follow-up — HTTP request-target C differential
 
-Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 byte values embedded in a URL, seven line-ending boundary cases, and one request split across two reads. This found that llhttp accepts a bare LF request-line delimiter before protocol text, but does not normalize LF after the protocol token; a lone CR inside the URL is classified as `HPE_INVALID_URL`. Rust now follows that behavior. Windows GNU parser tests pass 60/60, HTTP transport 99/99, all-target tests pass 432 + 10/99/7 default and 434 + 10/99/7 with `external-dns-sd`; Clippy (`-D warnings`) and fmt pass in both modes. Linux CI is pending publication. The C oracle generator is `rust/record-shims/run_http_request_target_byte_oracle.ps1`.
+Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 byte values embedded in a URL, seven line-ending boundary cases, and one request split across two reads. This found that llhttp accepts a bare LF request-line delimiter before protocol text, but does not normalize LF after the protocol token; a lone CR inside the URL is classified as `HPE_INVALID_URL`. Rust now follows that behavior. Windows GNU parser tests pass 60/60, HTTP transport 99/99, all-target tests pass 432 + 10/99/7 default and 434 + 10/99/7 with `external-dns-sd`; Clippy (`-D warnings`) and fmt pass in both modes. Linux run `45832729499` passes format, all-target tests/Clippy in both DNS-SD modes, release builds and endpoint smoke. The C oracle generator is `rust/record-shims/run_http_request_target_byte_oracle.ps1`.
 
 ## 1. สิ่งที่ทำใน session นี้
 
