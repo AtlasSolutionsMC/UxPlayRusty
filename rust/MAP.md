@@ -237,3 +237,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 - Workflow run `45801697290` succeeded at `5b8fec0e8572e6ed9c114128085743d9e7096f04`: fmt, all-target tests, Clippy with warnings denied, and release builds passed in both embedded-mDNS and `external-dns-sd` configurations. The dedicated Linux CI gate is complete for both configurations; physical/native OS runtime acceptance remains open.
 - Latest pushed code/checkpoint is `5b8fec0e8572e6ed9c114128085743d9e7096f04`. Resume by reading `Checkpoints.md` and `TestingBeforeResume.md` before making the next port change.
 - Portability lint uses a narrow `#[expect(dead_code)]` on the non-test Unix external-DNS-SD build; tests continue compiling and checking the Windows loader errors.
+
+### 2026-11-26 — standalone Linux CLI smoke added
+- Linux workflow `45803017972` passed all gates on `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`, including `expect(dead_code)` gating for the non-test Unix external-DNS-SD target.
+- Added a release-binary smoke for `-h` and `-v` under an empty temporary HOME; confirm it on the next workflow run. Continue the protocol/runtime port frontier after this CI confirmation.

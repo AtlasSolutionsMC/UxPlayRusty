@@ -52,6 +52,12 @@ jobs:
       - name: Build embedded mDNS release
         run: cargo build --manifest-path rust/app/Cargo.toml --release
 
+      - name: Smoke standalone CLI
+        run: |
+          home="$(mktemp -d)"
+          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -h >/dev/null
+          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
+
       - name: Test external DNS-SD configuration
         run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features external-dns-sd
 

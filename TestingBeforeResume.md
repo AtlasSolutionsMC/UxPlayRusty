@@ -271,3 +271,8 @@ taskkill /PID 22432 /T /F
 ### 2026-11-26 — Linux CI green
 - Ubuntu 24.04 workflow run `45801697290` succeeded on commit `5b8fec0e8572e6ed9c114128085743d9e7096f04`: format, all-target tests, Clippy (`-D warnings`) and optimized release builds all passed for embedded mDNS and `external-dns-sd`.
 - Linux CI acceptance for those two configurations is closed. Native Linux device/runtime validation and macOS/BSD acceptance remain open. Resume by reading this file and `Checkpoints.md`; the published target `master` is at the above commit.
+
+### 2026-11-26 — Linux release CLI smoke
+- Run `45803017972` passed all Linux gates on code commit `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`, including external-DNS-SD Clippy after converting the narrow Unix suppression to `#[expect(dead_code)]` for non-test binaries only.
+- Added a workflow step to invoke the embedded-mDNS release binary with `-h` and `-v` under an empty temporary home, confirming standalone Linux CLI startup without user config. This workflow-only addition is pending its next CI run.
+- Latest target `master` at this checkpoint: `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`.
