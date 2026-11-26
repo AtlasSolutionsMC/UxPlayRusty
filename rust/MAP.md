@@ -268,8 +268,8 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 - Rust had used SHA-256 in production and its prior tests, which falsely confirmed the same assumption. `raop-session` and the in-process app transcript now use SHA-512 with first-16-byte truncation. Focused session test and complete local PIN/Pair Verify/FairPlay/SETUP encrypted audio/video transcript pass; rustfmt passes. This is a source-derived protocol fix; actual Apple playback still needs device retest and full logs.
 
 ### 2026-11-26 — old-protocol User-Agent selector aligned with C
-- C's test is `strstr("AirMyPC/2.0;xxx", user_agent)`. Rust incorrectly also tested whether the incoming User-Agent contained `AirMyPC`, which made unlisted strings choose the old unhashed AES key. The Rust selector now uses the exact C substring direction, including empty-header behavior; regression covers listed, unlisted and embedded forms.
-- Windows GNU `raop-session` tests pass 10/10, Clippy with `-D warnings` and rustfmt pass. Full Ubuntu workflow run `45815592088` passes after this correction. This small compatibility correction is separate from the SHA-512 paired-key fix.
+- C makes two checks: `strstr("AirMyPC/2.0;xxx", user_agent)` and `strstr(user_agent, "AirMyPC")`. The Rust selector must preserve both substring directions, including empty-header behavior. A correction in the current batch restores the second branch and covers `AirMyPC/7200`, embedded matches and unrelated agents.
+- The earlier 10/10 session suite and Linux run `45815592088` verified a port that omitted C's second check; they are superseded for this selector. The corrected focused test and full Linux workflow are pending.
 
 ### 2026-11-26 — RAOP key and legacy selector Linux acceptance
 - Linux run `45814844764` passed the complete Ubuntu workflow after the paired-key SHA-512 fix; run `45815592088` passed all stages after the source-direction User-Agent selector fix. The latter includes both feature configurations, release builds and endpoint runtime smoke.

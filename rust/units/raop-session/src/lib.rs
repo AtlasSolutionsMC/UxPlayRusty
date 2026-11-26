@@ -528,9 +528,11 @@ pub fn setup(
     Ok(transition)
 }
 
-/// Match `strstr(OLD_PROTOCOL_CLIENT_USER_AGENT_LIST, user_agent)` in raop_handlers.h.
+/// Match both legacy User-Agent checks in `raop_handlers.h`.
 pub fn is_old_protocol_client(user_agent: Option<&str>) -> bool {
-    user_agent.is_some_and(|agent| OLD_PROTOCOL_CLIENT_USER_AGENT_LIST.contains(agent))
+    user_agent.is_some_and(|agent| {
+        OLD_PROTOCOL_CLIENT_USER_AGENT_LIST.contains(agent) || agent.contains("AirMyPC")
+    })
 }
 
 /// Handle RECORD's latency and analog-jack response headers.
@@ -759,13 +761,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn old_protocol_user_agent_matches_source_strstr_direction() {
+    fn old_protocol_user_agent_matches_both_source_strstr_checks() {
         assert!(!is_old_protocol_client(None));
         assert!(is_old_protocol_client(Some("AirMyPC/2.0")));
         assert!(is_old_protocol_client(Some("AirMyPC")));
         assert!(is_old_protocol_client(Some("")));
-        assert!(!is_old_protocol_client(Some("AirMyPC/7200")));
-        assert!(!is_old_protocol_client(Some("Player AirMyPC/2.0")));
+        assert!(is_old_protocol_client(Some("AirMyPC/7200")));
+        assert!(is_old_protocol_client(Some("Player AirMyPC/2.0")));
+        assert!(is_old_protocol_client(Some("prefixAirMyPC/2.0suffix")));
+        assert!(!is_old_protocol_client(Some("AirPlay/2.0")));
     }
 
     fn binary_plist(value: Value) -> Vec<u8> {

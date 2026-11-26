@@ -133,7 +133,7 @@ jobs:
               env["XDG_CONFIG_HOMEDIR"] = home
               config = os.path.join(home, "comment.rc")
               with open(config, "wb") as rc:
-                  rc.write(b"# ignored \xff\n-v\n")
+                  rc.write(b"# ignored \xff\nv\n")
               result = subprocess.run(
                   [executable, b"-rc", os.fsencode(config)],
                   env=env,
