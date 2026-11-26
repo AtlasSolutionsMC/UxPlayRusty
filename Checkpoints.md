@@ -1,5 +1,18 @@
 # UxPlayRusty Checkpoints
 
+## Windows delivery goal — current checkpoint (2026-11-27)
+
+The user has started a new Windows delivery goal using the attached scope and `DEVELOPMENT_PLAN_WINDOWS.md`. This supersedes older notes that say to wait for a later resume request. The implementation target is the ordinary `D:\Save\Uxplay\UxPlayRusty` folder; `UxPlayRusty(Final)` is reserved for cleanup after main acceptance.
+
+- GitHub repo: `AtlasSolutionsMC/UxPlayRusty`; default branch is `master`; live branches include `Workspace` and `master`.
+- The ordinary development folder now has local Git branch `windows-delivery`, based on `origin/Workspace` commit `53fa163404402d88c746b01f174febe79ff24d5a`; it tracks `origin/Workspace` and is not pushed yet. GitHub default is `master`; the separate `UxPlayRusty(Final)` folder remains untouched.
+- Before Git initialization, a read-only normalized diff against `Workspace` identified five pre-existing content changes (`.github/workflows/rust-linux.yml`, `Checkpoints.md`, `README.md`, `TestingBeforeResume.md`, `rust/MAP.md`). These remain unstaged; preserve and review them. No wholesale copy was made.
+- Windows GNU stable is installed; rustc/cargo 1.100.0. MSYS2 UCRT64: GCC 16.2.0, GStreamer 1.28.9, GLib 2.90.1, OpenSSL 4.1.0. D3D11 and Vulkan GStreamer factories are installed; Vulkan hardware runtime remains unverified. Active shell default is MSVC, where rustfmt is missing; GNU `cargo fmt --check` passes.
+- Baseline results in the ordinary folder: app `cargo test --all-targets` passes 550 (434+10+99+7); with `external-dns-sd`, 552 (436+10+99+7); beacon all-targets 73 (68+5). App Clippy `-D warnings` passes default and external modes; beacon Clippy passes. `cargo fmt --check` passes for app/beacon. Release builds pass app default, app external-DNS-SD, and beacon. App `-h`/`-v` and beacon `--help` pass with MSYS2 `bin` on PATH; app help/version fail without the native runtime path (Windows status `-1073741515`), so packaging must bundle runtime dependencies.
+- Local branch `windows-delivery` tracks `origin/Workspace`; its base revision is `53fa163404402d88c746b01f174febe79ff24d5a`. It has not been pushed. Five pre-existing content changes in workflow/docs plus this goal's map/checkpoint edits remain in the working tree; review and stage selectively.
+- Milestone 1 baseline is complete. Next: commit/push only this goal's map/checkpoint changes, then start the documentation/workspace path audit for milestone 2.
+- Milestone 1 baseline is complete locally; release builds, smoke commands, and baseline tests are recorded. See [`Map2Window.md`](Map2Window.md) for the full milestone map and evidence.
+
 ## Goal
 Create a standalone Rust replacement for the reference project at `D:\Save\Uxplay\UxPlay`, preserving all agreed features, supported platforms, and externally visible behavior. Use the `rust-anything` whole-app workflow and retain the original project as reference.
 
