@@ -178,13 +178,22 @@ impl BeaconBackend for WinRtBackend {
         if let Some(error) = stopped_publisher_stop_error(publisher_was_released) {
             return Err(error.to_owned());
         }
-        let stop_result = self
+        let publisher = self
             .publisher
             .as_ref()
-            .ok_or_else(|| "WinRT publisher is not active".to_owned())?
+            .ok_or_else(|| "WinRT publisher is not active".to_owned())?;
+        let stop_result = publisher
             .publisher
             .Stop()
             .map_err(|error| error.to_string());
+        if stop_result.is_ok() {
+            let status = publisher
+                .publisher
+                .Status()
+                .map(status_name)
+                .unwrap_or("UNKNOWN");
+            crate::source_println!("Publisher stop requested; status is: {status}");
+        }
         finish_stop(
             &mut self.publisher,
             &mut self.advertised_port,
@@ -266,6 +275,7 @@ fn status_name(status: BluetoothLEAdvertisementPublisherStatus) -> &'static str 
         BluetoothLEAdvertisementPublisherStatus::Aborted => "ABORTED",
         BluetoothLEAdvertisementPublisherStatus::Created => "CREATED",
         BluetoothLEAdvertisementPublisherStatus::Started => "STARTED",
+        BluetoothLEAdvertisementPublisherStatus::Stopping => "STOPPING",
         BluetoothLEAdvertisementPublisherStatus::Stopped => "STOPPED",
         BluetoothLEAdvertisementPublisherStatus::Waiting => "WAITING",
         _ => "UNKNOWN",
