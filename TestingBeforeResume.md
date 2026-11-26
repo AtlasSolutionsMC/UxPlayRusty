@@ -259,3 +259,9 @@ taskkill /PID 22432 /T /F
 - User authorized GitHub CLI `workflow` scope. Pushed `.github/workflows/rust-linux.yml`; first Ubuntu 24.04 run is `45798130202` on workflow commit `dd73925021fe61c016b240402d3d6155efdfe413`.
 - Native dependencies installed and fmt passed. Test compilation failed in Unix NTP ancillary timestamp parsing: `libc::CMSG_LEN(...) as _` left the comparison target ambiguous on Linux (`E0282`, `raop_ntp_runtime.rs:1255`). `size_of`/`size_of_val` imports also warned unused on Unix.
 - Fixed by comparing CMSG length in explicit `usize` and gating the Windows-only imports with `#[cfg(windows)]`. `cargo +stable-x86_64-pc-windows-gnu fmt --manifest-path rust/app/Cargo.toml -- --check` passes. Push this source fix, then inspect the next complete Linux run; no Linux pass is claimed yet.
+
+## 22. Addendum: Linux test portability fixes (2026-11-26)
+
+- The second Ubuntu run compiled and executed 426 tests; 424 passed and two failed for platform-specific reasons. `fcup_request.expected.bin` had been treated as text by Git, converting the unchanged C HTTP CRLF fixture to LF on Linux even though `http_response.c` writes CRLF bytes explicitly. Marked `rust/record-shims/*.bin` as `-text` so the fixture stays byte-exact on every host.
+- Fixed the Unix non-UTF-8 `-rc` test to pass the absolute temp-file path it created; the previous test wrote under a temp directory but invoked `-rc` with only the basename.
+- Next: sync these changes, push a checkpoint, and inspect the full Ubuntu rerun through tests, Clippy and both release configurations. Linux acceptance is still open.

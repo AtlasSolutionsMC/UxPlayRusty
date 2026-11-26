@@ -442,7 +442,11 @@ mod tests {
         let path = directory.join(&filename);
         std::fs::write(&path, b"-n receiver\n").unwrap();
 
-        let argv = [OsString::from("uxplay"), OsString::from("-rc"), filename];
+        let argv = [
+            OsString::from("uxplay"),
+            OsString::from("-rc"),
+            path.as_os_str().to_owned(),
+        ];
         assert!(matches!(explicit_rc(&argv), RcSelection::File(found) if found == path));
 
         let missing = directory.join(OsString::from_vec(b"missing-\xfe.rc".to_vec()));

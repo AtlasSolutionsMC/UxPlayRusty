@@ -220,3 +220,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 - [x] Implement the BLE command and all four backend code paths; source CLI/backend replay passes 10/10, while adapter/radio behavior remains unverified.
 - [x] Remove app fallback and run final manual Windows GNU release build/replay; raw-byte server differential passes 8/8.
 - [ ] Run remaining source-unit gates where analyzable, native builds/runtime on each supported OS, packaging and release cutover instructions. Generic `rust-anything app_lift` refuses because no units are wired through its generated metadata and its subprocess selected unavailable MSVC `link.exe`; this workflow refusal does not contradict the manual pure-Rust GNU build.
+
+### 2026-11-26 — Ubuntu CI test portability
+- Run `45798765738` compiled successfully and ran 426 unit tests (424 passed). Two tests exposed fixture/test portability issues. The FCUP `.bin` oracle was normalized by Git as text, although unchanged `http_response.c` emits explicit CRLF; `rust/record-shims/*.bin` is now marked `-text` to preserve exact wire bytes. The Unix invalid-UTF-8 `-rc` test wrote into a temporary directory but passed only a basename; it now passes the created absolute path.
+- Next: publish this checkpoint and inspect the complete CI rerun. Linux Clippy and release gates have not yet run successfully.
