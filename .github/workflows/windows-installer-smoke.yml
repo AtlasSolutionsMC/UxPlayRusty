@@ -9,8 +9,6 @@ on:
       - '.github/workflows/windows-installer-smoke.yml'
       - 'rust/**'
       - 'tools/windows/**'
-      - 'docs/development/WindowsRelease.md'
-      - 'Map2Window.md'
       - 'README.md'
       - 'LICENSE'
 
