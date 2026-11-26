@@ -40,7 +40,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: rust/app -> target
+          workspaces: |
+            rust/app -> target
+            rust/beacon -> target
 
       - name: Format standalone BLE beacon
         run: cargo fmt --manifest-path rust/beacon/Cargo.toml -- --check
