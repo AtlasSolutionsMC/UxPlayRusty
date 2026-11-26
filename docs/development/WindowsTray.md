@@ -22,7 +22,8 @@ user's Windows `Run` key. The value is synchronized at launch and whenever
 Restart applies the config. A named mutex prevents multiple receiver instances.
 If Explorer restarts, the application registers its tray icon again.
 
-Normal GUI logs are appended to `%APPDATA%\UxPlay\logs\uxplay.log`. Invoking
+Normal GUI logs are appended to `%APPDATA%\UxPlay\logs\uxplay.log`, unless
+`logging.file` selects another path. Invoking
 the executable with command-line arguments attaches to the caller's console or
 opens one for diagnostics. The release executable uses the Windows GUI
 subsystem for the no-argument launch.

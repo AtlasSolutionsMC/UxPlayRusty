@@ -7,7 +7,6 @@ use std::mem::size_of;
 use std::os::windows::ffi::OsStrExt;
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use windows_sys::Win32::Foundation::{
     ERROR_ALREADY_EXISTS, GetLastError, HWND, LPARAM, LRESULT, WPARAM,
 };
@@ -45,7 +44,7 @@ const RUN_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
 static UI_THREAD_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 static TASKBAR_CREATED_MESSAGE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-static GUI_LOG_FILE: OnceLock<std::fs::File> = OnceLock::new();
+static GUI_LOG_FILE: std::sync::Mutex<Option<std::fs::File>> = std::sync::Mutex::new(None);
 
 pub fn attach_console_for_cli() {
     unsafe {
@@ -55,20 +54,25 @@ pub fn attach_console_for_cli() {
     }
 }
 
-pub fn initialize_gui_logging() {
+pub fn initialize_gui_logging(configured_path: Option<&std::path::Path>) {
     let Some(appdata) = std::env::var_os("APPDATA") else {
         return;
     };
-    let directory = std::path::PathBuf::from(appdata)
-        .join("UxPlay")
-        .join("logs");
-    if std::fs::create_dir_all(&directory).is_err() {
+    let base = std::path::PathBuf::from(appdata).join("UxPlay");
+    let log_path = configured_path.map_or_else(
+        || base.join("logs").join("uxplay.log"),
+        std::path::Path::to_owned,
+    );
+    let Some(directory) = log_path.parent() else {
+        return;
+    };
+    if std::fs::create_dir_all(directory).is_err() {
         return;
     }
     let Ok(file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(directory.join("uxplay.log"))
+        .open(log_path)
     else {
         return;
     };
@@ -83,7 +87,9 @@ pub fn initialize_gui_logging() {
             handle,
         );
     }
-    let _ = GUI_LOG_FILE.set(file);
+    *GUI_LOG_FILE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(file);
 }
 
 pub fn show_error(text: &str) {
@@ -140,6 +146,7 @@ pub fn run(options: Options, argv: Vec<OsString>) -> ExitCode {
                             message(&error, true);
                             continue;
                         }
+                        initialize_gui_logging(crate::windows_config::user_log_path().as_deref());
                         control.request_exit();
                         join_server(&mut server);
                         server = Some(start_server(next_options, Arc::clone(&control)));

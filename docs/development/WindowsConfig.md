@@ -27,7 +27,11 @@ working while allowing command-line values to override saved preferences.
 | `video.h265` | Boolean | `false` | Enable H.265 mirror negotiation |
 | `video.low_latency` | Boolean | `false` | Bound mirror queues and drop stale decoded frames |
 | `video.vsync` | Boolean | `true` | Synchronize the video sink to its clock |
+| `ble.enabled` | Boolean | `false` | Start/stop the Windows `uxplay-beacon.exe` companion |
+| `ble.handoff_path` | String path, absolute or relative to this config file | `%APPDATA%\UxPlay\uxplay.ble` | Handoff file shared with the BLE companion |
 | `startup.enabled` | Boolean | `false` | Saved startup preference; Windows registration is implemented with the tray/startup milestone |
+| `logging.level` | `"normal"`, `"debug"`, `"debug_data"` | `"normal"` | Select routine, diagnostic, or packet-level logging |
+| `logging.file` | String path, absolute or relative to this config file | `%APPDATA%\UxPlay\logs\uxplay.log` | GUI log destination |
 
 Only listed keys are accepted. Wrong TOML types, unknown keys, invalid renderer
 names, empty receiver names, and out-of-range dimensions/FPS stop startup with
@@ -35,3 +39,9 @@ the offending key and reason. The application does not silently ignore typos.
 
 The file is plain TOML and can be edited in any text editor. Save it and use the
 tray's Restart action to apply changes once the tray milestone is available.
+
+When BLE is enabled, UxPlay writes the negotiated AirPlay port and its process
+identity to the handoff file, then starts the Windows Runtime BLE companion next
+to `uxplay.exe`. If the companion binary or an adapter is unavailable, UxPlay
+logs the failure and keeps AirPlay running. Shutdown removes the handoff file so
+the companion can stop its advertisement before UxPlay exits.

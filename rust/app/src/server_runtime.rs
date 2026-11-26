@@ -357,7 +357,16 @@ fn run_server(
         },
     )?;
 
-    write_ble_handoff(&options, server_port);
+    #[cfg(windows)]
+    let ble_handoff_written = write_ble_handoff(&options, server_port);
+    #[cfg(windows)]
+    let beacon_manager = if ble_handoff_written {
+        start_beacon_companion(&options)
+    } else {
+        None
+    };
+    #[cfg(not(windows))]
+    let _ = write_ble_handoff(&options, server_port);
     let mut listeners = Some(listeners);
     let result = loop {
         let current_listeners = match listeners.take() {
@@ -407,6 +416,10 @@ fn run_server(
     };
     watchdog_stop.store(true, std::sync::atomic::Ordering::Release);
     let _ = watchdog_thread.join();
+    #[cfg(windows)]
+    if let Some(beacon_manager) = beacon_manager {
+        beacon_manager.stop();
+    }
     outputs
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -565,14 +578,14 @@ fn remove_output_files(options: &Options) {
     }
 }
 
-fn write_ble_handoff(options: &Options, raop_port: u16) {
+fn write_ble_handoff(options: &Options, raop_port: u16) -> bool {
     let Some(path) = options.ble_filename.as_deref() else {
-        return;
+        return false;
     };
     let pid = std::process::id();
     if pid > 4_194_304 {
         println!("Failed to write BLE beacon data: process ID exceeds 4194304");
-        return;
+        return false;
     }
     let process_name = std::env::args_os()
         .next()
@@ -581,10 +594,118 @@ fn write_ble_handoff(options: &Options, raop_port: u16) {
         .into_owned();
     if write_ble_handoff_file(Path::new(path), raop_port, pid, process_name.as_bytes()).is_err() {
         println!("Failed to open file {path}");
-        return;
+        return false;
     }
     println!("port {raop_port}");
     println!("Bluetooth LE beacon-based service discovery is possible: PID data written to {path}");
+    true
+}
+
+#[cfg(windows)]
+struct BeaconManager {
+    stop_requested: Arc<AtomicBool>,
+    worker: std::thread::JoinHandle<()>,
+}
+
+#[cfg(windows)]
+impl BeaconManager {
+    fn stop(self) {
+        self.stop_requested
+            .store(true, std::sync::atomic::Ordering::Release);
+        let _ = self.worker.join();
+    }
+}
+
+#[cfg(windows)]
+fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
+    use std::os::windows::process::CommandExt;
+    use std::process::{Command, Stdio};
+    use std::time::Instant;
+
+    let handoff_path = PathBuf::from(options.ble_filename.as_ref()?);
+    let executable = match std::env::current_exe() {
+        Ok(path) => path.with_file_name("uxplay-beacon.exe"),
+        Err(error) => {
+            eprintln!("UxPlay: could not locate uxplay-beacon.exe: {error}");
+            return None;
+        }
+    };
+    if !executable.is_file() {
+        eprintln!(
+            "UxPlay: BLE companion {} is missing; AirPlay will continue without BLE discovery",
+            executable.display()
+        );
+        return None;
+    }
+
+    let child = Command::new(&executable)
+        .arg("WinRt")
+        .arg("--path")
+        .arg(&handoff_path)
+        .current_dir(executable.parent().unwrap_or_else(|| Path::new(".")))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW)
+        .spawn();
+    let mut child = match child {
+        Ok(child) => child,
+        Err(error) => {
+            eprintln!(
+                "UxPlay: could not start BLE companion {}: {error}; AirPlay remains available",
+                executable.display()
+            );
+            return None;
+        }
+    };
+    println!("Started Windows BLE companion (pid {}).", child.id());
+
+    let stop_requested = Arc::new(AtomicBool::new(false));
+    let thread_stop = Arc::clone(&stop_requested);
+    let worker = std::thread::spawn(move || {
+        loop {
+            if thread_stop.load(std::sync::atomic::Ordering::Acquire) {
+                // Removing the handoff asks uxplay-beacon to stop its platform publisher cleanly.
+                let _ = std::fs::remove_file(&handoff_path);
+                let deadline = Instant::now() + Duration::from_secs(3);
+                while Instant::now() < deadline {
+                    match child.try_wait() {
+                        Ok(Some(_)) => return,
+                        Ok(None) => std::thread::sleep(Duration::from_millis(100)),
+                        Err(error) => {
+                            eprintln!("UxPlay: could not monitor BLE companion: {error}");
+                            break;
+                        }
+                    }
+                }
+                if child.try_wait().ok().flatten().is_none() {
+                    eprintln!(
+                        "UxPlay: BLE companion did not stop after handoff removal; terminating it"
+                    );
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
+                return;
+            }
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    eprintln!("UxPlay: BLE companion exited ({status}); AirPlay remains available");
+                    return;
+                }
+                Ok(None) => std::thread::sleep(Duration::from_millis(250)),
+                Err(error) => {
+                    eprintln!("UxPlay: could not monitor BLE companion: {error}");
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return;
+                }
+            }
+        }
+    });
+    Some(BeaconManager {
+        stop_requested,
+        worker,
+    })
 }
 
 fn write_ble_handoff_file(

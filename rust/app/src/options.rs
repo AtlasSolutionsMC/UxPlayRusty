@@ -770,6 +770,14 @@ where
                     options.suppress_packet_debug_data = false;
                 }
             }
+            "-nodebug" => {
+                options.debug_log = false;
+                options.suppress_packet_debug_data = false;
+            }
+            "-debug-data" => {
+                options.debug_log = true;
+                options.suppress_packet_debug_data = false;
+            }
             "-h" | "--help" | "-?" | "-help" => {
                 return ParseOutcome::Exit(CliExit { code: 0, stdout: format!("{}{}", notices, format_help(binary_name)), stderr: stderr_notices.borrow().clone() });
             }
@@ -1381,6 +1389,26 @@ mod tests {
         assert_eq!(from_cli.server_name, "cli");
         assert!(from_cli.h265_support);
         assert!(from_cli.low_latency);
+    }
+
+    #[test]
+    fn config_can_disable_legacy_ble_and_debug_settings() {
+        let capabilities = BuildCapabilities {
+            host: HostPlatform::Windows,
+            dbus: false,
+            apple_p2p: false,
+            default_srgb: false,
+        };
+        let options = ready(parse_with_config_named_and_path_check(
+            Some(("legacy.rc", "ble C:/old/handoff.ble\nd\n")),
+            &["-ble".into(), "off".into(), "-nodebug".into()],
+            &[],
+            capabilities,
+            "uxplay",
+            |_| true,
+        ));
+        assert_eq!(options.ble_filename, None);
+        assert!(!options.debug_log);
     }
 
     #[test]

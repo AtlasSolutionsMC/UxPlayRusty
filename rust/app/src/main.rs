@@ -160,7 +160,7 @@ fn main() -> ExitCode {
     if native_argv.len() > 1 {
         windows_tray::attach_console_for_cli();
     } else {
-        windows_tray::initialize_gui_logging();
+        windows_tray::initialize_gui_logging(windows_config::user_log_path().as_deref());
     }
     // The C entry point receives argv in the active ANSI code page on Windows.
     let argv = compat::c_runtime_arguments(&native_argv);

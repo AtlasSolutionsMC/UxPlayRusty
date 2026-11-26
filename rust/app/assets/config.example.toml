@@ -24,3 +24,16 @@ vsync = true
 [startup]
 # Start UxPlay when the current Windows user signs in. Applied by the tray/startup milestone.
 enabled = false
+
+[ble]
+# Start the Windows BLE service-discovery companion. If enabled, it starts after the AirPlay port
+# is ready and stops when this receiver exits. An unavailable adapter does not stop AirPlay.
+enabled = false
+# Optional handoff-file location. Relative paths are resolved beside this config file.
+# handoff_path = "uxplay.ble"
+
+[logging]
+# normal, debug (protocol/pipeline details), or debug_data (includes packet data).
+level = "normal"
+# Optional log-file location. Relative paths are resolved beside this config file.
+# file = "logs/uxplay.log"
