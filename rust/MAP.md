@@ -241,3 +241,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — standalone Linux CLI smoke added
 - Linux workflow `45803017972` passed all gates on `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`, including `expect(dead_code)` gating for the non-test Unix external-DNS-SD target.
 - Added a release-binary smoke for `-h` and `-v` under an empty temporary HOME; confirm it on the next workflow run. Continue the protocol/runtime port frontier after this CI confirmation.
+
+### 2026-11-26 — Ubuntu HLS integration failure
+- Run `45803581645` reached tests after native dependency installation. Format passed; 425 tests passed, while `server_runtime::hls_lifecycle_tests::runtime_hls_effect_decodes_to_eos_then_cleans_up_current_session` failed after fetching its playlist twice and TS segment once without an EOS callback in 10 seconds. Isolated HLS renderer tests and other HLS lifecycle tests passed, so this is presently an app integration/decoder-path discrepancy, not a confirmed source logic defect.
+- Added a test-only renderer logger capture to the assertion to surface GStreamer errors in the next Linux run. Inspect that log before changing runtime behavior. The CLI smoke and later workflow gates were skipped because the test step failed.

@@ -803,6 +803,15 @@ mod hls_lifecycle_tests {
         let uri = format!("http://{address}/playlist.m3u8");
 
         let logger = Arc::new(crate::logger::Logger::new());
+        logger.set_level(crate::logger::INFO);
+        let renderer_logs = Arc::new(Mutex::new(Vec::<String>::new()));
+        let callback_logs = Arc::clone(&renderer_logs);
+        logger.set_callback(Some(Arc::new(move |level, message| {
+            callback_logs.lock().unwrap().push(format!(
+                "{level}: {}",
+                String::from_utf8_lossy(message)
+            ));
+        })));
         let options = Options {
             use_audio: false,
             audio_sink: "0".into(),
@@ -864,8 +873,9 @@ mod hls_lifecycle_tests {
         assert_eq!(
             eos_uri.as_deref(),
             Some(uri.as_str()),
-            "local HLS HTTP requests: {:?}",
-            *requests.lock().unwrap()
+            "local HLS HTTP requests: {:?}; renderer logs: {:?}",
+            *requests.lock().unwrap(),
+            *renderer_logs.lock().unwrap()
         );
         let requests = requests.lock().unwrap();
         assert!(requests.iter().any(|request| {
