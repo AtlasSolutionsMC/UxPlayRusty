@@ -45,8 +45,6 @@ pub enum RouteDecision {
     Handler(Handler),
     /// No handler matched; preserve the response initialized to `200 OK`.
     DefaultOk,
-    /// No HTTP route matched in the reference server's registered URL table.
-    NotFound,
     /// An unrecognized method under `RTSP/1.0` changes the response to 501.
     NotImplemented,
 }
@@ -113,7 +111,7 @@ pub fn classify(method: &[u8], url: &[u8], protocol: &[u8], hls_request: bool) -
                 .then_some(Handler::SetProperty),
             _ => None,
         };
-        return handler.map_or(RouteDecision::NotFound, RouteDecision::Handler);
+        return handler.map_or(RouteDecision::DefaultOk, RouteDecision::Handler);
     }
 
     if hls_request {
@@ -249,9 +247,9 @@ mod tests {
         }
         assert_eq!(
             classify_http(b"POST", b"/getProperty"),
-            RouteDecision::NotFound
+            RouteDecision::DefaultOk
         );
-        assert_eq!(classify_http(b"POST", b"/play/"), RouteDecision::NotFound);
+        assert_eq!(classify_http(b"POST", b"/play/"), RouteDecision::DefaultOk);
     }
 
     #[test]
@@ -266,7 +264,7 @@ mod tests {
         );
         assert_eq!(
             classify_http(b"GET", b"/server-info?x=1"),
-            RouteDecision::NotFound
+            RouteDecision::DefaultOk
         );
         assert_eq!(
             classify_http(b"PUT", b"/setProperty?foo=bar"),
@@ -274,7 +272,7 @@ mod tests {
         );
         assert_eq!(
             classify_http(b"PUT", b"/setProperty"),
-            RouteDecision::NotFound
+            RouteDecision::DefaultOk
         );
     }
 
@@ -301,7 +299,7 @@ mod tests {
             ),
             RouteDecision::Handler(Handler::ServerInfo)
         );
-        assert_eq!(classify_http(b"post", b"/play"), RouteDecision::NotFound);
-        assert_eq!(classify_http(b"POST", b"/Play"), RouteDecision::NotFound);
+        assert_eq!(classify_http(b"post", b"/play"), RouteDecision::DefaultOk);
+        assert_eq!(classify_http(b"POST", b"/Play"), RouteDecision::DefaultOk);
     }
 }

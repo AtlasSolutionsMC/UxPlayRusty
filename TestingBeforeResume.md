@@ -2,7 +2,7 @@
 
 วันที่: 2026-11-23  
 ผู้เขียน: session นี้  
-สถานะ: **ยังไม่ได้แก้โค้ด** มีเพียงรัน binary ที่ build ค้างไว้ และเขียนไฟล์สรุปนี้เท่านั้น
+สถานะ: บันทึกย้อนหลัง ณ 2026-11-23; ดู addenda ด้านล่างสำหรับการทำงานต่อวันที่ 2026-11-26
 
 ---
 
@@ -157,3 +157,52 @@ taskkill /PID 22432 /T /F
 - `D:\Save\Uxplay\UxPlayRusty\rust\units\raop-rtp-mirror\`
 - `D:\Save\Uxplay\UxPlayRusty\rust\units\mirror-buffer\`
 - `D:\Save\Uxplay\UxPlayRusty\baseline\original-build\uxplay.exe` — C reference สำหรับเทียบ
+
+## 8. Addendum: X11 renderer integration (2026-11-26)
+
+- This file was read before resuming work. The earlier statement that the session made no code changes is historical and ends at the timestamp in the prior addendum.
+- The optional Unix `x_display_fix.h` behavior is now implemented in Rust and connected to the renderer: window title traversal, EWMH fullscreen, the old-GStreamer title zoom fix, F11/left-Alt+Enter navigation, mirror-frame lookup, and HLS window polling.
+- Windows GNU all-target tests, both feature modes, app Clippy (`-D warnings`) and formatting pass. A standalone `x86_64-unknown-linux-gnu` API harness check and Clippy pass. Native Unix GStreamer/X11, a real X server/window manager, and on-device video remain unverified.
+- Continue with remaining locally verifiable media/protocol gaps. Do not run the final clean release build until implementation batches are complete. Keep the target GitHub synchronization and final clean build as the end-of-migration gates, and keep the original C checkout unchanged.
+
+## 9. Addendum: RAOP header limits and CSeq (2026-11-26)
+
+- Before editing, read this file, `rust/MAP.md` and the latest checkpoint. Compared `lib/raop.c`, `utils.c::parse_int`, and `http_request.c::http_request_header_get_size` with the Rust request adapter and response builder.
+- Ported the 20-field / 64-byte name / 1024-byte value limits before connection classification, returning the source 431 response; invalid CSeq now logs the source message and yields no reply. Valid decimal CSeq is normalized for regular replies and the single-RAOP-client 409 response.
+- Windows GNU default/`external-dns-sd` app gates pass (426/428 app tests plus 10/98/7 auxiliary targets), both Clippy modes with warnings denied pass, and formatting is clean. Focused request/response tests cover accepted and rejected field-count/name/value boundaries, drop, normalization, and strtol range behavior.
+- The C reference checkout remains unchanged. Continue local handler/runtime work; final clean build and target Git sync/push remain at the end. The real-device mirroring issue and native Unix runtime are still unresolved.
+
+## 10. Addendum: process termination hooks (2026-11-26)
+
+- Compared `uxplay.cpp`'s Unix SIGINT/SIGTERM/SIGHUP and Windows Ctrl+C/close/shutdown handling against the app runtime and installed `ctrlc` crate. Rust had only Ctrl+C semantics enabled.
+- Enabled `ctrlc`'s `termination` feature. Its Unix implementation registers SIGTERM and SIGHUP alongside SIGINT; its Windows handler accepts console control events. All events call the existing shared shutdown callback and normal server cleanup.
+- `cargo tree -e features -i ctrlc` confirms activation; a minimal harness with `termination` also checks for Linux, macOS and FreeBSD. Windows GNU check, default and `external-dns-sd` all-target tests/Clippy, and fmt pass. This Windows host could not inject native Unix signals or Windows close/shutdown events.
+
+## 11. Addendum: unmatched route fallback (2026-11-26)
+
+- Read this checkpoint file in full before resuming. Compared `lib/raop.c` request initialization, route selection and `handler == NULL` logging with `protocol_routes.rs`, `protocol_dispatch.rs` and `ProtocolConnection::request`.
+- C initializes 200 OK before route selection. Unknown HTTP/1.1 method/URL combinations leave that response unchanged and log `Unhandled Client Request: %s %s %s`; unknown RTSP methods set 501 and also log because no handler is selected. Rust incorrectly returned HTTP 404 and emitted no matching INFO log.
+- Removed the HTTP-only 404 decision, retained default 200, and added byte-preserving source INFO logging for every route decision without a selected handler. Focused Windows GNU tests pass 3/3 for dispatch bytes, live HTTP response/log and RTSP 501/log. Default/feature all-target suites pass 428/430 app tests plus auxiliary 10/98/7 targets; both Clippy modes (`-D warnings`) and fmt check pass.
+- The app-level unsupported-HLS precondition can drop requests before route dispatch; the regression enables HLS support so it exercises the unmatched-route behavior itself. Full default/feature suites, Clippy and final clean build remain later gates. Original C files remain unchanged.
+
+- Follow-up audit: `lib/fcup_request.h` explicitly logs socket error code, platform message and trailing newline after a failed single `send()`. Tightened the existing HLS route integration regression from prefix-only to the complete C-shaped error on Windows (`WSAENOTSOCK`) and Unix (`EBADF`); focused Windows GNU test passes. This closes the MAP's FCUP logger acceptance item; wire bytes, single-send and nonnegative partial-send behavior were already covered.
+
+## 12. Addendum: HLS FCUP request ID lifetime (2026-11-26)
+
+- Compared `airplay_video.c::get_next_FCUP_RequestID` and `airplay_video_init` with the HLS store. C increments one `FCUP_RequestID` stored on the long-lived server video object. Rust kept a counter on each playlist and reset it for each new HLS playback.
+- Moved the counter to `AirPlayVideoStore`, incrementing it only when generating an FCUP Fetch action. Cache clearing does not reset it, matching the source object's lifetime. Regression checks master/media IDs 1/2, the next playback 3, and post-cache-clear playback 4.
+- Focused Windows GNU test passes. Default/feature all-target app tests pass 429/431 plus auxiliary 10/98/7 targets; both Clippy modes (`-D warnings`) and fmt check pass. C reference remains unchanged.
+
+## 13. Correction: HLS FCUP request ID belongs to each slot (2026-11-26)
+
+- The conclusion above that C keeps one server-wide counter was incorrect. Re-read the complete `airplay_video_t` structure, `airplay_video_init()`, new-play allocation, reuse path, and `get_next_FCUP_RequestID()` caller: every cached slot is its own allocated `airplay_video_t`, and initialization sets its `FCUP_RequestID` to zero. Reusing the stored UUID keeps that slot/counter; allocating or recreating a slot resets it.
+- Reverted the incorrect store-global counter. Rust keeps `next_request_id` in each `AirPlayVideo`, incrementing for each FCUP Fetch on that playlist. The revised test proves master/media IDs 1/2/3, UUID reuse continues at 4, a new slot starts at 1, and clearing slots means the next one starts at 1.
+- Focused Windows GNU regression passes. Default/feature all-target suites pass 429/431 app tests plus auxiliary 10/98/7 targets; both Clippy modes (`-D warnings`) and fmt check pass. This addendum supersedes the conclusion in Addendum 12; the original C tree remains unchanged.
+
+## 14. Addendum: final build and replay boundary (2026-11-26)
+
+- Built the default Windows GNU release binary from the previously absent/empty `rust/app/target/acceptance-release`, then built the `external-dns-sd` release configuration. Both pass; `-h` exits 0.
+- Final all-target suites pass: default app 429 plus 10/98/7 auxiliary tests; feature app 431 plus 10/98/7. Clippy with `-D warnings` and fmt check pass in both configurations.
+- Rust Anything server replay reports 5/8 at 0 fallback; the three failures are close/reset reads (`hls-master-missing-current-video`, `play-invalid-body-with-session`, `server-info`), each of which passes its own 1/1 replay. Raw C/Rust HTTP byte comparison passes 8/8 after normalizing only `Date`.
+- Upstream source refresh fetched exactly two commits, both touching `uxplay.cpp`: PIN-mode password callback sentinel, `-restrict` admission for missing DeviceID, and registration-name CR/LF sanitation. The behaviors are present in the Rust port. No merge/update was applied to the original C checkout to keep it unchanged.
+- Target clone fetched and is current with remote `master` before synchronization. Next: mirror the workspace's source/doc tree into the isolated target review clone while excluding Git metadata and generated builds/baselines; inspect staged additions/modifications/deletions; push the authorized exact-tree replacement. Do not touch the original C checkout.

@@ -550,6 +550,9 @@ fn start_feedback_watchdog(
                 if stop.load(std::sync::atomic::Ordering::Acquire) {
                     break;
                 }
+                if hls_eos.enabled {
+                    video_renderer_rs::port::waiting_for_x11_window();
+                }
                 if hls_eos.enabled
                     && let Some(uri) = video_renderer_rs::port::video_renderer_take_hls_eos_uri()
                 {

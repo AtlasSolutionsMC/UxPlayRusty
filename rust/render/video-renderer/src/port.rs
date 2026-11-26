@@ -11,6 +11,7 @@
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, OnceLock};
 
+use crate::x11_fix::{SearchResult, X11WindowFix};
 use glib::{ControlFlow, MainLoop};
 use gstreamer as gst;
 use gstreamer::prelude::*;
@@ -223,6 +224,7 @@ pub struct VideoRenderer {
     base_time_ns: u64,
     hls: Arc<Mutex<HlsState>>,
     external_window_handle: Arc<std::sync::atomic::AtomicUsize>,
+    x11_window_fix: Arc<Mutex<Option<X11WindowFix>>>,
     logger: LogCallback,
 }
 
@@ -250,12 +252,24 @@ impl VideoRenderer {
         let mut type_jpeg = None;
         let mut sync = false;
         let external_window_handle = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let auto_sink = config.video_sink.contains("autovideosink")
+            || config.video_sink.contains("fpsdisplaysink");
+        let x11_candidate = auto_sink
+            || config.video_sink.contains("ximagesink")
+            || config.video_sink.contains("xvimagesink");
+        let x11_window_fix = Arc::new(Mutex::new(if x11_candidate {
+            let version = gst::version();
+            X11WindowFix::open(
+                &config.server_name,
+                config.initial_fullscreen,
+                (version.0, version.1) < (1, 20),
+            )
+        } else {
+            None
+        }));
 
         let clock = gst::SystemClock::obtain();
         clock.set_property("clock-type", gst::ClockType::Realtime);
-        let auto_sink = config.video_sink.contains("autovideosink")
-            || config.video_sink.contains("fpsdisplaysink");
-
         let codecs = if hls_video {
             type_hls = Some(0);
             vec![Codec::Hls]
@@ -427,6 +441,7 @@ impl VideoRenderer {
             base_time_ns: u64::MAX,
             hls: Arc::new(Mutex::new(hls_state)),
             external_window_handle,
+            x11_window_fix,
             logger,
         })
     }
@@ -606,6 +621,34 @@ impl VideoRenderer {
             }
         }
         let _ = appsrc.push_buffer(buffer);
+        let use_x11 = self.active_entry().is_none_or(|entry| {
+            entry
+                .discovered_sink
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .as_ref()
+                .is_none_or(element_uses_x11)
+        });
+        if let Some(fix) = self
+            .x11_window_fix
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .as_mut()
+        {
+            match fix.search_after_frame(use_x11) {
+                SearchResult::Waiting(attempt) => log(
+                    &self.logger,
+                    LogLevel::Debug,
+                    &format!("Looking for X11 UxPlay Window, attempt {attempt}"),
+                ),
+                SearchResult::Found(_) => log(
+                    &self.logger,
+                    LogLevel::Info,
+                    "\n*** X11 Windows: Use key F11 or (left Alt)+Enter to toggle full-screen mode\n",
+                ),
+                SearchResult::NotSearching => {}
+            }
+        }
         (0, RenderOutcome::Submitted)
     }
 
@@ -790,10 +833,27 @@ impl VideoRenderer {
     }
 
     pub fn waiting_for_x11_window(&self) -> bool {
-        // The source's X_DISPLAY_FIX window discovery is an optional X11
-        // adapter. The portable renderer reports false when that adapter is
-        // not compiled into this crate.
-        false
+        let Some(hls_id) = self.type_hls else {
+            return false;
+        };
+        let use_x11 = self
+            .renderers
+            .get(hls_id)
+            .and_then(Option::as_ref)
+            .and_then(|entry| {
+                entry
+                    .discovered_sink
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .as_ref()
+                    .map(element_uses_x11)
+            })
+            .unwrap_or(true);
+        self.x11_window_fix
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .as_mut()
+            .is_some_and(|fix| fix.waiting_for_window(use_x11))
     }
 
     pub fn set_window_handle(&self, handle: usize) {
@@ -815,6 +875,7 @@ impl VideoRenderer {
         let eos = Arc::clone(&entry.eos);
         let hls = Arc::clone(&self.hls);
         let discovered_sink = Arc::clone(&entry.discovered_sink);
+        let x11_window_fix = Arc::clone(&self.x11_window_fix);
         let logger = Arc::clone(&self.logger);
         let loop_ = main_loop.clone();
         let source = bus.create_watch(None, glib::Priority::DEFAULT, move |bus, message| {
@@ -827,6 +888,7 @@ impl VideoRenderer {
                 &eos,
                 &hls,
                 &discovered_sink,
+                &x11_window_fix,
                 &loop_,
                 &logger,
             );
@@ -1055,6 +1117,7 @@ fn handle_bus_message(
     eos: &Arc<Mutex<bool>>,
     hls: &Arc<Mutex<HlsState>>,
     discovered_sink: &Arc<Mutex<Option<gst::Element>>>,
+    x11_window_fix: &Arc<Mutex<Option<X11WindowFix>>>,
     main_loop: &MainLoop,
     logger: &LogCallback,
 ) {
@@ -1082,6 +1145,26 @@ fn handle_bus_message(
         hls_video_seek_to_start_position(pipeline, hls);
     }
     match message.view() {
+        gst::MessageView::Element(_) => {
+            if let Ok(gst_video::NavigationMessage::Event(event_message)) =
+                gst_video::NavigationMessage::parse(message)
+                && let Ok(event) = gst_video::NavigationEvent::parse(&event_message.event)
+            {
+                let key_event = match event {
+                    gst_video::NavigationEvent::KeyPress { key, .. } => Some((key, true)),
+                    gst_video::NavigationEvent::KeyRelease { key, .. } => Some((key, false)),
+                    _ => None,
+                };
+                if let Some((key, pressed)) = key_event
+                    && let Some(fix) = x11_window_fix
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .as_mut()
+                {
+                    fix.handle_key(&key, pressed);
+                }
+            }
+        }
         gst::MessageView::DurationChanged(..) => {
             hls.lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -1170,7 +1253,10 @@ fn handle_bus_message(
             let src_name = message
                 .src()
                 .map_or_else(String::new, |source| source.name().to_string());
-            if src_name.contains(codec.name()) && src_name.contains("sink") {
+            let is_video_sink = src_name.contains("sink") && !src_name.contains("audio");
+            if (src_name.contains(codec.name()) || (is_hls && is_video_sink))
+                && src_name.contains("sink")
+            {
                 let new_state = state_changed.current();
                 let sink_not_seen = discovered_sink
                     .lock()
@@ -1227,6 +1313,19 @@ fn hls_video_seek_to_start_position(pipeline: &gst::Pipeline, hls: &Arc<Mutex<Hl
 
 fn log(logger: &LogCallback, level: LogLevel, message: &str) {
     logger(level, message);
+}
+
+fn element_uses_x11(sink: &gst::Element) -> bool {
+    sink.factory()
+        .map(|factory| factory.name().to_string())
+        .is_none_or(|name| sink_factory_uses_x11(&name))
+}
+
+fn sink_factory_uses_x11(name: &str) -> bool {
+    name.contains("ximagesink")
+        || name.contains("xvimagesink")
+        || name.contains("autovideosink")
+        || name.contains("fpsdisplaysink")
 }
 
 static GLOBAL_RENDERER: OnceLock<Mutex<Option<VideoRenderer>>> = OnceLock::new();
@@ -1615,6 +1714,20 @@ pub fn gstreamer_decoder_check(decoder: Option<&[u8]>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn automatic_and_explicit_x11_sinks_keep_window_lookup_enabled() {
+        for name in [
+            "ximagesink",
+            "xvimagesink",
+            "autovideosink",
+            "fpsdisplaysink",
+        ] {
+            assert!(sink_factory_uses_x11(name), "{name}");
+        }
+        assert!(!sink_factory_uses_x11("waylandsink"));
+        assert!(!sink_factory_uses_x11("d3d11videosink"));
+    }
 
     fn annex_b_nalus(data: &[u8]) -> Vec<&[u8]> {
         let mut start_codes = Vec::new();

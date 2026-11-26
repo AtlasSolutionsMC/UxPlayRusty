@@ -10,6 +10,36 @@ use std::io;
 pub const SOURCE_SERVER_HEADER: &[u8] = b"AirTunes/220.68";
 pub const SOURCE_AUDIO_JACK_STATUS: &[u8] = b"connected; type=digital";
 
+/// `utils.c::parse_int`: accept a complete, non-negative decimal C integer
+/// within `INT_MAX`, then return the source's normalized decimal spelling.
+pub(crate) fn parse_source_cseq(value: &[u8]) -> Option<Vec<u8>> {
+    let value = value.split(|byte| *byte == 0).next()?;
+    let mut start = 0;
+    while value
+        .get(start)
+        .is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c))
+    {
+        start += 1;
+    }
+    let negative = value.get(start) == Some(&b'-');
+    if negative || value.get(start) == Some(&b'+') {
+        start += 1;
+    }
+    let digits_start = start;
+    let mut parsed = 0u64;
+    while let Some(byte @ b'0'..=b'9') = value.get(start) {
+        parsed = parsed
+            .checked_mul(10)?
+            .checked_add(u64::from(*byte - b'0'))?;
+        start += 1;
+    }
+    if start == digits_start || start != value.len() || (negative && parsed != 0) {
+        return None;
+    }
+    let value = i32::try_from(parsed).ok()?;
+    Some(value.to_string().into_bytes())
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct RequestMetadata<'a> {
     pub protocol: &'a [u8],
@@ -81,13 +111,10 @@ pub fn assemble_response(
     if !request.is_hls {
         response.add_header(b"Server", SOURCE_SERVER_HEADER);
         if let Some(cseq) = request.cseq {
-            if cseq.is_empty() {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "empty CSeq triggers the source response builder assertion",
-                ));
-            }
-            response.add_header(b"CSeq", cseq);
+            let cseq = parse_source_cseq(cseq).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "invalid source CSeq")
+            })?;
+            response.add_header(b"CSeq", &cseq);
         }
     }
     response.finish(body, body_len);
@@ -196,6 +223,40 @@ mod tests {
         assert_eq!(
             reply.bytes,
             b"HTTP/1.1 200 OK\r\nServer: AirTunes/220.68\r\n\r\n"
+        );
+    }
+
+    #[test]
+    fn cseq_parsing_matches_strtol_validation_and_normalization() {
+        for (input, expected) in [
+            (b"0".as_slice(), Some(b"0".as_slice())),
+            (b"+001", Some(b"1")),
+            (b" 42", Some(b"42")),
+            (b"-0", Some(b"0")),
+            (b"-1", None),
+            (b"2147483647", Some(b"2147483647")),
+            (b"2147483648", None),
+            (b"", None),
+            (b"+", None),
+            (b"12 ", None),
+            (b"12x", None),
+            (b"999999999999999999999999999999999", None),
+        ] {
+            assert_eq!(parse_source_cseq(input).as_deref(), expected, "{input:?}");
+        }
+    }
+
+    #[test]
+    fn response_normalizes_the_request_cseq_like_raop() {
+        let reply = assemble_response(
+            metadata(b"RTSP/1.0", b"OPTIONS", Some(b"+0007"), false),
+            HandlerOutput::default(),
+        )
+        .unwrap();
+        assert!(
+            reply
+                .bytes
+                .ends_with(b"Server: AirTunes/220.68\r\nCSeq: 7\r\n\r\n")
         );
     }
 }

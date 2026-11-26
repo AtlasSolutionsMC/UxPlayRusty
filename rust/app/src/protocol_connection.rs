@@ -1477,6 +1477,41 @@ impl ConnectionHandler for ProtocolConnection {
         let url = request.url().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "request has no parsed URL")
         })?;
+        // Keep raop.c's defensive header bounds and CSeq validation ahead of
+        // connection classification and all handler side effects.
+        const MAX_HDR_FIELDS: usize = 20;
+        const MAX_HDR_FIELD_LEN: usize = 64;
+        const MAX_HDR_VALUE_LEN: usize = 1024;
+        let (_, num_fields, max_field_len, max_value_len) = request.header_stats();
+        if num_fields > MAX_HDR_FIELDS
+            || max_field_len > MAX_HDR_FIELD_LEN
+            || max_value_len > MAX_HDR_VALUE_LEN
+        {
+            log_at(
+                &self.context.media_config.logger,
+                crate::logger::ERR,
+                format!(
+                    "rejecting request with overlong headers: {num_fields} fields,max field_name length {max_field_len}, max field value length {max_value_len}"
+                ),
+            );
+            let mut response = HttpResponse::new();
+            response.init(protocol.as_bytes(), 431, b"Request Header Fields Too Large");
+            response.finish(None, 0);
+            return Ok(Some(HttpReply::new(response.completed_data().to_vec())));
+        }
+        if let Some(cseq) = request.header(b"CSeq")
+            && crate::protocol_response::parse_source_cseq(cseq).is_none()
+        {
+            let cseq = cseq.split(|byte| *byte == 0).next().unwrap_or_default();
+            let mut message = b"rejecting request with invalid CSeq value ".to_vec();
+            message.extend_from_slice(cseq);
+            log_bytes_at(
+                &self.context.media_config.logger,
+                crate::logger::ERR,
+                &message,
+            );
+            return Ok(None);
+        }
         let hls_request = is_hls_request(request);
         let ble_request = protocol.as_bytes() == b"RTSP/1.0"
             && request.header(b"CSeq").is_none()
@@ -1580,6 +1615,19 @@ impl ConnectionHandler for ProtocolConnection {
         );
         let route =
             protocol_routes::classify(method.as_bytes(), url, protocol.as_bytes(), hls_request);
+        if !matches!(route, RouteDecision::Handler(_)) {
+            let mut message = b"Unhandled Client Request: ".to_vec();
+            message.extend_from_slice(method.as_bytes());
+            message.push(b' ');
+            message.extend_from_slice(url);
+            message.push(b' ');
+            message.extend_from_slice(protocol.as_bytes());
+            log_bytes_at(
+                &self.context.media_config.logger,
+                crate::logger::INFO,
+                &message,
+            );
+        }
         match route {
             RouteDecision::Handler(Handler::ServerInfo) => {
                 self.context.hls_pending.store(true, Ordering::Release);
@@ -2145,13 +2193,9 @@ fn raop_connection_conflict_response(request: &HttpRequest) -> io::Result<HttpRe
     );
     response.add_header(b"Server", crate::protocol_response::SOURCE_SERVER_HEADER);
     if let Some(cseq) = request.header(b"CSeq") {
-        if cseq.is_empty() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "empty CSeq triggers the source response builder assertion",
-            ));
-        }
-        response.add_header(b"CSeq", cseq);
+        let cseq = crate::protocol_response::parse_source_cseq(cseq)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid source CSeq"))?;
+        response.add_header(b"CSeq", &cseq);
     }
     response.finish(None, 0);
     Ok(HttpReply::new(response.completed_data().to_vec()))
@@ -2213,6 +2257,12 @@ fn unported_handler(handler: Handler) -> io::Error {
 fn log_at(logger: &Option<Arc<crate::logger::Logger>>, level: i32, message: impl AsRef<str>) {
     if let Some(logger) = logger {
         logger.log(level, message.as_ref());
+    }
+}
+
+fn log_bytes_at(logger: &Option<Arc<crate::logger::Logger>>, level: i32, message: &[u8]) {
+    if let Some(logger) = logger {
+        logger.log_bytes(level, message);
     }
 }
 
@@ -2691,6 +2741,165 @@ mod tests {
             },
             ..ProtocolContext::default()
         }
+    }
+
+    #[test]
+    fn invalid_cseq_is_logged_and_dropped_before_classification() {
+        let (logger, events) = collecting_logger(crate::logger::ERR);
+        let mut connection = ProtocolConnection::new(
+            protocol_context_with_logger(logger),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+
+        let reply = connection
+            .request(&parse(b"OPTIONS * RTSP/1.0\r\nCSeq: -1\r\n\r\n"))
+            .unwrap();
+
+        assert!(reply.is_none());
+        assert_eq!(connection.connection_class(), ConnectionClass::Unknown);
+        assert_eq!(
+            *events.lock().unwrap(),
+            [b"rejecting request with invalid CSeq value -1".to_vec()]
+        );
+    }
+
+    #[test]
+    fn unmatched_http_request_keeps_default_200_and_source_log() {
+        let (logger, events) = collecting_logger_events(crate::logger::INFO);
+        let mut context = protocol_context_with_logger(logger);
+        context.hls_support = true;
+        let mut connection =
+            ProtocolConnection::new(context, Arc::new(RecordingEffects::default())).unwrap();
+
+        let reply = connection
+            .request(&parse(
+                b"POST /unknown HTTP/1.1\r\nX-Apple-Session-ID: session\r\n\r\n",
+            ))
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            reply.bytes,
+            b"HTTP/1.1 200 OK\r\nServer: AirTunes/220.68\r\n\r\n"
+        );
+        assert!(events.lock().unwrap().contains(&(
+            crate::logger::INFO,
+            b"Unhandled Client Request: POST /unknown HTTP/1.1".to_vec()
+        )));
+    }
+
+    #[test]
+    fn unknown_rtsp_method_keeps_501_and_source_unhandled_log() {
+        let (logger, events) = collecting_logger_events(crate::logger::INFO);
+        let mut connection = ProtocolConnection::new(
+            protocol_context_with_logger(logger),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+
+        let reply = connection
+            .request(&parse(b"ANNOUNCE * RTSP/1.0\r\nCSeq: 8\r\n\r\n"))
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            reply.bytes,
+            b"RTSP/1.0 501 Not Implemented\r\nAudio-Jack-Status: connected; type=digital\r\nServer: AirTunes/220.68\r\nCSeq: 8\r\n\r\n"
+        );
+        assert!(events.lock().unwrap().contains(&(
+            crate::logger::INFO,
+            b"Unhandled Client Request: ANNOUNCE * RTSP/1.0".to_vec()
+        )));
+    }
+
+    #[test]
+    fn overlong_headers_get_bare_431_before_classification() {
+        let (logger, events) = collecting_logger(crate::logger::ERR);
+        let mut connection = ProtocolConnection::new(
+            protocol_context_with_logger(logger),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+        let mut wire = b"OPTIONS * RTSP/1.0\r\n".to_vec();
+        for index in 0..21 {
+            wire.extend_from_slice(format!("X-{index}: v\r\n").as_bytes());
+        }
+        wire.extend_from_slice(b"\r\n");
+
+        let reply = connection.request(&parse(&wire)).unwrap().unwrap();
+
+        assert_eq!(
+            reply.bytes,
+            b"RTSP/1.0 431 Request Header Fields Too Large\r\n\r\n"
+        );
+        assert_eq!(connection.connection_class(), ConnectionClass::Unknown);
+        assert_eq!(
+            *events.lock().unwrap(),
+            [b"rejecting request with overlong headers: 21 fields,max field_name length 4, max field value length 1".to_vec()]
+        );
+    }
+
+    #[test]
+    fn maximum_header_field_count_is_accepted() {
+        let mut connection = ProtocolConnection::new(
+            ProtocolContext::default(),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+        let mut wire = b"OPTIONS * RTSP/1.0\r\nCSeq: 1\r\n".to_vec();
+        for index in 0..19 {
+            wire.extend_from_slice(format!("X-{index}: v\r\n").as_bytes());
+        }
+        wire.extend_from_slice(b"\r\n");
+
+        let reply = connection.request(&parse(&wire)).unwrap().unwrap();
+
+        assert!(reply.bytes.starts_with(b"RTSP/1.0 200 OK\r\n"));
+        assert!(reply.bytes.ends_with(b"CSeq: 1\r\n\r\n"));
+    }
+
+    #[test]
+    fn overlong_header_value_gets_source_431() {
+        let (logger, events) = collecting_logger(crate::logger::ERR);
+        let mut connection = ProtocolConnection::new(
+            protocol_context_with_logger(logger),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+        let mut wire = b"OPTIONS * RTSP/1.0\r\nX: ".to_vec();
+        wire.extend_from_slice(&vec![b'a'; 1025]);
+        wire.extend_from_slice(b"\r\n\r\n");
+
+        let reply = connection.request(&parse(&wire)).unwrap().unwrap();
+
+        assert_eq!(
+            reply.bytes,
+            b"RTSP/1.0 431 Request Header Fields Too Large\r\n\r\n"
+        );
+        assert_eq!(
+            *events.lock().unwrap(),
+            [b"rejecting request with overlong headers: 1 fields,max field_name length 1, max field value length 1025".to_vec()]
+        );
+    }
+
+    #[test]
+    fn maximum_header_name_and_value_lengths_are_accepted() {
+        let mut connection = ProtocolConnection::new(
+            ProtocolContext::default(),
+            Arc::new(RecordingEffects::default()),
+        )
+        .unwrap();
+        let mut wire = b"OPTIONS * RTSP/1.0\r\nCSeq: 1\r\n".to_vec();
+        wire.extend_from_slice("x".repeat(64).as_bytes());
+        wire.extend_from_slice(b": ");
+        wire.extend_from_slice(&vec![b'v'; 1024]);
+        wire.extend_from_slice(b"\r\n\r\n");
+
+        let reply = connection.request(&parse(&wire)).unwrap().unwrap();
+
+        assert!(reply.bytes.starts_with(b"RTSP/1.0 200 OK\r\n"));
+        assert!(reply.bytes.ends_with(b"CSeq: 1\r\n\r\n"));
     }
 
     #[test]
@@ -3198,7 +3407,7 @@ mod tests {
         events.lock().unwrap().clear();
 
         let reply = connection
-            .request(&parse(b"OPTIONS * RTSP/1.0\r\nCSeq: 12\r\n\r\n"))
+            .request(&parse(b"OPTIONS * RTSP/1.0\r\nCSeq: +0012\r\n\r\n"))
             .unwrap()
             .unwrap();
 
@@ -5329,9 +5538,28 @@ mod tests {
         assert!(contains(
             b"Unsupported m3u8 HLS streaming format: clientProcName OtherPlayer not found in supported list: YouTube;"
         ));
+        #[cfg(windows)]
+        let expected_fcup_error = format!(
+            "fcup_request: send  error 10038:{}\n",
+            crate::compat::socket_error_message(10038)
+        );
+        #[cfg(unix)]
+        let expected_fcup_error = format!(
+            "fcup_request: send  error {}:{}\n",
+            libc::EBADF,
+            crate::compat::socket_error_message(libc::EBADF)
+        );
+        #[cfg(not(any(windows, unix)))]
+        let expected_fcup_error = "fcup_request: send  error ".to_owned();
         assert!(
-            logs.iter()
-                .any(|message| { message.starts_with(b"fcup_request: send  error ") })
+            logs.iter().any(|message| {
+                if cfg!(any(windows, unix)) {
+                    message == expected_fcup_error.as_bytes()
+                } else {
+                    message.starts_with(expected_fcup_error.as_bytes())
+                }
+            }),
+            "missing C-shaped FCUP send error: {expected_fcup_error:?}"
         );
         assert!(contains(b"action type is unhandledURLResponse"));
         assert!(contains(b"FCUP_Response_URL =  /video/low.m3u8"));

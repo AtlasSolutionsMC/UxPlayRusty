@@ -1,4 +1,4 @@
-//! Shared AirPlay HLS playlist storage and FCUP sequence state.
+//! Shared AirPlay HLS playlist storage and per-playlist FCUP sequence state.
 
 use uxplay_airplay_http_handlers::{
     self as handlers, ActionEffect, ActionPlan, MediaPlaylistStats, PlayPlan, PlayRequest,
@@ -78,6 +78,11 @@ impl AirPlayVideo {
             .first()
             .map(|playlist| playlist.stats.duration_seconds)
             .unwrap_or_default()
+    }
+
+    fn next_fcup_request_id(&mut self) -> u64 {
+        self.next_request_id += 1;
+        self.next_request_id
     }
 }
 
@@ -256,11 +261,11 @@ impl AirPlayVideoStore {
             } => {
                 video.playback_location = playback_location;
                 video.upstream_uri_prefix = uri_prefix;
-                video.next_request_id = 1;
+                let request_id = video.next_fcup_request_id();
                 let action = HlsAction::Fetch {
                     url: video.playback_location.clone(),
                     session_id: video.session_id.clone(),
-                    request_id: video.next_request_id,
+                    request_id,
                 };
                 self.videos[index] = Some(video);
                 action
@@ -474,11 +479,12 @@ impl AirPlayVideoStore {
         if let Some(media) = video.media_playlists.get(video.next_media_uri) {
             let url = String::from_utf8_lossy(&media.uri).into_owned();
             video.next_media_uri += 1;
-            video.next_request_id += 1;
+            let session_id = video.session_id.clone();
+            let request_id = video.next_fcup_request_id();
             HlsAction::Fetch {
                 url,
-                session_id: video.session_id.clone(),
-                request_id: video.next_request_id,
+                session_id,
+                request_id,
             }
         } else {
             HlsAction::StartPlayback {
@@ -562,6 +568,73 @@ mod tests {
             store.playlist_for_request("/low.m3u8").unwrap(),
             b"#EXTM3U\n#EXTINF:4.5,\nsegment.ts\n#EXT-X-ENDLIST\n"
         );
+    }
+
+    #[test]
+    fn fcup_request_ids_are_scoped_to_each_reusable_playlist() {
+        let mut store = AirPlayVideoStore::default();
+        assert!(matches!(
+            store.begin_play(
+                play_request("first", "/video/master.m3u8"),
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 1, .. }
+        ));
+        assert!(matches!(
+            store.apply_action(
+                ActionPlan::FcupPlaylist {
+                    url: "/video/master.m3u8".to_owned(),
+                    is_master: true,
+                    playlist: b"#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000\n/video/low.m3u8\n/video/mid.m3u8\n/video/high.m3u8\n".to_vec(),
+                },
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 2, .. }
+        ));
+        assert!(matches!(
+            store.apply_action(
+                ActionPlan::FcupPlaylist {
+                    url: "/video/low.m3u8".to_owned(),
+                    is_master: false,
+                    playlist: b"#EXTM3U\n#EXTINF:4.5,\nlow.ts\n".to_vec(),
+                },
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 3, .. }
+        ));
+        assert!(matches!(
+            store.begin_play(
+                play_request("first", "/video/master.m3u8"),
+                "http://localhost:7000"
+            ),
+            HlsAction::StartPlayback { .. }
+        ));
+        assert!(matches!(
+            store.apply_action(
+                ActionPlan::FcupPlaylist {
+                    url: "/video/mid.m3u8".to_owned(),
+                    is_master: false,
+                    playlist: b"#EXTM3U\n#EXTINF:4.5,\nmid.ts\n".to_vec(),
+                },
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 4, .. }
+        ));
+        assert!(matches!(
+            store.begin_play(
+                play_request("second", "/video/other/master.m3u8"),
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 1, .. }
+        ));
+        store.clear_all();
+        assert!(matches!(
+            store.begin_play(
+                play_request("third", "/video/master.m3u8"),
+                "http://localhost:7000"
+            ),
+            HlsAction::Fetch { request_id: 1, .. }
+        ));
     }
 
     #[test]

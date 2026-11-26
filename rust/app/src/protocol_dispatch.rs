@@ -208,14 +208,6 @@ pub fn dispatch_with_context(
             metadata,
             HandlerOutput::default(),
         )?)),
-        RouteDecision::NotFound => Ok(DispatchOutcome::Reply(assemble_response(
-            metadata,
-            HandlerOutput {
-                status_code: 404,
-                status_message: b"Not Found".to_vec(),
-                ..HandlerOutput::default()
-            },
-        )?)),
         RouteDecision::NotImplemented => {
             let output = HandlerOutput {
                 status_code: 501,
@@ -327,14 +319,14 @@ mod tests {
     }
 
     #[test]
-    fn unmatched_http_route_returns_source_not_found_status() {
+    fn unmatched_http_route_preserves_source_default_success() {
         let request = parse(b"POST /unknown HTTP/1.1\r\n\r\n");
         let DispatchOutcome::Reply(reply) = dispatch(&request, false).unwrap() else {
-            panic!("unmatched HTTP routes return a not-found response")
+            panic!("unmatched HTTP routes preserve the default response")
         };
         assert_eq!(
             reply.bytes,
-            b"HTTP/1.1 404 Not Found\r\nServer: AirTunes/220.68\r\n\r\n"
+            b"HTTP/1.1 200 OK\r\nServer: AirTunes/220.68\r\n\r\n"
         );
     }
 

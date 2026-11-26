@@ -19,6 +19,9 @@ gstreamer = "0.25.4"
 gstreamer-app = "0.25.2"
 gstreamer-video = "0.25.4"
 
+[target.'cfg(unix)'.dependencies]
+x11rb = "0.14.0"
+
 [profile.release]
 lto = true
 

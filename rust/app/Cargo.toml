@@ -23,7 +23,7 @@ httparse = "1.10.1"
 socket2 = { version = "0.6", features = ["all"] }
 glib = "0.22.11"
 gstreamer = "0.25.4"
-ctrlc = "3"
+ctrlc = { version = "3", features = ["termination"] }
 http-response-rs = { path = "../units/http-response" }
 plist = "1.10.4"
 getrandom = "0.4.3"

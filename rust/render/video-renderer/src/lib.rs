@@ -2,6 +2,7 @@
 //! by rust-anything from `rust-anything.json`. All of the crate's `unsafe` code lives in this file.
 
 pub mod port;
+mod x11_fix;
 
 use std::ffi::{c_char, c_int, c_void};
 use std::sync::Arc;
