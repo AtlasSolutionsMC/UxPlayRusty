@@ -1112,7 +1112,7 @@ Create a standalone Rust replacement for the reference project at `D:\Save\Uxpla
 - Rechecked current host prerequisites: WSL is not installed; Rust has Linux and FreeBSD targets, but the host has no native GCC/Clang or Linux OpenSSL/libplist/GStreamer sysroot. Previous Linux cross-check failures have unchanged prerequisites.
 - Added `.github/workflows/rust-linux.yml` to validate the integrated app on Ubuntu 24.04 with native dependencies. It runs fmt, all-target tests, Clippy (`-D warnings`) and release builds for embedded mDNS and `external-dns-sd`.
 - Git rejected the workflow push because its OAuth credential lacks `workflow` scope; the connected GitHub Contents API also rejected the create-file request with 403 `Resource not accessible by integration`. No workflow or Actions run exists remotely. Keep the local workflow definition and Linux acceptance open; publish it once an authorized credential/integration is available. Native runtime/device acceptance remains separate.
-- Published the checkpoint/MAP blocker record without changing the workflow path: latest verified target `master` is `b914743d846679618d5eca652de46ac470624e22`; the local workflow remains untracked in the review clone.
+- Published the checkpoint/MAP blocker record without changing the workflow path: latest verified target `master` is `35d26bd96dff7aed869d7bdccc36d58c002b8c3f`; the local workflow remains untracked in the review clone.
 - `gh auth status` confirms the active GitHub CLI credential has `repo` but not `workflow`; GitHub Actions API returns zero workflow runs on `master`. An authorization question is pending; no secrets or token values were inspected.
 
 ### 2026-11-26 — pulled upstream reference commits safely
