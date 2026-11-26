@@ -47,16 +47,28 @@ jobs:
         shell: pwsh
         run: rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal --component clippy,rustfmt
 
-      - name: Run Windows app and beacon tests
+      - name: Run Windows app and beacon quality gates
         shell: pwsh
         env:
           MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: |
           $env:RUSTUP_TOOLCHAIN = 'stable-x86_64-pc-windows-gnu'
           $env:Path = (Join-Path $env:MSYS2_ROOT 'ucrt64\bin') + ';' + $env:Path
-          cargo test --manifest-path .\rust\app\Cargo.toml --bin uxplay beacon_companion_tests
+          cargo fmt --manifest-path .\rust\app\Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo fmt --manifest-path .\rust\beacon\Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path .\rust\app\Cargo.toml --all-targets
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --manifest-path .\rust\beacon\Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path .\rust\app\Cargo.toml --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path .\rust\beacon\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup
