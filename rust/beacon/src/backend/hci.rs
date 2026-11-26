@@ -1301,6 +1301,7 @@ mod tests {
         ];
 
         for (context, operation, expected) in cases {
+            let expected = crate::canonicalize_reference_fixture(expected);
             assert_eq!(
                 hci_spawn_error_traceback(Host::Linux, "hci0", context, operation, &error),
                 expected,
@@ -1322,6 +1323,7 @@ mod tests {
                 include_str!("../../tests/fixtures/source-hci-interrupt-stop-nonzero.txt"),
             ),
         ] {
+            let expected = crate::canonicalize_reference_fixture(expected);
             assert_eq!(
                 hci_called_process_error_traceback(
                     Host::Linux,

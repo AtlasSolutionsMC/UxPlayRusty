@@ -465,6 +465,17 @@ fn reference_beacon_script() -> PathBuf {
         .join("uxplay-beacon.py")
 }
 
+#[cfg(test)]
+pub(crate) fn canonicalize_reference_fixture(fixture: &str) -> String {
+    const RECORDED_REFERENCE_ROOT: &str = r"D:\Save\Uxplay\UxPlay";
+    let script = reference_beacon_script();
+    let root = script
+        .parent()
+        .and_then(Path::parent)
+        .expect("reference beacon script has a project root");
+    fixture.replace(RECORDED_REFERENCE_ROOT, &root.display().to_string())
+}
+
 fn empty_config_traceback(script: &Path) -> String {
     let script = script.display();
     format!(
@@ -1547,14 +1558,18 @@ mod tests {
     fn stopped_winrt_publisher_traceback_matches_cpython_source_fixture() {
         assert_eq!(
             python_traceback_for_monitor_error(WINRT_STOPPED_PUBLISHER_ERROR).unwrap(),
-            include_str!("../tests/fixtures/source-winrt-stopped-stop-traceback.txt")
+            canonicalize_reference_fixture(include_str!(
+                "../tests/fixtures/source-winrt-stopped-stop-traceback.txt"
+            ))
         );
     }
 
     #[test]
     fn bleuio_zero_port_traceback_matches_cpython_source_fixture() {
         let actual = python_traceback_for_monitor_error(BLEUIO_ZERO_PORT_ASSERTION_ERROR).unwrap();
-        let expected = include_str!("../tests/fixtures/source-bleuio-zero-port-traceback.txt");
+        let expected = canonicalize_reference_fixture(include_str!(
+            "../tests/fixtures/source-bleuio-zero-port-traceback.txt"
+        ));
         let first_difference = actual
             .bytes()
             .zip(expected.bytes())
@@ -1571,7 +1586,9 @@ mod tests {
     fn interrupted_stopped_winrt_traceback_matches_cpython_source_fixture() {
         assert_eq!(
             python_traceback_for_monitor_error(WINRT_STOPPED_PUBLISHER_INTERRUPT_ERROR).unwrap(),
-            include_str!("../tests/fixtures/source-winrt-stopped-interrupt-traceback.txt")
+            canonicalize_reference_fixture(include_str!(
+                "../tests/fixtures/source-winrt-stopped-interrupt-traceback.txt"
+            ))
         );
     }
 
