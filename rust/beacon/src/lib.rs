@@ -478,7 +478,12 @@ pub(crate) fn canonicalize_reference_fixture(fixture: &str) -> String {
         .parent()
         .and_then(Path::parent)
         .expect("reference beacon script has a project root");
-    fixture.replace(RECORDED_REFERENCE_ROOT, &root.display().to_string())
+    let fixture = fixture.replace(RECORDED_REFERENCE_ROOT, &root.display().to_string());
+    if cfg!(windows) {
+        fixture
+    } else {
+        fixture.replace("\\Bluetooth_LE_beacon\\", "/Bluetooth_LE_beacon/")
+    }
 }
 
 fn empty_config_traceback(script: &Path) -> String {
@@ -1658,7 +1663,7 @@ mod tests {
         let data = BeaconFileData {
             raop_port: 7100,
             pid: 1,
-            process_name: b"C:\\Apps\\uxplay.exe".to_vec(),
+            process_name: b"C:/Apps/uxplay.exe".to_vec(),
         };
         assert_eq!(source_orphan_name(&data, &mut verifier), Ok(None));
     }
