@@ -16,6 +16,10 @@ Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in R
 
 A fresh comparison with lib/raop_ntp.c found that double inverse_two_pow_n[RAOP_NTP_DATA_COUNT] = { 1.0 }; zero-initializes all but the first element. Rust previously computed geometric weights, which changed root distance and is_synced; Rust now matches the C weights. A compiled C reproduction confirmed `0.5 0 0 0 0 0 0 0`. Windows GNU focused regression, app all-target suites (431 + 10/98/7), Clippy and fmt pass. Pushed as `d9db3e4`; Linux run `45827934540` passes format, default and external-DNS-SD tests/Clippy/release builds, CLI and endpoint smokes.
 
+### 2026-11-26 follow-up — HTTP request-target C differential
+
+Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 byte values embedded in a URL, seven line-ending boundary cases, and one request split across two reads. This found that llhttp accepts a bare LF request-line delimiter before protocol text, but does not normalize LF after the protocol token; a lone CR inside the URL is classified as `HPE_INVALID_URL`. Rust now follows that behavior. Windows GNU parser tests pass 60/60, HTTP transport 99/99, all-target tests pass 432 + 10/99/7 default and 434 + 10/99/7 with `external-dns-sd`; Clippy (`-D warnings`) and fmt pass in both modes. Linux CI is pending publication. The C oracle generator is `rust/record-shims/run_http_request_target_byte_oracle.ps1`.
+
 ## 1. สิ่งที่ทำใน session นี้
 
 ### 1.1 ตรวจสถานะพอร์ตก่อนรัน (snapshot วันที่ 2026-11-23)

@@ -93,6 +93,7 @@ impl HttpRequest {
         let search_start = self.header_scan_pos.saturating_sub(3);
         let line_ending_scan_start = self.header_scan_pos.saturating_sub(1);
         self.input.extend_from_slice(data);
+        normalize_bare_lf_request_line(&mut self.input);
         if let Err((error, valid_prefix_len)) = validate_partial_request_line(&self.input) {
             capture_partial_request_line(
                 &self.input[..valid_prefix_len],
@@ -585,6 +586,38 @@ fn validate_partial_request_line(input: &[u8]) -> Result<(), (ParserFailure, usi
         return Err((failure, offset));
     }
     Ok(())
+}
+
+/// llhttp accepts a bare LF as the request-line delimiter. Normalize that one
+/// delimiter so the Rust HTTP parser can consume the same line and following
+/// headers; bare LF inside headers remains subject to the source's strict rules.
+fn normalize_bare_lf_request_line(input: &mut Vec<u8>) {
+    let Some(lf) = input.iter().position(|byte| *byte == b'\n') else {
+        return;
+    };
+    if input.get(lf.wrapping_sub(1)) == Some(&b'\r')
+        || find_bytes(input, b"\r\n").is_some_and(|crlf| crlf < lf)
+    {
+        return;
+    }
+    let line = &input[..lf];
+    let Some(method_end) = line.iter().position(|byte| *byte == b' ') else {
+        return;
+    };
+    if !is_llhttp_method(&line[..method_end]) || method_end + 1 >= line.len() {
+        return;
+    }
+    let target_start = line[method_end + 1..]
+        .iter()
+        .position(|byte| *byte != b' ')
+        .map(|offset| method_end + 1 + offset);
+    let Some(target_start) = target_start else {
+        return;
+    };
+    if line[target_start..].contains(&b' ') {
+        return;
+    }
+    input.insert(lf, b'\r');
 }
 
 fn request_target_prefix_failure(
@@ -1729,6 +1762,9 @@ fn validate_header_line_endings(input: &[u8], start: usize) -> Result<(), Parser
 fn line_ending_failure(input: &[u8], index: usize, saw_cr: bool) -> ParserFailure {
     let request_line_end = find_bytes(input, b"\r\n");
     if request_line_end.is_none_or(|line_end| index < line_end) {
+        if saw_cr && let Some(failure) = request_target_url_failure(input) {
+            return failure;
+        }
         return if saw_cr {
             ParserFailure {
                 name: "HPE_STRICT",
@@ -2209,13 +2245,8 @@ mod tests {
     }
 
     #[test]
-    fn rejects_bare_lf_and_malformed_crlf_before_the_header_terminator() {
+    fn rejects_bare_lf_and_malformed_crlf_in_headers() {
         for (input, expected_name, expected_description) in [
-            (
-                &b"GET / HTTP/1.1\n"[..],
-                "HPE_INVALID_VERSION",
-                "Expected CRLF after version",
-            ),
             (
                 &b"GET / HTTP/1.1\rX"[..],
                 "HPE_STRICT",
@@ -2658,6 +2689,40 @@ mod tests {
             let error = request.add_data(input).unwrap_err();
             assert_eq!(error.name, "HPE_INVALID_URL", "{input:?}");
             assert_eq!(error.description, *description, "{input:?}");
+        }
+    }
+
+    #[test]
+    fn request_target_single_byte_classification_matches_c_oracle() {
+        const ORACLE: &str =
+            include_str!("../../record-shims/http_request_target_byte_oracle.expected.tsv");
+
+        for line in ORACLE.lines() {
+            let mut columns = line.split('\t');
+            let hex = columns.next().expect("request hex column");
+            let split = columns.next().expect("chunk split column");
+            let expected = columns.next().expect("error column");
+            assert!(columns.next().is_none(), "three oracle columns");
+            let (pairs, remainder) = hex.as_bytes().as_chunks::<2>();
+            assert!(remainder.is_empty(), "even-length hex input");
+            let input = pairs
+                .iter()
+                .map(|pair| {
+                    u8::from_str_radix(std::str::from_utf8(pair).expect("ASCII hex"), 16)
+                        .expect("hex byte")
+                })
+                .collect::<Vec<_>>();
+
+            let mut request = HttpRequest::new();
+            if split == "-" {
+                let _ = request.add_data(&input);
+            } else {
+                let split = split.parse::<usize>().expect("numeric chunk split");
+                assert!(split <= input.len(), "split lies within request");
+                let _ = request.add_data(&input[..split]);
+                let _ = request.add_data(&input[split..]);
+            }
+            assert_eq!(request.error_name(), Some(expected), "request {hex}");
         }
     }
 
