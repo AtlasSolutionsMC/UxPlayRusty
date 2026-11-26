@@ -213,7 +213,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 - [x] Reference CMake build succeeds; source tree unchanged.
 - [x] App recorder baseline exists and original replay is 118/118.
 - [x] Rust server is the default for valid ASCII startup; the explicit reference launcher and implicit fallback are removed. Focused `/server-info` replay passes 1/1 at 0 fallback, and raw-byte C/Rust HTTP differential passes 8/8. The generic HTTP reader is 5/8 on persistent responses.
-- [ ] Complete cross-platform CLI/config/runtime acceptance; Windows CLI corpus (118/118) is already Rust-only, while native Unix argv/config and device/platform runtime gates remain open.
+- [ ] Complete cross-platform CLI/config/runtime acceptance; Windows CLI corpus (118/118) is Rust-only and Linux native raw argv/`-rc` byte/config smokes pass in run `45819281259`. Full option-to-runtime matrix, native D-Bus, other OS runtime and device gates remain open.
 - [x] One scalar C unit passes a full `rust-anything gate`.
 - [x] Port all recorded Windows CLI cases and verify native Unix invalid-byte argv early exit in Linux CI; Unix `-rc` config, full option-to-runtime matrix and device/platform gates remain open.
 - [ ] Port and replay each crypto, parsing, discovery, AirPlay and rendering unit.
