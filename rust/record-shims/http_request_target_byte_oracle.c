@@ -53,6 +53,28 @@ int main(void)
         print_case(input, sizeof(input));
     }
 
+    static const unsigned char header_prefix[] = "GET / HTTP/1.1\r\nX-Test: ";
+    static const unsigned char header_suffix[] = "\r\n\r\n";
+    unsigned char header_input[sizeof(header_prefix) - 1 + 1 + sizeof(header_suffix) - 1];
+    for (unsigned int value = 0; value <= 255; ++value) {
+        memcpy(header_input, header_prefix, sizeof(header_prefix) - 1);
+        header_input[sizeof(header_prefix) - 1] = (unsigned char)value;
+        memcpy(header_input + sizeof(header_prefix), header_suffix, sizeof(header_suffix) - 1);
+
+        print_case(header_input, sizeof(header_input));
+    }
+
+    static const unsigned char name_prefix[] = "GET / HTTP/1.1\r\nX";
+    static const unsigned char name_suffix[] = ": value\r\n\r\n";
+    unsigned char name_input[sizeof(name_prefix) - 1 + 1 + sizeof(name_suffix) - 1];
+    for (unsigned int value = 0; value <= 255; ++value) {
+        memcpy(name_input, name_prefix, sizeof(name_prefix) - 1);
+        name_input[sizeof(name_prefix) - 1] = (unsigned char)value;
+        memcpy(name_input + sizeof(name_prefix), name_suffix, sizeof(name_suffix) - 1);
+
+        print_case(name_input, sizeof(name_input));
+    }
+
     static const char *const line_ending_cases[] = {
         "GET /x\nX-Test: value\r\n\r\n",
         "GET /x\n\r\n",

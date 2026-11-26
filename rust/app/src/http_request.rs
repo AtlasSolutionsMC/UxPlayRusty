@@ -2693,7 +2693,7 @@ mod tests {
     }
 
     #[test]
-    fn request_target_single_byte_classification_matches_c_oracle() {
+    fn single_byte_request_classification_matches_c_oracle() {
         const ORACLE: &str =
             include_str!("../../record-shims/http_request_target_byte_oracle.expected.tsv");
 
