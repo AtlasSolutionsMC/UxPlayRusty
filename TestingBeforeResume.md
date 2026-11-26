@@ -278,3 +278,6 @@ taskkill /PID 22432 /T /F
 - Latest target `master` at this checkpoint: `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`.
 - HLS follow-up: `45805967580` passed the test with logger capture in both DNS-SD modes, followed by all Clippy/release steps and the CLI smoke. The previous single timeout did not recur; no runtime change was made.
 - 2026-11-26 header audit: MAP rows for `global.h`, `sockets.h`, and `threads.h` now record their replacement at the Rust runtime boundary. C constants/macros have no independent ABI; exact OS thread-create failure parity remains open.
+
+### 2026-11-26 — generated llhttp replacement mapped
+- Reviewed `http_request.c` callback/getter use with `http_request.rs`. The 10,007 LOC generated parser and its API/HTTP support files are replaced by the Rust `HttpRequest` boundary (`httparse` plus source-specific state/error rules), not copied line-for-line. Reclassified the three analyzer rows as replaced and kept residual malformed/incremental parser edges on the `http_request.c` row. Current Linux CI run `45806443997` already passed both modes; this is documentation-only.
