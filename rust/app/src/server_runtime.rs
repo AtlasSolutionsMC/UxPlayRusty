@@ -644,8 +644,8 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         .arg(&handoff_path)
         .current_dir(executable.parent().unwrap_or_else(|| Path::new(".")))
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW)
         .spawn();
     let mut child = match child {
@@ -659,6 +659,14 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         }
     };
     println!("Started Windows BLE companion (pid {}).", child.id());
+    let stdout_reader = child
+        .stdout
+        .take()
+        .map(|stream| pipe_beacon_log_stream(stream, "stdout"));
+    let stderr_reader = child
+        .stderr
+        .take()
+        .map(|stream| pipe_beacon_log_stream(stream, "stderr"));
 
     let stop_requested = Arc::new(AtomicBool::new(false));
     let thread_stop = Arc::clone(&stop_requested);
@@ -670,7 +678,10 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
                 let deadline = Instant::now() + Duration::from_secs(3);
                 while Instant::now() < deadline {
                     match child.try_wait() {
-                        Ok(Some(_)) => return,
+                        Ok(Some(_)) => {
+                            join_beacon_log_readers(stdout_reader, stderr_reader);
+                            return;
+                        }
                         Ok(None) => std::thread::sleep(Duration::from_millis(100)),
                         Err(error) => {
                             eprintln!("UxPlay: could not monitor BLE companion: {error}");
@@ -685,11 +696,13 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
                     let _ = child.kill();
                     let _ = child.wait();
                 }
+                join_beacon_log_readers(stdout_reader, stderr_reader);
                 return;
             }
             match child.try_wait() {
                 Ok(Some(status)) => {
                     eprintln!("UxPlay: BLE companion exited ({status}); AirPlay remains available");
+                    join_beacon_log_readers(stdout_reader, stderr_reader);
                     return;
                 }
                 Ok(None) => std::thread::sleep(Duration::from_millis(250)),
@@ -697,6 +710,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
                     eprintln!("UxPlay: could not monitor BLE companion: {error}");
                     let _ = child.kill();
                     let _ = child.wait();
+                    join_beacon_log_readers(stdout_reader, stderr_reader);
                     return;
                 }
             }
@@ -706,6 +720,52 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         stop_requested,
         worker,
     })
+}
+
+#[cfg(windows)]
+fn pipe_beacon_log_stream(
+    stream: impl std::io::Read + Send + 'static,
+    source: &'static str,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        use std::io::BufRead as _;
+        let mut reader = std::io::BufReader::new(stream);
+        let mut line = Vec::new();
+        loop {
+            line.clear();
+            match reader.read_until(b'\n', &mut line) {
+                Ok(0) => return,
+                Ok(_) => {
+                    while line
+                        .last()
+                        .is_some_and(|byte| matches!(byte, b'\r' | b'\n'))
+                    {
+                        line.pop();
+                    }
+                    eprintln!(
+                        "UxPlay BLE companion {source}: {}",
+                        String::from_utf8_lossy(&line)
+                    );
+                }
+                Err(error) => {
+                    eprintln!("UxPlay: could not read BLE companion {source}: {error}");
+                    return;
+                }
+            }
+        }
+    })
+}
+
+#[cfg(windows)]
+fn join_beacon_log_readers(
+    stdout_reader: Option<std::thread::JoinHandle<()>>,
+    stderr_reader: Option<std::thread::JoinHandle<()>>,
+) {
+    for (source, reader) in [("stdout", stdout_reader), ("stderr", stderr_reader)] {
+        if reader.is_some_and(|reader| reader.join().is_err()) {
+            eprintln!("UxPlay: BLE companion {source} log reader stopped unexpectedly");
+        }
+    }
 }
 
 fn write_ble_handoff_file(
