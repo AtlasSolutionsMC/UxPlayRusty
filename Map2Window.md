@@ -88,6 +88,7 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - Run `45898164036` from source revision `29c6624` passed the Windows installer build and runtime smoke, including `level`, AAC/ALAC decode factories, D3D11 sink, Vulkan upload, staged Vulkan plugin DLL, and `uxplay -h` with MSYS2 removed from `PATH`.
 - A different fresh `windows-2025` runner installed the setup, verified Start Menu and per-user startup registration/config, ran installed CLI help without MSYS2, launched the no-argument tray app with an isolated debug config and observed successful AirPlay server startup, then uninstalled and verified cleanup. This closes the clean-runner install/uninstall gate and provides server startup evidence; it does not accept tray menus, sign-in startup, client playback, or BLE lifecycle.
+- Run `45899255159` passed both installer-build and clean-machine-install jobs after the workflow path-filter update. The subsequent release-guide-only commit `815f1ef` did not trigger another build, as intended.
 - Updated workflow path filters so checkpoint/release-guide-only edits do not rebuild the installer. The workflow itself remains a trigger so its changes are validated.
 
 ### 2026-11-27 — Windows installer preparation (provisional)
