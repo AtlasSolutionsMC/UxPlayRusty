@@ -50,6 +50,12 @@ pub enum VideoResetReason {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SessionLogLevel {
+    Debug,
+    Error,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AudioFormat {
     pub codec_type: u8,
     pub samples_per_frame: u16,
@@ -107,6 +113,10 @@ impl Drop for MirrorSetup {
 /// handler never reaches into the renderer or invokes callbacks through FFI.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SessionEffect {
+    Log {
+        level: SessionLogLevel,
+        message: String,
+    },
     SetRemoteControlId {
         dacp_id: String,
         active_remote: String,
@@ -386,9 +396,42 @@ pub fn setup(
             ecdh_secret.zeroize();
         }
 
-        let timing_protocol =
-            timing_protocol(string_value(request_dict, "timingProtocol").as_deref());
-        let timing_remote_port = unsigned_value(request_dict, "timingPort") as u16;
+        if bool_value(request_dict, "isRemoteControlOnly") {
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Error,
+                message: "Client specified AirPlay2 \"Remote Control\" protocol\n Only AirPlay v1 protocol (using NTP and timing port) is supported".into(),
+            });
+        }
+
+        let timing_protocol_value = string_value(request_dict, "timingProtocol");
+        let timing_protocol = timing_protocol(timing_protocol_value.as_deref());
+        match timing_protocol_value.as_deref() {
+            None => transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Debug,
+                message: "Client did not specify timingProtocol, old protocol without offset will be used".into(),
+            }),
+            Some(value) if timing_protocol != TimingProtocol::Ntp => {
+                transition.effects.push(SessionEffect::Log {
+                    level: SessionLogLevel::Error,
+                    message: format!("Client specified timingProtocol={value}, but timingProtocol= NTP is required here"),
+                });
+            }
+            Some(_) => {}
+        }
+
+        let timing_remote_port_raw = unsigned_value(request_dict, "timingPort");
+        let timing_remote_port = timing_remote_port_raw as u16;
+        if timing_remote_port_raw != 0 {
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Debug,
+                message: format!("timing_rport = {timing_remote_port_raw}"),
+            });
+        } else {
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Error,
+                message: "Client did not supply timing_rport, may be using unsupported AirPlay2 \"Remote Control\" protocol".into(),
+            });
+        }
         transition.effects.push(SessionEffect::StartTiming {
             remote_address: context.remote_address.to_owned(),
             remote_port: timing_remote_port,
@@ -799,7 +842,7 @@ mod tests {
         request.insert("eiv".into(), Value::Data(vec![7; AES_IV_SIZE]));
         request.insert("ekey".into(), Value::Data(vec![9; EKEY_SIZE]));
         request.insert("timingPort".into(), Value::from(7000));
-        request.insert("timingProtocol".into(), Value::String("NTP".into()));
+        request.insert("timingProtocol".into(), Value::String("N".into()));
         request.insert(
             "streams".into(),
             Value::Array(vec![Value::Dictionary(stream)]),
@@ -946,6 +989,10 @@ mod tests {
             local_port: 7001,
             protocol: TimingProtocol::Ntp,
         }));
+        assert!(transition.effects.contains(&SessionEffect::Log {
+            level: SessionLogLevel::Debug,
+            message: "timing_rport = 7000".into(),
+        }));
         assert!(transition.effects.iter().any(|effect| matches!(
             effect,
             SessionEffect::StartAudio {
@@ -964,6 +1011,76 @@ mod tests {
                 format: AudioFormat { codec_type: 2, .. }
             }
         )));
+    }
+
+    #[test]
+    fn setup_emits_source_timing_diagnostics_in_order() {
+        let fairplay = FairPlay::new(std::ptr::null_mut());
+        let mut request = parse_binary_plist_or_empty(&setup_body_with_audio());
+        let dictionary = request.as_dictionary_mut().expect("setup request is a dictionary");
+        dictionary.insert("isRemoteControlOnly".into(), Value::Boolean(true));
+        dictionary.insert("timingProtocol".into(), Value::String("None".into()));
+        dictionary.remove("timingPort");
+
+        let transition = setup(
+            &mut RaopSessionState::default(),
+            &binary_plist(request),
+            None,
+            None,
+            None,
+            SetupContext {
+                remote_address: "192.0.2.1",
+                remote_address_length: 4,
+                ports: ServerPorts {
+                    timing_local: 7001,
+                    audio_control_local: 7002,
+                    audio_data_local: 7003,
+                    mirror_data_local: 7004,
+                },
+                decisions: SetupDecisions {
+                    authorized: true,
+                    admit_client: true,
+                    callbacks: CallbackAvailability::default(),
+                    authorization_challenge: None,
+                },
+                fairplay: &fairplay,
+                pairing_session: None,
+                client_fps_data: 0,
+            },
+        )
+        .expect("valid SETUP request");
+
+        let logs = transition
+            .effects
+            .iter()
+            .filter_map(|effect| match effect {
+                SessionEffect::Log { level, message } => Some((*level, message.as_str())),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            logs,
+            vec![
+                (
+                    SessionLogLevel::Error,
+                    "Client specified AirPlay2 \"Remote Control\" protocol\n Only AirPlay v1 protocol (using NTP and timing port) is supported",
+                ),
+                (
+                    SessionLogLevel::Error,
+                    "Client specified timingProtocol=None, but timingProtocol= NTP is required here",
+                ),
+                (
+                    SessionLogLevel::Error,
+                    "Client did not supply timing_rport, may be using unsupported AirPlay2 \"Remote Control\" protocol",
+                ),
+            ]
+        );
+        assert!(transition.effects.contains(&SessionEffect::StartTiming {
+            remote_address: "192.0.2.1".into(),
+            remote_port: 0,
+            local_port: 7001,
+            protocol: TimingProtocol::None,
+        }));
     }
 
     #[test]

@@ -1027,7 +1027,8 @@ impl SessionMedia {
             }
             SessionEffect::ReportClientRequest { .. }
             | SessionEffect::RegisterClient { .. }
-            | SessionEffect::GetAudioFormat { .. } => {
+            | SessionEffect::GetAudioFormat { .. }
+            | SessionEffect::Log { .. } => {
                 return Err(io::Error::new(
                     io::ErrorKind::Unsupported,
                     "session effect must be handled by the protocol callback adapter",

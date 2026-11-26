@@ -28,7 +28,7 @@ use std::sync::{Arc, Mutex};
 use uxplay_pairing::port::{Pairing, PairingSession, ed25519_pk_to_base64, random_pin};
 use uxplay_raop_session::{
     self as raop_session, AudioFormat, RaopSessionState, ServerPorts, SessionEffect,
-    SessionResponse, SessionTransition, SetupContext, SetupDecisions,
+    SessionLogLevel, SessionResponse, SessionTransition, SetupContext, SetupDecisions,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -1343,6 +1343,17 @@ impl ProtocolConnection {
         let mut adjusted_audio_format = None;
         for effect in effects {
             match effect {
+                SessionEffect::Log { level, message } => {
+                    if let Some(logger) = self.context.media_config.logger.as_ref() {
+                        logger.log(
+                            match level {
+                                SessionLogLevel::Debug => crate::logger::DEBUG,
+                                SessionLogLevel::Error => crate::logger::ERR,
+                            },
+                            message,
+                        );
+                    }
+                }
                 SessionEffect::GetAudioFormat { format } => {
                     adjusted_audio_format = Some(self.effects.get_audio_format(format)?);
                 }
