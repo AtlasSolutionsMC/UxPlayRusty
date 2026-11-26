@@ -65,6 +65,49 @@ try {
     }
     Write-Output 'PASS installed uxplay -h without MSYS2 PATH'
 
+    $launchLog = Join-Path $backupRoot 'launch.log'
+    $launchConfig = Join-Path $backupRoot 'launch-config.toml'
+    $launchLogToml = $launchLog.Replace('\', '/')
+    Set-Content -LiteralPath $launchConfig -Encoding utf8 -Value @(
+        '[server]'
+        'name = "UxPlay-Install-Smoke"'
+        ''
+        '[ble]'
+        'enabled = false'
+        ''
+        '[logging]'
+        'level = "debug"'
+        "file = `"$launchLogToml`""
+    )
+    $startInfo = [Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $appPath
+    $startInfo.WorkingDirectory = $install
+    $startInfo.UseShellExecute = $false
+    $startInfo.Environment['UXPLAY_CONFIG'] = $launchConfig
+    $guiProcess = [Diagnostics.Process]::Start($startInfo)
+    try {
+        Start-Sleep -Seconds 8
+        $guiProcess.Refresh()
+        if ($guiProcess.HasExited) {
+            throw "Installed tray app exited during launch smoke (exit $($guiProcess.ExitCode))."
+        }
+        if (-not (Test-Path -LiteralPath $launchLog)) {
+            throw 'Installed tray app did not create its isolated launch log.'
+        }
+        $startupFailure = Select-String -LiteralPath $launchLog -Pattern 'UxPlay Rust: server startup failed:'
+        if ($startupFailure) {
+            throw "Installed tray app could not start the AirPlay server: $($startupFailure.Line)"
+        }
+        Write-Output 'PASS installed tray app starts the AirPlay server'
+    } finally {
+        $guiProcess.Refresh()
+        if (-not $guiProcess.HasExited) {
+            Stop-Process -Id $guiProcess.Id -Force
+            $guiProcess.WaitForExit(5000) | Out-Null
+        }
+        $guiProcess.Dispose()
+    }
+
     $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @(
         '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
     ) -Wait -PassThru
