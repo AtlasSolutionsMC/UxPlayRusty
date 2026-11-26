@@ -1,0 +1,53 @@
+name: Rust macOS acceptance
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-app:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native media and plist dependencies
+        run: brew install gstreamer libplist openssl@3 pkgconf
+
+      - name: Configure native dependency paths
+        run: |
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig:$(brew --prefix gstreamer)/lib/pkgconfig:$(brew --prefix libplist)/lib/pkgconfig:$(brew --prefix openssl@3)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/app -> target
+
+      - name: Format
+        run: cargo fmt --manifest-path rust/app/Cargo.toml -- --check
+
+      - name: Test macOS Bonjour and P2P configuration
+        run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features apple-p2p
+
+      - name: Lint macOS Bonjour and P2P configuration
+        run: cargo clippy --manifest-path rust/app/Cargo.toml --all-targets --features apple-p2p -- -D warnings
+
+      - name: Build macOS release
+        run: cargo build --manifest-path rust/app/Cargo.toml --release --features apple-p2p
+
+      - name: Smoke standalone CLI
+        run: |
+          rust/app/target/release/uxplay -h >/dev/null
+          rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
