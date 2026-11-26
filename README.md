@@ -12,7 +12,7 @@ Latest Windows GNU all-target gates pass 429 app tests by default and 431 with `
 
 The baseline CMake build and toolchain notes are in [Checkpoints.md](Checkpoints.md). The migration map, accepted decisions, glossary and research are in [rust/](rust/).
 
-Build the current Rust front door with:
+Build the standalone Rust application with:
 
 ```powershell
 $msysUcrt = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64'
