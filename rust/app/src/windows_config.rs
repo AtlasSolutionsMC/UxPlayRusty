@@ -77,10 +77,13 @@ pub fn parse(text: &str) -> Result<(Vec<String>, UserConfig), String> {
             );
         }
         if let Some(enabled) = boolean(video, "vsync", "video.vsync")? {
-            args.extend([
-                "-vsync".to_owned(),
-                if enabled { "yes" } else { "no" }.to_owned(),
-            ]);
+            // `-vsync` enables timestamp synchronization by itself; its optional
+            // argument is a numeric delay, while the only disabling value is `no`.
+            // Emitting `yes` here is parsed as an invalid delay by the legacy CLI.
+            args.push("-vsync".to_owned());
+            if !enabled {
+                args.push("no".to_owned());
+            }
         }
     }
 
@@ -398,6 +401,12 @@ mod tests {
                 .unwrap_err()
                 .contains("ble.enabled")
         );
+    }
+
+    #[test]
+    fn true_vsync_uses_the_legacy_flag_without_a_yes_argument() {
+        let (args, _) = parse("[video]\nvsync = true").unwrap();
+        assert_eq!(args, ["-vsync"]);
     }
 
     #[test]
