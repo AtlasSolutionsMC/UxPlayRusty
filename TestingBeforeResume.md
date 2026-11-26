@@ -246,3 +246,10 @@ taskkill /PID 22432 /T /F
 
 - Re-read the current main path and searched the app for `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER`; neither selector is present. Corrected ADR-007/009 and the historical fallback instructions above, and changed README's “Rust front door” build heading to “standalone Rust application.” This is documentation cleanup only; no app source changed.
 - Target remote `master` is verified at `6557d4df0d20492353a95fc285259a0e4d77d415`; the target review clone is clean except for the local, untracked `.github/workflows/rust-linux.yml`. GitHub reports zero Actions runs. Keep the authorization and real iPhone capture gaps open.
+
+## 20. Addendum: resumed acceptance blocker audit (2026-11-26)
+
+- Re-read this file and `Checkpoints.md` before continuing. Target `master` is now verified at `e7834a62a3c23ab8fff6834bc52bbbcbe9d6462a`; local HEAD matches remote. `.github/workflows/rust-linux.yml` is the sole untracked path. GitHub CLI scope remains `repo` only (no `workflow`); the Actions API returns `total_count: 0`.
+- Rechecked for Docker, Podman, WSL, Linux GCC/Clang, Zig and cross-build wrappers; none are installed. This host cannot provide the native Linux app build/runtime gate.
+- Targeted static review found no `todo!`/`unimplemented!` in integrated app/renderer/beacon code and no obvious unhandled protocol session effect; the only FIXME is the source-compatible `playlistInsert` no-op. Avoid speculative parser/crypto changes without a source discrepancy.
+- Remaining concrete blockers: authorization to publish `.github/workflows/rust-linux.yml` and inspect/fix the resulting Linux Actions run; full iPhone stderr/raw packets and same-device C comparison for the reported mirror frame failure; native supported-OS/device/release acceptance. The migration is not complete.
