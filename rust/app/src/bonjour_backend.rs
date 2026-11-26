@@ -765,7 +765,7 @@ define_discard_registration_reply!("C");
 define_discard_registration_reply!("system");
 
 #[cfg(all(unix, feature = "external-dns-sd"))]
-#[link(name = "dns_sd")]
+#[cfg_attr(not(target_os = "macos"), link(name = "dns_sd"))]
 unsafe extern "C" {
     fn DNSServiceRegister(
         reference: *mut *mut std::ffi::c_void,
