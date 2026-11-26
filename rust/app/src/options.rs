@@ -391,6 +391,28 @@ pub fn parse_with_rc_named_and_path_check<F>(
     cli_args: &[String],
     capabilities: BuildCapabilities,
     binary_name: &str,
+    path_check: F,
+) -> ParseOutcome
+where
+    F: FnMut(&WritablePathCheck) -> bool,
+{
+    parse_with_config_named_and_path_check(
+        rc_file,
+        &[],
+        cli_args,
+        capabilities,
+        binary_name,
+        path_check,
+    )
+}
+
+/// Parse legacy rc values, then user config values, then command-line overrides.
+pub fn parse_with_config_named_and_path_check<F>(
+    rc_file: Option<(&str, &str)>,
+    config_args: &[String],
+    cli_args: &[String],
+    capabilities: BuildCapabilities,
+    binary_name: &str,
     mut path_check: F,
 ) -> ParseOutcome
 where
@@ -402,6 +424,7 @@ where
         prefix.push_str(&format!("UxPlay: reading configuration from  {path}\n"));
         args.extend(parse_rc_options(text));
     }
+    args.extend_from_slice(config_args);
     args.extend_from_slice(cli_args);
     parse_with_prefix_and_path_check(&args, capabilities, prefix, binary_name, &mut path_check)
 }
@@ -800,6 +823,7 @@ where
             "-avdec" => { options.video_parser = "h264parse".into(); options.video_decoder = "avdec_h264".into(); options.video_converter = "videoconvert".into(); }
             "-d3d11" => set_video_renderer(&mut options, VideoRendererKind::D3d11),
             "-lowlatency" => options.low_latency = true,
+            "-nolowlatency" => options.low_latency = false,
             "-v4l2" => { options.video_decoder = "v4l2h264dec".into(); options.video_converter = "v4l2convert".into(); }
             "-fs" => options.fullscreen = true,
             "-FPSdata" => options.show_client_fps = true,
@@ -981,6 +1005,7 @@ where
                 if optional_non_option(next).is_some() { i += 1; }
             }
             "-h265" => options.h265_support = true,
+            "-no-h265" => options.h265_support = false,
             "-nofreeze" => options.nofreeze = true,
             _ => return fail(1, notices, format!("unknown option {arg}, stopping (for help use option \"-h\")\n")),
         }
@@ -1311,6 +1336,51 @@ mod tests {
             exit.stderr,
             "missing.mp4 cannot be written to:\noption \"-mp4 <fn>\" must be to a file with write access\n"
         );
+    }
+
+    #[test]
+    fn user_config_overrides_rc_and_cli_overrides_both() {
+        let capabilities = BuildCapabilities {
+            host: HostPlatform::Linux,
+            dbus: true,
+            apple_p2p: false,
+            default_srgb: false,
+        };
+        let rc = Some(("legacy.rc", "n legacy\nh265\nlowlatency\n"));
+        let config = [
+            "-n".into(),
+            "config".into(),
+            "-no-h265".into(),
+            "-nolowlatency".into(),
+        ];
+        let from_config = ready(parse_with_config_named_and_path_check(
+            rc,
+            &config,
+            &[],
+            capabilities,
+            "uxplay",
+            |_| true,
+        ));
+        assert_eq!(from_config.server_name, "config");
+        assert!(!from_config.h265_support);
+        assert!(!from_config.low_latency);
+
+        let from_cli = ready(parse_with_config_named_and_path_check(
+            rc,
+            &config,
+            &[
+                "-n".into(),
+                "cli".into(),
+                "-h265".into(),
+                "-lowlatency".into(),
+            ],
+            capabilities,
+            "uxplay",
+            |_| true,
+        ));
+        assert_eq!(from_cli.server_name, "cli");
+        assert!(from_cli.h265_support);
+        assert!(from_cli.low_latency);
     }
 
     #[test]

@@ -1,0 +1,26 @@
+# UxPlay for Windows user configuration.
+# The first launch creates %APPDATA%/UxPlay/config.toml from this template.
+# Order of precedence: built-in defaults < legacy uxplayrc < this file < command line.
+
+[server]
+# AirPlay receiver name shown on the network. Must not be empty.
+name = "UxPlay"
+
+[video]
+# Video renderer: "auto", "d3d11", or "vulkan". Unsupported hardware/plugins fall back with a warning.
+renderer = "auto"
+# Maximum requested dimensions, optionally with a refresh rate, e.g. "1920x1080@60".
+# Width and height: 1..9999. Inline refresh rate: 1..255. Unset uses UxPlay's default.
+# resolution = "1920x1080@60"
+# Maximum requested frame rate: integer 1..255. Unset uses UxPlay's default.
+# max_fps = 60
+# Enable H.265 AirPlay mirroring when the sending device supports it. Default: false.
+h265 = false
+# Drop stale decoded frames to reduce latency. This may reduce smoothness on a slow PC.
+low_latency = false
+# Synchronize video to its clock. Default: true.
+vsync = true
+
+[startup]
+# Start UxPlay when the current Windows user signs in. Applied by the tray/startup milestone.
+enabled = false

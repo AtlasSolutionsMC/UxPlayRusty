@@ -1156,6 +1156,7 @@ dependencies = [
  "pkg-config",
  "plist",
  "socket2",
+ "toml",
  "uxplay-airplay-http-handlers",
  "uxplay-core",
  "uxplay-crypto",

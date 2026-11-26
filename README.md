@@ -59,3 +59,5 @@ cargo test --manifest-path rust/units/playfair-sap-hash/Cargo.toml
 ```
 
 The final build will require the native GStreamer runtime/plugins and OpenSSL selected in [`docs/architecture/DECISIONS.md`](docs/architecture/DECISIONS.md).
+
+Windows first-run configuration and the supported `config.toml` settings are documented in [`docs/development/WindowsConfig.md`](docs/development/WindowsConfig.md).

@@ -141,6 +141,7 @@ mod rtp_wire;
 mod server_runtime;
 mod startup_validation;
 mod units;
+mod windows_config;
 
 use options::{BuildCapabilities, ParseOutcome};
 use std::ffi::{OsStr, OsString};
@@ -209,6 +210,22 @@ fn parse_startup_options(argv: &[OsString]) -> Option<(ParseOutcome, String)> {
         .skip(1)
         .map(|value| value.to_str().map(str::to_owned))
         .collect::<Option<Vec<_>>>()?;
+    #[cfg(windows)]
+    let config_args = match windows_config::load_or_create() {
+        Ok((_, args, _)) => args,
+        Err(error) => {
+            return Some((
+                ParseOutcome::Exit(options::CliExit {
+                    code: 1,
+                    stdout: String::new(),
+                    stderr: format!("UxPlay: {error}\n"),
+                }),
+                String::new(),
+            ));
+        }
+    };
+    #[cfg(not(windows))]
+    let config_args: Vec<String> = Vec::new();
     let RcFileLoad {
         file: rc_file,
         error: config_error,
@@ -235,8 +252,9 @@ fn parse_startup_options(argv: &[OsString]) -> Option<(ParseOutcome, String)> {
     let rc_ref = rc_ref
         .as_ref()
         .map(|(path, contents)| (path.as_str(), contents.as_str()));
-    let outcome = options::parse_with_rc_named_and_path_check(
+    let outcome = options::parse_with_config_named_and_path_check(
         rc_ref,
+        &config_args,
         &cli_args,
         BuildCapabilities::default(),
         binary,
