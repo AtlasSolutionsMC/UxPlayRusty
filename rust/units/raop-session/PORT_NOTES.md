@@ -27,3 +27,5 @@
 - The oracle checks scalar C expressions only. It does not exercise the original `raop_handler_setup` function, real UDP/TCP sockets, digest authentication, callback order, or platform-specific renderer behavior.
 
 Keep this unit staged until the app adapter resolves the synchronous callback/effect results and replays real SETUP/TEARDOWN sessions against the unchanged C server.
+
+- The old-protocol User-Agent decision mirrors C's exact strstr(OLD_PROTOCOL_CLIENT_USER_AGENT_LIST, user_agent) direction. An AirMyPC brand substring outside the configured list does not by itself select the legacy unhashed key path.
