@@ -64,9 +64,17 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - M8 remains open for hands-on Windows tray menus/restart/disconnect/exit, startup after sign-in, app server lifecycle, real iPhone A/V and repeated low-latency comparison, Vulkan-capable GPU render/window lifecycle, BLE radio, and clean-machine install/uninstall. This host's regressions do not claim those results.
 - Windows release preparation: `tools/windows/package-release.ps1` rebuilds app and beacon, collects PE-import DLL dependencies plus the runtime plugins/scanner, includes package license files/notices and compiles `Setup.exe`. The bundle stage is 196.4 MB; Inno Setup output is 52.1 MB. `smoke-runtime.ps1` passed 18 GStreamer factory probes including AAC/ALAC, H.264/H.265 parse, WASAPI, D3D11 and Vulkan; packaged `uxplay.exe -h` exited 0 with MSYS2 removed from `PATH`. This is local plugin/loader evidence, not Apple media or GPU acceptance.
 - The Inno Setup install smoke passed install files, Start Menu shortcut, optional startup Run registration, `startup.enabled=true`, uninstall cleanup and Add/Remove Programs removal. It preserves/restores the current user's config, handoff, Run value and shortcut. This was a temporary install on the development host, not a clean Windows machine. Package source and staged files remain provisional until M8 acceptance; rebuild from the accepted revision before distribution.
+- Refreshed the provisional bundle from revision `1139936`: Inno Setup compiled `dist/windows/Setup.exe` (54,596,202 bytes), `BUILD-INFO.txt` identifies `1139936`, all 18 staged GStreamer/runtime probes plus `uxplay -h` without MSYS2 `PATH` passed, and the install/startup/uninstall smoke passed again. These checks ran on the development host; the clean-machine gate and post-acceptance rebuild remain open.
 - Runtime package notices include installed license texts where present and report SPDX/upstream metadata for installed MSYS2 packages that do not ship standalone license text. The package review/source-distribution obligation check is still open; do not treat generated notices as a completed legal audit.
 
 ## Checkpoint log
+
+### 2026-11-27 — BLE shutdown observation and package refresh
+
+- Detected an Intel Wireless Bluetooth adapter and Microsoft BLE Enumerator on the Windows host. A controlled WinRT preflight reached `WAITING` and `STARTED`; the monitor noticed owner exit and removed the handoff file.
+- The WinRT publisher's `Stop()` returned, but its immediate status remained `STARTED`; the status stayed `STARTED` through a 10-second diagnostic wait, with no `STOPPED` callback. The backend now logs the immediate status and maps `STOPPING`. M7 stays in progress because actual advertiser shutdown is not confirmed; see Microsoft’s [publisher Stop API reference](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.advertisement.bluetoothleadvertisementpublisher.stop?view=winrt-28000).
+- Windows beacon checks after the diagnostic change passed: format, 68 library tests, 5 CLI tests, Clippy with warnings denied, and release build. This code proof does not close the BLE radio lifecycle gate.
+- Rebuilt the provisional Windows package from `1139936`; runtime smoke (18 factories and no-MSYS2 CLI) plus install/startup/uninstall smoke passed on this development host. No clean-machine install or Apple device playback was performed.
 
 ### 2026-11-27 — Windows installer preparation (provisional)
 
