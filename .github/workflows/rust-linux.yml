@@ -62,41 +62,64 @@ jobs:
 
       - name: Smoke Rust server endpoint
         run: |
-          set -euo pipefail
-          home="$(mktemp -d)"
-          log="$(mktemp)"
-          body="$(mktemp)"
-          port=27100
-          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" \
-            rust/app/target/release/uxplay -n CodexLinuxSmoke -a -vs 0 \
-              -p tcp "$((port + 1)),$port,$((port + 2))" >"$log" 2>&1 &
-          pid=$!
-          cleanup() {
-            kill -INT "$pid" 2>/dev/null || true
-            for _ in $(seq 1 30); do
-              kill -0 "$pid" 2>/dev/null || break
-              sleep 0.1
-            done
-            kill -KILL "$pid" 2>/dev/null || true
-            wait "$pid" 2>/dev/null || true
-            rm -rf "$home" "$log" "$body"
-          }
-          trap cleanup EXIT
-          for _ in $(seq 1 50); do
-            if curl --silent --show-error --fail --max-time 1 \
-              -H 'X-Apple-Session-ID: smoke' \
-              "http://127.0.0.1:${port}/server-info" --output "$body"; then
-              grep -q '<key>deviceid</key>' "$body"
-              exit 0
-            fi
-            if ! kill -0 "$pid" 2>/dev/null; then
-              cat "$log"
-              exit 1
-            fi
-            sleep 0.2
-          done
-          cat "$log"
-          exit 1
+          python3 - <<'PY'
+          import os
+          import signal
+          import socket
+          import subprocess
+          import sys
+          import tempfile
+          import time
+          import urllib.request
+
+          with tempfile.TemporaryDirectory(prefix="uxplay-smoke-") as home, tempfile.TemporaryFile() as log:
+              with socket.socket() as probe:
+                  probe.bind(("127.0.0.1", 0))
+                  port = probe.getsockname()[1]
+              env = os.environ.copy()
+              env.pop("UXPLAYRC", None)
+              env["HOME"] = home
+              env["XDG_CONFIG_HOMEDIR"] = home
+              proc = subprocess.Popen(
+                  ["rust/app/target/release/uxplay", "-n", "CodexLinuxSmoke", "-a", "-vs", "0",
+                   "-p", "tcp", f"{port + 1},{port},{port + 2}"],
+                  env=env, stdout=log, stderr=subprocess.STDOUT,
+              )
+              try:
+                  deadline = time.monotonic() + 10
+                  while time.monotonic() < deadline:
+                      if proc.poll() is not None:
+                          break
+                      try:
+                          request = urllib.request.Request(
+                              f"http://127.0.0.1:{port}/server-info",
+                              headers={"X-Apple-Session-ID": "smoke"},
+                          )
+                          with urllib.request.urlopen(request, timeout=1) as response:
+                              body = response.read()
+                              assert response.status == 200
+                              assert b"<key>deviceid</key>" in body
+                              break
+                      except (OSError, TimeoutError):
+                          time.sleep(0.2)
+                  else:
+                      raise RuntimeError("server-info endpoint did not become ready")
+                  if proc.poll() is not None:
+                      raise RuntimeError("server exited before serving server-info")
+              finally:
+                  if proc.poll() is None:
+                      proc.send_signal(signal.SIGINT)
+                  try:
+                      return_code = proc.wait(timeout=5)
+                  except subprocess.TimeoutExpired:
+                      proc.kill()
+                      proc.wait()
+                      raise RuntimeError("server did not stop after SIGINT")
+                  if return_code != 0:
+                      log.seek(0)
+                      sys.stderr.write(log.read().decode(errors="replace"))
+                      raise RuntimeError(f"server exited with status {return_code}")
+          PY
 
       - name: Test external DNS-SD configuration
         run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features external-dns-sd

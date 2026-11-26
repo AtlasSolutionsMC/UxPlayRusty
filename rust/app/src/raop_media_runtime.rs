@@ -71,10 +71,14 @@ impl RendererEventLoop {
             })?;
         }
 
-        let config = video_renderer_config(options);
-        video_renderer_init(config, video_renderer_log_callback(logger))
-            .map_err(|error| io::Error::other(format!("video renderer startup failed: {error}")))?;
-        video_renderer_start();
+        let use_video = options.video_sink != "0";
+        if use_video {
+            let config = video_renderer_config(options);
+            video_renderer_init(config, video_renderer_log_callback(logger)).map_err(|error| {
+                io::Error::other(format!("video renderer startup failed: {error}"))
+            })?;
+            video_renderer_start();
+        }
 
         let main_loop = MainLoop::new(None, false);
         let mut audio_watches = Vec::new();
@@ -88,8 +92,11 @@ impl RendererEventLoop {
             }
         }
 
-        let video_renderer_count =
-            1 + usize::from(options.h265_support) + usize::from(options.render_cover_art);
+        let video_renderer_count = if use_video {
+            1 + usize::from(options.h265_support) + usize::from(options.render_cover_art)
+        } else {
+            0
+        };
         let mut video_watch_ids = Vec::with_capacity(video_renderer_count);
         for id in 0..video_renderer_count {
             let source_id = video_renderer_listen(&main_loop, id).map_err(|error| {
@@ -123,6 +130,33 @@ impl RendererEventLoop {
 impl Drop for RendererEventLoop {
     fn drop(&mut self) {
         self.stop();
+    }
+}
+
+#[cfg(test)]
+mod renderer_event_loop_tests {
+    use super::*;
+
+    #[test]
+    fn disabled_video_skips_video_renderer_initialization_and_bus_watches() {
+        let _renderer_guard = VIDEO_RENDERER_TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let options = Options {
+            use_audio: false,
+            audio_sink: "0".into(),
+            video_sink: "0".into(),
+            h265_support: true,
+            render_cover_art: true,
+            ..Options::default()
+        };
+        let logger = Arc::new(Logger::new());
+
+        let renderer_loop = RendererEventLoop::start(&options, &logger)
+            .expect("disabling media outputs must still start the server event loop");
+        assert_eq!(video_renderer_choose_codec_and_size(false, false), -1);
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        drop(renderer_loop);
     }
 }
 
