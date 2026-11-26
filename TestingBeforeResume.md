@@ -241,3 +241,8 @@ taskkill /PID 22432 /T /F
 - Both commits only change `uxplay.cpp`: PIN password callback sentinel `-2`, missing-DeviceID admission under `-restrict`, and CR/LF sanitization of pairing-register client names. Rust already implements these source behaviors. No merge to the reference or Rust code change was needed.
 - Resume by reading this section and `Checkpoints.md` first. Target Rusty `master` last verified at `dc0f914c204f8628fb5023be5854cb10fb1178eb`; the current local workflow is still untracked in the target review clone because Git writes lack the `workflow` scope. GitHub reports no Actions run yet.
 - Static placeholder scan of integrated app/renderer/beacon source found no `todo!` or `unimplemented!`; the only FIXME is the intentional C-compatible `playlistInsert` no-op. This does not close native OS, live Apple-client, Linux CI, or release packaging acceptance.
+
+## 19. Addendum: current startup documentation reconciliation (2026-11-26)
+
+- Re-read the current main path and searched the app for `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER`; neither selector is present. Corrected ADR-007/009 and the historical fallback instructions above, and changed README's “Rust front door” build heading to “standalone Rust application.” This is documentation cleanup only; no app source changed.
+- Target remote `master` is verified at `6557d4df0d20492353a95fc285259a0e4d77d415`; the target review clone is clean except for the local, untracked `.github/workflows/rust-linux.yml`. GitHub reports zero Actions runs. Keep the authorization and real iPhone capture gaps open.
