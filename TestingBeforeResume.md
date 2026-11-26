@@ -218,3 +218,9 @@ taskkill /PID 22432 /T /F
 - Re-read `main.rs`, `compat_cli.rs`, and the app's command creation sites. The old guidance about removing unrepresentable-argument forwarding/rollback was stale: no reference executable launch or rollback path remains in the Rust app; `fallback_log` only reports zero to the replay harness. Native Unix argument/runtime acceptance remains open.
 - Re-read `lib/raop_ntp.c` socket setup and receive loop alongside `raop_ntp_runtime.rs`. C sets `SO_RCVTIMEO`, and any negative `kernel_timestamp_session_recv()` result is logged as the ordinary timeout; Rust maps receive errors to the same timeout path. NTP does not use `select()` here. Keep OS error injection/hardware timestamp acceptance as unverified evidence, but do not treat an unimplemented NTP select branch as a product gap.
 - No code change was warranted by this audit. C reference sources remain unchanged.
+
+## 17. Addendum: Linux CI acceptance path (2026-11-26)
+
+- Confirmed `wsl --status` reports WSL is not installed; this host has Rust Linux/FreeBSD targets but no `gcc`/`clang` and no Linux OpenSSL/libplist/GStreamer sysroot. Do not repeat the known failing native cross-check with unchanged prerequisites.
+- Added `.github/workflows/rust-linux.yml` for an actual Ubuntu 24.04 build/test environment. It installs Ubuntu's native OpenSSL, libplist, GStreamer development/runtime and Avahi DNS-SD packages, then runs app fmt, tests, Clippy and release builds with both embedded mDNS and `external-dns-sd`.
+- GitHub rejected both `git push` and the connected GitHub Contents API write for `.github/workflows/rust-linux.yml` (Git credential lacks OAuth `workflow` scope; Contents API returned 403 `Resource not accessible by integration`). No remote workflow or Actions run exists. Keep Linux acceptance open; publish with an authorized credential/integration, then inspect and fix any actual Linux failures.

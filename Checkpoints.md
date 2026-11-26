@@ -1108,6 +1108,11 @@ Create a standalone Rust replacement for the reference project at `D:\Save\Uxpla
 ### 2026-11-26 — README acceptance status refresh
 - Updated the repository front page with the latest verified Windows GNU gate counts, clean default/feature release builds, CLI evidence, raw-byte HTTP differential and the grouped replay limitation. Added a direct link to the Vulkan/iPhone Mirroring feasibility report. This is documentation only; the source and C reference were not changed.
 
+### 2026-11-26 — Ubuntu CI for Linux acceptance
+- Rechecked current host prerequisites: WSL is not installed; Rust has Linux and FreeBSD targets, but the host has no native GCC/Clang or Linux OpenSSL/libplist/GStreamer sysroot. Previous Linux cross-check failures have unchanged prerequisites.
+- Added `.github/workflows/rust-linux.yml` to validate the integrated app on Ubuntu 24.04 with native dependencies. It runs fmt, all-target tests, Clippy (`-D warnings`) and release builds for embedded mDNS and `external-dns-sd`.
+- Git rejected the workflow push because its OAuth credential lacks `workflow` scope; the connected GitHub Contents API also rejected the create-file request with 403 `Resource not accessible by integration`. No workflow or Actions run exists remotely. Keep the local workflow definition and Linux acceptance open; publish it once an authorized credential/integration is available. Native runtime/device acceptance remains separate.
+
 ### 2026-11-22 — HCI cleanup CalledProcessError parity
 - The wider callback/cleanup audit across the five Python beacon files and Rust backends found one remaining locally testable HCI mismatch: Python catches nonzero `CalledProcessError` during start/setup, but an HCI stop command is uncaught and prints a CPython traceback. Rust already preserved the source start-command sequence, but returned a plain stop diagnostic for nonzero exit.
 - `HciBackend::stop_with_context()` now builds the actual command output and, on nonzero exit, formats the uncaught `CalledProcessError` traceback for ordinary handoff removal and the chained Ctrl+C stop. Start/setup's caught nonzero behavior is unchanged. Added unchanged-source fake subprocess fixtures and Rust comparison tests for both cleanup routes.
