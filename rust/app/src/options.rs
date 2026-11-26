@@ -704,13 +704,13 @@ where
                     };
                     let option = format!("-p {value}");
                     let Some(ports) = parse_ports(ports_value) else {
-                        return fail(1, format!("{notices}*** ERROR: invalid \"{option} {ports_value}\", all 3 ports must be in range [1024,65535]\n"), String::new());
+                        return fail(1, format!("{notices}*** ERROR: invalid \"{option} {ports_value}\", all 3 distinct ports must be in range [1024,65535]\n"), String::new());
                     };
                     if value == "tcp" { options.tcp_ports = ports; } else { options.udp_ports = ports; }
                     i += 1;
                 } else {
                     let Some(ports) = parse_ports(value) else {
-                        return fail(1, format!("{notices}*** ERROR: invalid \"-p {value}\", all 3 ports must be in range [1024,65535]\n"), String::new());
+                        return fail(1, format!("{notices}*** ERROR: invalid \"-p {value}\", all 3 distinct ports must be in range [1024,65535]\n"), String::new());
                     };
                     options.tcp_ports = ports;
                     options.udp_ports = ports;
@@ -1068,10 +1068,10 @@ fn parse_ports(text: &str) -> Option<[u16; 3]> {
     }
     let mut ports = [0u16; 3];
     for (index, value) in parts.iter().enumerate() {
-        if value.is_empty() || value.len() > 5 || value.starts_with('-') {
+        if value.is_empty() || value.len() > 5 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
             return None;
         }
-        let n = parse_display_number(value)?;
+        let n = value.parse::<u32>().ok()?;
         if !(LOWEST_ALLOWED_PORT..=HIGHEST_PORT).contains(&n) {
             return None;
         }
@@ -1083,6 +1083,11 @@ fn parse_ports(text: &str) -> Option<[u16; 3]> {
             return None;
         }
         ports[index] = n as u16;
+    }
+    for index in 0..ports.len() {
+        if ports[index + 1..].contains(&ports[index]) {
+            return None;
+        }
     }
     Some(ports)
 }
@@ -1341,6 +1346,31 @@ mod tests {
         assert!(options.mux_to_file && options.fullscreen);
         assert_eq!(options.pin_password_mode, 1);
         assert!(options.requested_language.is_empty() && options.h265_support);
+    }
+
+    #[test]
+    fn port_lists_reject_duplicates_in_explicit_and_generated_entries() {
+        for (arguments, expected) in [
+            (&["-p", "6000,6000"][..], "-p 6000,6000"),
+            (&["-p", "tcp", "6000,6000"][..], "-p tcp 6000,6000"),
+            (&["-p", "6001,6000"][..], "-p 6001,6000"),
+            (&["-p", "+6000"][..], "-p +6000"),
+            (&["-p", " 6000"][..], "-p  6000"),
+        ] {
+            let exit = exited(parse(arguments));
+            assert_eq!(exit.code, 1);
+            assert!(
+                exit.stdout.contains(&format!(
+                    "invalid \"{expected}\", all 3 distinct ports must be in range [1024,65535]"
+                )),
+                "stdout: {}\nstderr: {}",
+                exit.stdout,
+                exit.stderr,
+            );
+        }
+
+        let options = ready(parse(&["-p", "6002,6000,6001"]));
+        assert_eq!(options.tcp_ports, [6002, 6000, 6001]);
     }
 
     #[test]

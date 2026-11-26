@@ -22,7 +22,11 @@ Compiled the unchanged C request parser and llhttp to record 264 cases: all 256 
 
 ### Latest 2026-11-26 parser expansion
 
-Expanded the unchanged C/llhttp differential to 776 byte classifications: every byte value in the URL target, HTTP header name, and HTTP header value, plus seven line-ending boundaries and a fragmented request-line case. All rows match Rust. Windows GNU all-target suites pass 432 + 10/99/7 and 434 + 10/99/7 with external DNS-SD; Clippy (`-D warnings`) and fmt pass in both modes. Linux CI is pending.
+Expanded the unchanged C/llhttp differential to 776 byte classifications: every byte value in the URL target, HTTP header name, and HTTP header value, plus seven line-ending boundaries and a fragmented request-line case. All rows match Rust. Windows GNU all-target suites pass 432 + 10/99/7 and 434 + 10/99/7 with external DNS-SD; Clippy (`-D warnings`) and fmt pass in both modes. Linux run `45833787778` passes the full workflow.
+
+### Latest 2026-11-26 upstream `get_ports` port-list correction
+
+Reviewed the three upstream commits. Rust already has client-name CR/LF stripping, missing-DeviceID admission and legacy PIN per-session Digest auth. Rust port parsing now matches updated C validation: digit-only, unique explicit and auto-expanded port lists, with the `all 3 distinct ports` message. Focused test and both Windows GNU all-target/Clippy/fmt gates pass; Linux CI for this change is pending. Rust branch ancestry merge `7e882b3` makes `FDH2/UxPlay:master` behind count zero while keeping `uxplay.cpp` absent from the standalone target tree.
 
 ## 1. สิ่งที่ทำใน session นี้
 
