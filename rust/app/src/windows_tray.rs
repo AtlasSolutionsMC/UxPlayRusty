@@ -430,20 +430,29 @@ fn open_config(hwnd: HWND) {
         }
     };
     let verb = wide("open");
-    let path = wide(&path.to_string_lossy());
+    let (editor, arguments) = config_editor_arguments(&path);
+    let editor = wide(editor);
+    let arguments = wide(&arguments);
     let result = unsafe {
         ShellExecuteW(
             hwnd,
             verb.as_ptr(),
-            path.as_ptr(),
-            std::ptr::null(),
+            editor.as_ptr(),
+            arguments.as_ptr(),
             std::ptr::null(),
             1,
         )
     };
     if (result as isize) <= 32 {
-        message("Windows could not open the UxPlay config file.", true);
+        message(
+            "Windows could not open the UxPlay config file in Notepad.",
+            true,
+        );
     }
+}
+
+fn config_editor_arguments(path: &std::path::Path) -> (&'static str, String) {
+    ("notepad.exe", format!("\"{}\"", path.display()))
 }
 
 fn set_startup(enabled: bool) -> Result<(), String> {
@@ -520,4 +529,23 @@ fn wide(value: &str) -> Vec<u16> {
         .encode_wide()
         .chain(std::iter::once(0))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::config_editor_arguments;
+    use std::path::Path;
+
+    #[test]
+    fn config_opens_in_notepad_without_a_toml_file_association() {
+        let path = Path::new(r"C:\Users\Test User\AppData\Roaming\UxPlay\config.toml");
+
+        let (editor, arguments) = config_editor_arguments(path);
+
+        assert_eq!(editor, "notepad.exe");
+        assert_eq!(
+            arguments,
+            r#""C:\Users\Test User\AppData\Roaming\UxPlay\config.toml""#
+        );
+    }
 }
