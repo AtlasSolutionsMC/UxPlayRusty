@@ -83,6 +83,70 @@ jobs:
               b'Error: detected a non-ascii or non-UTF-8 string "\xff"'
               b"while parsing input arguments"
           ), result.stderr
+
+          with tempfile.TemporaryDirectory(prefix="uxplay-rc-smoke-") as home:
+              env = os.environ.copy()
+              env.pop("UXPLAYRC", None)
+              env["HOME"] = home
+              env["XDG_CONFIG_HOMEDIR"] = home
+              missing = os.fsencode(home) + b"/missing-\xff.rc"
+              result = subprocess.run(
+                  [executable, b"-rc", missing],
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  check=False,
+              )
+          assert result.returncode == 0, result.returncode
+          assert result.stdout == (
+              b"*** ERROR: startup file " + missing
+              + b" specified by option -rc was not found\n"
+          ), result.stdout
+          assert result.stderr == b"", result.stderr
+
+          with tempfile.TemporaryDirectory(prefix="uxplay-rc-bytes-smoke-") as home:
+              env = os.environ.copy()
+              env.pop("UXPLAYRC", None)
+              env["HOME"] = home
+              env["XDG_CONFIG_HOMEDIR"] = home
+              config = os.path.join(home, "invalid.rc")
+              with open(config, "wb") as rc:
+                  rc.write(b"-bad\xff\n")
+              result = subprocess.run(
+                  [executable, b"-rc", os.fsencode(config)],
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  check=False,
+              )
+          assert result.returncode == 0, result.returncode
+          assert result.stdout == f"UxPlay: reading configuration from  {config}\n".encode(), result.stdout
+          assert result.stderr == (
+              b'Error: detected a non-ascii or non-UTF-8 string "-bad\xff"'
+              b"while parsing input arguments"
+          ), result.stderr
+
+          with tempfile.TemporaryDirectory(prefix="uxplay-rc-comment-smoke-") as home:
+              env = os.environ.copy()
+              env.pop("UXPLAYRC", None)
+              env["HOME"] = home
+              env["XDG_CONFIG_HOMEDIR"] = home
+              config = os.path.join(home, "comment.rc")
+              with open(config, "wb") as rc:
+                  rc.write(b"# ignored \xff\n-v\n")
+              result = subprocess.run(
+                  [executable, b"-rc", os.fsencode(config)],
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  check=False,
+              )
+          assert result.returncode == 0, result.returncode
+          assert result.stdout == (
+              f"UxPlay: reading configuration from  {config}\n"
+              "UxPlay version 1.74; for help, use option \"-h\"\n"
+          ).encode(), result.stdout
+          assert result.stderr == b"", result.stderr
           PY
 
       - name: Smoke Rust server endpoint
