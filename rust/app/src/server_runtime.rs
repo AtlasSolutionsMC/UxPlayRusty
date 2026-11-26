@@ -28,7 +28,7 @@ use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 use uxplay_pairing::Pairing;
 use uxplay_raop_session::{CallbackAvailability, ServerPorts, SetupDecisions};
@@ -36,7 +36,82 @@ use uxplay_raop_session::{CallbackAvailability, ServerPorts, SetupDecisions};
 /// Starts the TCP listener, advertises the two DNS-SD services, and serves the
 /// staged protocol adapter.
 pub fn run(options: Options) -> ExitCode {
-    match run_server(options) {
+    match run_server(options, Arc::new(ServerControl::new()), true) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(ServerRuntimeError::ExitCode(code)) => code,
+        Err(ServerRuntimeError::Io(error)) => {
+            eprintln!(
+                "UxPlay Rust: server startup failed: {}",
+                crate::compat::socket_error_description(&error)
+            );
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// Shared lifecycle controls used by the Windows tray host.
+pub struct ServerControl {
+    shutdown: Arc<AtomicBool>,
+    stop_requested: Arc<AtomicBool>,
+    connections: Mutex<Weak<ConnectionRegistry>>,
+}
+
+impl ServerControl {
+    pub fn new() -> Self {
+        Self {
+            shutdown: Arc::new(AtomicBool::new(false)),
+            stop_requested: Arc::new(AtomicBool::new(false)),
+            connections: Mutex::new(Weak::new()),
+        }
+    }
+
+    pub fn request_exit(&self) {
+        self.stop_requested
+            .store(true, std::sync::atomic::Ordering::Release);
+        self.shutdown
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+
+    pub(crate) fn reset(&self) {
+        self.stop_requested
+            .store(false, std::sync::atomic::Ordering::Release);
+        self.shutdown
+            .store(false, std::sync::atomic::Ordering::Release);
+        *self
+            .connections
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Weak::new();
+    }
+
+    pub fn request_disconnect(&self) {
+        if let Some(connections) = self
+            .connections
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .upgrade()
+        {
+            connections.remove_known_connections();
+        }
+    }
+
+    fn attach_connections(&self, connections: &Arc<ConnectionRegistry>) {
+        *self
+            .connections
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Arc::downgrade(connections);
+    }
+}
+
+impl Default for ServerControl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Runs the server under externally managed lifecycle controls. The caller owns the control
+/// handle and may request disconnect or graceful shutdown from another thread.
+pub fn run_with_control(options: Options, control: Arc<ServerControl>) -> ExitCode {
+    match run_server(options, control, false) {
         Ok(()) => ExitCode::SUCCESS,
         Err(ServerRuntimeError::ExitCode(code)) => code,
         Err(ServerRuntimeError::Io(error)) => {
@@ -60,7 +135,11 @@ impl From<io::Error> for ServerRuntimeError {
     }
 }
 
-fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
+fn run_server(
+    options: Options,
+    control: Arc<ServerControl>,
+    install_ctrlc: bool,
+) -> Result<(), ServerRuntimeError> {
     crate::logger::set_console_output_utf8();
     let logger_level = if options.debug_log {
         if options.suppress_packet_debug_data {
@@ -196,6 +275,7 @@ fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
     ));
     let event_channel = Arc::new(crate::airplay_event_channel::AirPlayEventChannel::default());
     let connection_registry = Arc::new(ConnectionRegistry::default());
+    control.attach_connections(&connection_registry);
     let context = ProtocolContext {
         hls_support: options.hls_support,
         local_uri_prefix: format!("http://localhost:{server_port}"),
@@ -239,8 +319,6 @@ fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
         audio_delay_micros: audio_delay_micros(&options),
         ..ProtocolContext::default()
     };
-    let shutdown = Arc::new(AtomicBool::new(false));
-    let stop_requested = Arc::new(AtomicBool::new(false));
     let restart_requested = Arc::new(AtomicBool::new(false));
     let effects: Arc<dyn ProtocolEffectSink> = Arc::new(StartupEffects {
         registration,
@@ -249,16 +327,20 @@ fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
         event_channel: Arc::clone(&event_channel),
         video_store: Arc::clone(&video_store),
         restart_requested: Arc::clone(&restart_requested),
-        shutdown: Arc::clone(&shutdown),
+        shutdown: Arc::clone(&control.shutdown),
     });
 
-    let shutdown_on_signal = Arc::clone(&shutdown);
-    let stop_on_signal = Arc::clone(&stop_requested);
-    ctrlc::set_handler(move || {
-        stop_on_signal.store(true, std::sync::atomic::Ordering::Release);
-        shutdown_on_signal.store(true, std::sync::atomic::Ordering::Release);
-    })
-    .map_err(|error| io::Error::other(format!("could not install shutdown handler: {error}")))?;
+    if install_ctrlc {
+        let shutdown_on_signal = Arc::clone(&control.shutdown);
+        let stop_on_signal = Arc::clone(&control.stop_requested);
+        ctrlc::set_handler(move || {
+            stop_on_signal.store(true, std::sync::atomic::Ordering::Release);
+            shutdown_on_signal.store(true, std::sync::atomic::Ordering::Release);
+        })
+        .map_err(|error| {
+            io::Error::other(format!("could not install shutdown handler: {error}"))
+        })?;
+    }
 
     let watchdog_stop = Arc::new(AtomicBool::new(false));
     let watchdog_thread = start_feedback_watchdog(
@@ -287,7 +369,7 @@ fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
         };
         let result = serve_protocol_with_registry(
             current_listeners,
-            Arc::clone(&shutdown),
+            Arc::clone(&control.shutdown),
             ServerConfig::default(),
             context.clone(),
             Arc::clone(&connection_registry),
@@ -295,11 +377,20 @@ fn run_server(options: Options) -> Result<(), ServerRuntimeError> {
         );
         if result.is_ok()
             && restart_requested.swap(false, std::sync::atomic::Ordering::AcqRel)
-            && !stop_requested.load(std::sync::atomic::Ordering::Acquire)
+            && !control
+                .stop_requested
+                .load(std::sync::atomic::Ordering::Acquire)
         {
-            shutdown.store(false, std::sync::atomic::Ordering::Release);
-            if stop_requested.load(std::sync::atomic::Ordering::Acquire) {
-                shutdown.store(true, std::sync::atomic::Ordering::Release);
+            control
+                .shutdown
+                .store(false, std::sync::atomic::Ordering::Release);
+            if control
+                .stop_requested
+                .load(std::sync::atomic::Ordering::Acquire)
+            {
+                control
+                    .shutdown
+                    .store(true, std::sync::atomic::Ordering::Release);
                 break Ok(());
             }
             if media_config.use_audio {
@@ -1613,5 +1704,38 @@ mod discovery_startup_tests {
         assert!(conflict.contains("kDNSServiceErr_NameConflict"));
         assert!(conflict.contains("another instance of receiver"));
         assert!(!dnssd_registration_error_text(-1, false, "uxplay").contains("Socket error"));
+    }
+}
+
+#[cfg(test)]
+mod tray_control_tests {
+    use super::*;
+    use crate::http_transport::ConnectionClass;
+    use std::io::Read;
+    use std::net::{TcpListener, TcpStream};
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn exit_signals_shutdown_and_disconnect_closes_known_clients() {
+        let control = ServerControl::new();
+        control.request_exit();
+        assert!(control.shutdown.load(Ordering::Acquire));
+        assert!(control.stop_requested.load(Ordering::Acquire));
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (server, _) = listener.accept().unwrap();
+        let registry = Arc::new(ConnectionRegistry::default());
+        let registration = registry.register(&server).unwrap();
+        registration.set_class(ConnectionClass::AirPlay);
+        control.attach_connections(&registry);
+        control.request_disconnect();
+
+        let mut client = client;
+        client
+            .set_read_timeout(Some(Duration::from_secs(1)))
+            .unwrap();
+        let mut byte = [0_u8; 1];
+        assert_eq!(client.read(&mut byte).unwrap(), 0);
     }
 }

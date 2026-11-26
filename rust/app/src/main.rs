@@ -1,3 +1,5 @@
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 #[cfg_attr(
     not(test),
     expect(
@@ -142,6 +144,8 @@ mod server_runtime;
 mod startup_validation;
 mod units;
 mod windows_config;
+#[cfg(windows)]
+mod windows_tray;
 
 use options::{BuildCapabilities, ParseOutcome};
 use std::ffi::{OsStr, OsString};
@@ -152,6 +156,12 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     fallback_log::report_fallbacks();
     let native_argv: Vec<OsString> = std::env::args_os().collect();
+    #[cfg(windows)]
+    if native_argv.len() > 1 {
+        windows_tray::attach_console_for_cli();
+    } else {
+        windows_tray::initialize_gui_logging();
+    }
     // The C entry point receives argv in the active ANSI code page on Windows.
     let argv = compat::c_runtime_arguments(&native_argv);
     if let Some(code) = compat_cli::run_explicit_rc_compat(&argv) {
@@ -172,6 +182,10 @@ fn main() -> ExitCode {
             ParseOutcome::Exit(exit) => {
                 write_stdout(&exit.stdout);
                 write_stderr(&exit.stderr);
+                #[cfg(windows)]
+                if argv.len() == 1 && exit.code != 0 {
+                    windows_tray::show_error(&format!("{}{}", exit.stdout, exit.stderr));
+                }
                 return ExitCode::from(exit.code);
             }
             ParseOutcome::Ready(success) => {
@@ -185,6 +199,10 @@ fn main() -> ExitCode {
                     if startup.exit_code != 0 {
                         return ExitCode::from(startup.exit_code);
                     }
+                }
+                #[cfg(windows)]
+                if argv.len() == 1 {
+                    return windows_tray::run(success.options, argv);
                 }
                 return server_runtime::run(success.options);
             }
