@@ -14,7 +14,7 @@ Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in R
 
 ### 2026-11-26 follow-up — NTP filter parity
 
-A fresh comparison with lib/raop_ntp.c found that double inverse_two_pow_n[RAOP_NTP_DATA_COUNT] = { 1.0 }; zero-initializes all but the first element. Rust previously computed geometric weights, which changed root distance and is_synced; Rust now matches the C weights. A compiled C reproduction confirmed `0.5 0 0 0 0 0 0 0`. Windows GNU focused regression, app all-target suites (431 + 10/98/7), Clippy and fmt pass. Linux CI is pending; this is not yet a published acceptance result.
+A fresh comparison with lib/raop_ntp.c found that double inverse_two_pow_n[RAOP_NTP_DATA_COUNT] = { 1.0 }; zero-initializes all but the first element. Rust previously computed geometric weights, which changed root distance and is_synced; Rust now matches the C weights. A compiled C reproduction confirmed `0.5 0 0 0 0 0 0 0`. Windows GNU focused regression, app all-target suites (431 + 10/98/7), Clippy and fmt pass. Pushed as `d9db3e4`; Linux run `45827934540` passes format, default and external-DNS-SD tests/Clippy/release builds, CLI and endpoint smokes.
 
 ## 1. สิ่งที่ทำใน session นี้
 
