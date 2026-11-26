@@ -276,3 +276,4 @@ taskkill /PID 22432 /T /F
 - Run `45803017972` passed all Linux gates on code commit `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`, including external-DNS-SD Clippy after converting the narrow Unix suppression to `#[expect(dead_code)]` for non-test binaries only.
 - Added a workflow step to invoke the embedded-mDNS release binary with `-h` and `-v` under an empty temporary home, confirming standalone Linux CLI startup without user config. This workflow-only addition is pending its next CI run.
 - Latest target `master` at this checkpoint: `a78c7191c814eb2c0dcfab0c21fcebe10f1b4663`.
+- HLS follow-up: `45805967580` passed the test with logger capture in both DNS-SD modes, followed by all Clippy/release steps and the CLI smoke. The previous single timeout did not recur; no runtime change was made.

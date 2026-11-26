@@ -245,3 +245,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — Ubuntu HLS integration failure
 - Run `45803581645` reached tests after native dependency installation. Format passed; 425 tests passed, while `server_runtime::hls_lifecycle_tests::runtime_hls_effect_decodes_to_eos_then_cleans_up_current_session` failed after fetching its playlist twice and TS segment once without an EOS callback in 10 seconds. Isolated HLS renderer tests and other HLS lifecycle tests passed, so this is presently an app integration/decoder-path discrepancy, not a confirmed source logic defect.
 - Added a test-only renderer logger capture to the assertion to surface GStreamer errors in the next Linux run. Inspect that log before changing runtime behavior. The CLI smoke and later workflow gates were skipped because the test step failed.
+
+### 2026-11-26 — Linux gates and standalone CLI smoke green
+- Ubuntu run `45805967580` succeeded on `2a1de15c0e75f0f9f122aaa84226b8b3773cd322`: fmt, all-target tests and Clippy (`-D warnings`) for embedded mDNS and `external-dns-sd`, both release builds, and release binary `-h`/`-v` smoke passed. The HLS EOS timeout from the preceding run did not recur; the instrumented test passed in both modes.
+- Added push `paths-ignore: **/*.md` so checkpoint/MAP-only commits do not start the full native dependency workflow. The workflow-file change itself is included in the next validation run.
