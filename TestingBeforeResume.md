@@ -212,3 +212,9 @@ taskkill /PID 22432 /T /F
 - Ran `rust-anything app_lift` as the final workflow check. It refused because its generated unit metadata does not recognize the hand-integrated app (`no unit is wired yet`) and its subprocess used the default MSVC toolchain without `link.exe`.
 - This is not a product build failure: the same app passed clean default/feature Windows GNU release builds and all test/Clippy/fmt gates using the installed `stable-x86_64-pc-windows-gnu` toolchain plus MSYS2 UCRT64 linker. No code change was made for the generic tool's mismatch.
 - Reconciled the Feature acceptance frontier: all 118 Windows CLI cases are Rust-only; fallback is removed; clean manual build/replay is complete. Native Unix/platform, live-device, and packaging gates remain open.
+
+## 16. Addendum: standalone path and NTP receive audit (2026-11-26)
+
+- Re-read `main.rs`, `compat_cli.rs`, and the app's command creation sites. The old guidance about removing unrepresentable-argument forwarding/rollback was stale: no reference executable launch or rollback path remains in the Rust app; `fallback_log` only reports zero to the replay harness. Native Unix argument/runtime acceptance remains open.
+- Re-read `lib/raop_ntp.c` socket setup and receive loop alongside `raop_ntp_runtime.rs`. C sets `SO_RCVTIMEO`, and any negative `kernel_timestamp_session_recv()` result is logged as the ordinary timeout; Rust maps receive errors to the same timeout path. NTP does not use `select()` here. Keep OS error injection/hardware timestamp acceptance as unverified evidence, but do not treat an unimplemented NTP select branch as a product gap.
+- No code change was warranted by this audit. C reference sources remain unchanged.
