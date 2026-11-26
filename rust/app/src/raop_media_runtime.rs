@@ -2038,6 +2038,81 @@ mod volume_tests {
     }
 
     #[test]
+    fn h265_mirror_callback_finalizes_video_only_mp4() {
+        let _renderer_guard = VIDEO_RENDERER_TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        gstreamer::init().expect("GStreamer is required for the H.265 video mux test");
+        if ["h265parse", "mp4mux"]
+            .into_iter()
+            .any(|factory| gstreamer::ElementFactory::find(factory).is_none())
+        {
+            return;
+        }
+
+        let mux_prefix = temporary_prefix("mirror-h265-mp4");
+        let options = Options {
+            use_audio: false,
+            audio_sink: "0".into(),
+            video_sink: "fakesink".into(),
+            h265_support: true,
+            mux_to_file: true,
+            mux_filename: mux_prefix.to_string_lossy().into_owned(),
+            ..Options::default()
+        };
+        let mut output_runtime =
+            MediaOutputRuntime::new(&options).expect("app output runtime should initialize mux");
+        output_runtime.connection_opened();
+        let outputs = Arc::new(Mutex::new(output_runtime));
+        let callbacks = RendererMirrorCallbacks {
+            outputs: Arc::clone(&outputs),
+            logger: None,
+            use_video: false,
+            nofreeze: false,
+        };
+
+        assert!(callbacks.event(MirrorEvent::CodecConfigured {
+            codec: VideoCodec::H265,
+            dimensions: uxplay_raop_rtp_mirror::VideoDimensions {
+                width_source: 64,
+                height_source: 64,
+                x_offset: 0,
+                y_offset: 0,
+                width: 64,
+                height: 64,
+            },
+        }));
+        let fixture =
+            include_bytes!("../../render/video-renderer/testdata/mirror/black-frame.hevc");
+        assert!(callbacks.event(MirrorEvent::VideoFrame(
+            uxplay_raop_rtp_mirror::VideoFrame {
+                codec: VideoCodec::H265,
+                data: fixture.to_vec(),
+                nal_count: annex_b_nalus(fixture).len(),
+                ntp_time_local: 2_000_000_000,
+                ntp_time_remote: 2_000_000_000,
+            }
+        )));
+        lock(&outputs).connection_closed(false, None);
+
+        let mp4_path = std::path::PathBuf::from(format!("{}.1.H265.mp4", mux_prefix.display()));
+        let mp4 = std::fs::read(&mp4_path).expect("mirror callback should finalize H.265 MP4");
+        assert!(
+            mp4.len() > 64,
+            "finalized H.265 video MP4 is only {} bytes",
+            mp4.len()
+        );
+        for atom in [b"ftyp".as_slice(), b"moov", b"mdat"] {
+            assert!(
+                mp4.windows(atom.len()).any(|window| window == atom),
+                "finalized H.265 MP4 does not contain the {} atom",
+                String::from_utf8_lossy(atom)
+            );
+        }
+        std::fs::remove_file(mp4_path).unwrap();
+    }
+
+    #[test]
     fn screensaver_mode_one_tracks_mirror_start_and_stop_once() {
         let (requests, received) = std::sync::mpsc::channel();
         let mut inhibitor = ScreensaverInhibitor {

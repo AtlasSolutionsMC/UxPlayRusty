@@ -2125,4 +2125,53 @@ mod tests {
             "valid SPS/PPS/IDR input did not reach fakesink through appsrc, h264parse and avdec_h264"
         );
     }
+
+    #[test]
+    fn h265_appsrc_pipeline_decodes_fixture_idr_to_fakesink() {
+        gst::init().expect("GStreamer must be initialized before querying factories");
+        if ["h265parse", "avdec_h265", "videoconvert", "fakesink"]
+            .into_iter()
+            .any(|factory| gst::ElementFactory::find(factory).is_none())
+        {
+            return;
+        }
+
+        let encoded_frame = include_bytes!("../testdata/mirror/black-frame.hevc");
+        let config = VideoRendererConfig {
+            video_sink: "fakesink".to_owned(),
+            video_sink_options: " signal-handoffs=true".to_owned(),
+            video_sync: false,
+            h265_support: true,
+            ..VideoRendererConfig::default()
+        };
+        let mut renderer = VideoRenderer::new(config).expect("H.265 decoder pipeline");
+        let h265_index = renderer.type_h265.expect("H.265 renderer should exist");
+        let sink = renderer.renderers[h265_index]
+            .as_ref()
+            .expect("H.265 renderer pipeline")
+            .pipeline
+            .by_name("fakesink_h265")
+            .expect("named H.265 fakesink");
+        let handoffs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let sink_handoffs = Arc::clone(&handoffs);
+        let _handoff_handler = sink.connect("handoff", false, move |_| {
+            sink_handoffs.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            None
+        });
+
+        assert_eq!(renderer.choose_codec(false, true), 0);
+        let (_, outcome) = renderer.render_buffer(encoded_frame, 0);
+        assert_eq!(outcome, RenderOutcome::Submitted);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        renderer.destroy();
+        assert!(
+            handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
+            "valid HEVC fixture did not reach fakesink through appsrc, h265parse and avdec_h265"
+        );
+    }
 }
