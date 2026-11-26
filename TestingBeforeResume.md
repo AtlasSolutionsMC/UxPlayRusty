@@ -8,7 +8,7 @@
 
 ## Current authoritative state — 2026-11-26
 
-The macOS workflow was published as `d40cf2c`; Linux acceptance run `45837953213` passed and macOS run `45837953181` is queued. Live GitHub compare confirms `master` is 101 commits ahead and 0 behind `FDH2/UxPlay:master`; the supplied 95-ahead/3-behind view predates merge `7e882b3`.
+The macOS workflow was published as `d40cf2c`; Linux acceptance run `45837953213` passed and macOS run `45837953181` is queued. Live GitHub compare confirms `master` is 102 commits ahead and 0 behind `FDH2/UxPlay:master`; the supplied 95-ahead/3-behind view predates merge `7e882b3`.
 
 
 This file begins with a historical snapshot from 2026-11-23; use the later addenda and current `README.md`/`rust/MAP.md` for present behavior. The Rust executable is now the only application path: the C launcher/fallback and `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER` selectors are absent. `fallback_log` only reports the migration harness counter. Do not follow the old fallback instructions in the historical snapshot below.
