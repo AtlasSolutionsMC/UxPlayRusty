@@ -4700,7 +4700,7 @@ mod tests {
             );
             let mut key_material = fairplay_audio_key.to_vec();
             key_material.extend_from_slice(&ecdh_secret);
-            let expected_audio_key: [u8; 16] = hash(MessageDigest::sha256(), &key_material)
+            let expected_audio_key: [u8; 16] = hash(MessageDigest::sha512(), &key_material)
                 .unwrap()[..16]
                 .try_into()
                 .unwrap();

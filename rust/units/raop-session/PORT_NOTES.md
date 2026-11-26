@@ -4,7 +4,7 @@
 
 `src/lib.rs` models the state used by `raop_conn_t` for RAOP SETUP, RECORD, FLUSH, and TEARDOWN. It parses binary plists, stores timing/audio/mirror session state and negotiated ports/keys, creates binary-plist SETUP replies, and emits ordered `SessionEffect` values for socket, pairing, FairPlay, and renderer work.
 
-- SETUP validates the 16-byte EIV and 72-byte EKEY, decrypts with the staged FairPlay unit, applies the legacy pairing ECDH SHA-256 key step when applicable, and records timing/audio/mirror initialization requests.
+- SETUP validates the 16-byte EIV and 72-byte EKEY, decrypts with the staged FairPlay unit, applies the paired-client key step as the first 16 bytes of SHA-512(clear FairPlay key || ECDH secret) when applicable (`sha_init()` in the unchanged C crypto facade is SHA-512), and records timing/audio/mirror initialization requests.
 - SETUP handles type 96 audio and type 110 mirror streams, including local and remote ports, stream connection IDs, audio format inputs, HLS cleanup, unknown stream disconnects, and the response plist fields.
 - RECORD reproduces the source latency calculation and both response headers.
 - FLUSH reproduces the `RTP-Info: seq=` prefix check and `strtol` behavior before emitting the audio flush effect.

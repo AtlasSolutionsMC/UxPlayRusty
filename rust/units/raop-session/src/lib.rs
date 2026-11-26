@@ -6,7 +6,7 @@
 
 use fairplay_playfair::port::FairPlay;
 use plist::{Dictionary, Value};
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha512};
 use std::io::{self, Cursor};
 use std::sync::{Arc, Mutex};
 use uxplay_pairing::PairingSession;
@@ -376,7 +376,9 @@ pub fn setup(
         {
             let mut ecdh_secret = [0; 32];
             if pairing_session.get_ecdh_secret_key(&mut ecdh_secret) > 0 {
-                let mut hasher = Sha256::new();
+                // lib/crypto.c's sha_init() is SHA-512; the C handler copies
+                // the first 16 digest bytes back as the negotiated AES key.
+                let mut hasher = Sha512::new();
                 hasher.update(decrypted_key);
                 hasher.update(ecdh_secret);
                 decrypted_key.copy_from_slice(&hasher.finalize()[..AES_KEY_SIZE]);
@@ -1011,7 +1013,7 @@ mod tests {
     }
 
     #[test]
-    fn setup_hashes_new_protocol_audio_key_with_pairing_secret() {
+    fn setup_sha512_hashes_new_protocol_audio_key_with_pairing_secret() {
         let (pairing, _) =
             uxplay_pairing::Pairing::init_generate(b"raop-session-test", None).unwrap();
         let mut pairing_session = pairing.session().unwrap();
@@ -1037,7 +1039,7 @@ mod tests {
         }
         let mut fairplay_key = [0_u8; AES_KEY_SIZE];
         assert_eq!(fairplay.decrypt(&ekey, &mut fairplay_key), 0);
-        let mut hasher = Sha256::new();
+        let mut hasher = Sha512::new();
         hasher.update(fairplay_key);
         hasher.update(ecdh_secret);
         let expected_key: [u8; AES_KEY_SIZE] = hasher.finalize()[..AES_KEY_SIZE]
