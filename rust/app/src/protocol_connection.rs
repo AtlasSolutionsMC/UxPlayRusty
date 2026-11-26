@@ -1348,6 +1348,7 @@ impl ProtocolConnection {
                         logger.log(
                             match level {
                                 SessionLogLevel::Debug => crate::logger::DEBUG,
+                                SessionLogLevel::Info => crate::logger::INFO,
                                 SessionLogLevel::Error => crate::logger::ERR,
                             },
                             message,

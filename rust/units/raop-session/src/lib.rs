@@ -52,6 +52,7 @@ pub enum VideoResetReason {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SessionLogLevel {
     Debug,
+    Info,
     Error,
 }
 
@@ -380,8 +381,25 @@ pub fn setup(
         let mut iv = [0; AES_IV_SIZE];
         iv.copy_from_slice(eiv);
         let mut decrypted_key = [0; AES_KEY_SIZE];
-        let _fairplay_status = context.fairplay.decrypt(&encrypted_key, &mut decrypted_key);
-        if !is_old_protocol_client(user_agent)
+        let fairplay_status = context.fairplay.decrypt(&encrypted_key, &mut decrypted_key);
+        transition.effects.push(SessionEffect::Log {
+            level: SessionLogLevel::Debug,
+            message: format!("fairplay_decrypt ret = {fairplay_status}"),
+        });
+        if let Some(user_agent) = user_agent {
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Info,
+                message: format!("Client identified as User-Agent: {user_agent}"),
+            });
+        }
+        let old_protocol = is_old_protocol_client(user_agent);
+        if old_protocol {
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Info,
+                message: "Client identifed as using old protocol (unhashed) AES audio key)".into(),
+            });
+        }
+        if !old_protocol
             && let Some(pairing_session) = context.pairing_session
         {
             let mut ecdh_secret = [0; 32];
@@ -469,6 +487,10 @@ pub fn setup(
             Value::from(u64::from(context.ports.timing_local)),
         );
         response_plist.insert("eventPort".into(), Value::from(0));
+        transition.effects.push(SessionEffect::Log {
+            level: SessionLogLevel::Debug,
+            message: format!("eport = 0, tport = {}", context.ports.timing_local),
+        });
     }
 
     if let Some(streams) = request_dict
@@ -1024,6 +1046,25 @@ mod tests {
             level: SessionLogLevel::Debug,
             message: "timing_rport = 7000".into(),
         }));
+        assert!(transition.effects.contains(&SessionEffect::Log {
+            level: SessionLogLevel::Debug,
+            message: "eport = 0, tport = 7001".into(),
+        }));
+        assert!(transition.effects.iter().any(|effect| matches!(
+            effect,
+            SessionEffect::Log {
+                level: SessionLogLevel::Debug,
+                message,
+            } if message.starts_with("fairplay_decrypt ret = ")
+        )));
+        assert!(transition.effects.contains(&SessionEffect::Log {
+            level: SessionLogLevel::Info,
+            message: "Client identified as User-Agent: AirMyPC/2.0".into(),
+        }));
+        assert!(transition.effects.contains(&SessionEffect::Log {
+            level: SessionLogLevel::Info,
+            message: "Client identifed as using old protocol (unhashed) AES audio key)".into(),
+        }));
         assert!(transition.effects.iter().any(|effect| matches!(
             effect,
             SessionEffect::StartAudio {
@@ -1105,6 +1146,10 @@ mod tests {
             logs,
             vec![
                 (
+                    SessionLogLevel::Debug,
+                    "fairplay_decrypt ret = -1",
+                ),
+                (
                     SessionLogLevel::Error,
                     "Client specified AirPlay2 \"Remote Control\" protocol\n Only AirPlay v1 protocol (using NTP and timing port) is supported",
                 ),
@@ -1116,6 +1161,7 @@ mod tests {
                     SessionLogLevel::Error,
                     "Client did not supply timing_rport, may be using unsupported AirPlay2 \"Remote Control\" protocol",
                 ),
+                (SessionLogLevel::Debug, "eport = 0, tport = 7001"),
                 (SessionLogLevel::Debug, "type = 110"),
                 (
                     SessionLogLevel::Debug,

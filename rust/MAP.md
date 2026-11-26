@@ -209,7 +209,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ## Feature acceptance frontier
 
 - [x] Toolchain and native Windows build dependencies installed.
-- [x] Linux CI acceptance: Ubuntu 24.04 run `45819281259` passes format, all-target tests, Clippy (`-D warnings`), release builds for embedded mDNS and `external-dns-sd`, CLI/invalid-byte argv and `-rc` file smokes, and runtime `/server-info` 200/plist/SIGINT endpoint smoke with `-vs 0`.
+- [x] Linux CI acceptance: Ubuntu 24.04 run `45821720990` passes format, all-target tests, Clippy (`-D warnings`), release builds for embedded mDNS and `external-dns-sd`, CLI/invalid-byte argv and `-rc` file smokes, and runtime `/server-info` 200/plist/SIGINT endpoint smoke with `-vs 0`.
 - [x] Reference CMake build succeeds; source tree unchanged.
 - [x] App recorder baseline exists and original replay is 118/118.
 - [x] Rust server is the default for valid ASCII startup; the explicit reference launcher and implicit fallback are removed. Focused `/server-info` replay passes 1/1 at 0 fallback, and raw-byte C/Rust HTTP differential passes 8/8. The generic HTTP reader is 5/8 on persistent responses.
@@ -283,5 +283,6 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — RAOP SETUP timing diagnostics
 - Compared the C SETUP path with `raop-session`: Rust previously chose the timing protocol and started the timing worker but omitted the source diagnostics for AirPlay 2 `isRemoteControlOnly`, unsupported `timingProtocol`, and missing or present `timingPort`.
 - Added ordered `SessionEffect::Log` messages with source severity and exact text; the app adapter sends them through the shared logger. The port preserves the C prefix check for timing protocol and logs the untruncated 64-bit timing port before the source-compatible 16-bit socket cast.
-- Windows GNU session tests pass 11/11, including missing/unsupported timing fields and source log order, plus C-compatible `"N"` prefix handling. App encrypted-media transcript passes 1/1; app/session Clippy (`-D warnings`) and rustfmt pass. Linux workflow is pending after push; AirPlay client diagnostics are not real-device validation.
-- Follow-up comparison found additional C logs for each stream's `type`, mirror `streamConnectionID`, successful/failed mirror and audio initialization, and unknown stream types. The current patch adds these in source order; regression exercises mirror/audio/unknown streams. Focused Windows session/app checks pass; Linux CI is pending.
+- Windows GNU session tests pass 11/11, including missing/unsupported timing fields and source log order, plus C-compatible `"N"` prefix handling. App encrypted-media transcript passes 1/1; app/session Clippy (`-D warnings`) and rustfmt pass. Linux run `45821116648` passes all stages with timing diagnostics; AirPlay client diagnostics are not real-device validation.
+- Follow-up comparison found additional C logs for each stream's `type`, mirror `streamConnectionID`, successful/failed mirror and audio initialization, and unknown stream types. These are integrated in source order; run `45821720990` passes all Ubuntu CI stages including this stream log coverage.
+- A final SETUP logging pass adds `fairplay_decrypt ret`, client User-Agent and legacy-mode INFO lines, and `eport/tport` DEBUG output. Unit regressions pass locally; Linux workflow is pending after the next push.
