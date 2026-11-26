@@ -43,6 +43,8 @@ Options:
           use "-p n1,n2,n3" to set each port, "n1,n2" for n3 = n2+1
           "-p tcp n" or "-p udp n" sets TCP or UDP ports separately
 -avdec    Force software h264 video decoding with libav decoder
+-lowlatency Bound mirror queues and drop old decoded frames when overloaded
+-d3d11    Select the D3D11 H.264/H.265 decoders and video sink
 -vp ...   Choose the GSteamer h264 parser: default "h264parse"
 -vd ...   Choose the GStreamer h264 decoder; default "decodebin"
           choices: (software) avdec_h264; (hardware) v4l2h264dec,

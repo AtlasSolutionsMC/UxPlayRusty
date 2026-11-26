@@ -177,6 +177,7 @@ pub struct Options {
     pub suppress_packet_debug_data: bool,
     pub video_parser: String,
     pub video_decoder: String,
+    pub low_latency: bool,
     pub video_converter: String,
     pub video_sink: String,
     pub video_sink_options: String,
@@ -271,6 +272,7 @@ impl Options {
             suppress_packet_debug_data: false,
             video_parser: "h264parse".into(),
             video_decoder: "decodebin".into(),
+            low_latency: false,
             video_converter: "videoconvert".into(),
             video_sink: "autovideosink".into(),
             video_sink_options: String::new(),
@@ -773,6 +775,8 @@ where
                 }
             }
             "-avdec" => { options.video_parser = "h264parse".into(); options.video_decoder = "avdec_h264".into(); options.video_converter = "videoconvert".into(); }
+            "-d3d11" => { options.video_decoder = "d3d11h264dec".into(); options.video_sink = "d3d11videosink".into(); options.video_sink_options.clear(); }
+            "-lowlatency" => options.low_latency = true,
             "-v4l2" => { options.video_decoder = "v4l2h264dec".into(); options.video_converter = "v4l2convert".into(); }
             "-fs" => options.fullscreen = true,
             "-FPSdata" => options.show_client_fps = true,
@@ -1291,6 +1295,20 @@ mod tests {
         assert_eq!(options.udp_ports, options.tcp_ports);
         assert!(options.debug_log && options.suppress_packet_debug_data);
         assert_eq!(options.video_sink, "autovideosink");
+        assert!(!options.low_latency);
+    }
+
+    #[test]
+    fn low_latency_and_d3d11_preset_are_opt_in_and_overridable() {
+        let options = ready(parse(&["-lowlatency", "-d3d11"]));
+        assert!(options.low_latency);
+        assert_eq!(options.video_decoder, "d3d11h264dec");
+        assert_eq!(options.video_sink, "d3d11videosink");
+
+        let overridden = ready(parse(&["-d3d11", "-vd", "avdec_h264", "-vs", "fakesink"]));
+        assert_eq!(overridden.video_decoder, "avdec_h264");
+        assert_eq!(overridden.video_sink, "fakesink");
+        assert!(!overridden.low_latency);
     }
 
     #[test]

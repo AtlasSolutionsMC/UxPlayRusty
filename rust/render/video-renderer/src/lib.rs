@@ -372,6 +372,7 @@ pub unsafe extern "C" fn video_renderer_init(
         parser: owned_c_string(parser, "h264parse"),
         rtp_pipeline: owned_c_string(rtp_pipeline, ""),
         decoder: owned_c_string(decoder, "avdec_h264"),
+        low_latency: false,
         converter: owned_c_string(converter, "videoconvert"),
         video_sink: owned_c_string(videosink, "autovideosink"),
         video_sink_options: owned_c_string(videosink_options, ""),

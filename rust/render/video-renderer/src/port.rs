@@ -68,6 +68,7 @@ pub struct VideoRendererConfig {
     pub parser: String,
     pub rtp_pipeline: String,
     pub decoder: String,
+    pub low_latency: bool,
     pub converter: String,
     pub video_sink: String,
     pub video_sink_options: String,
@@ -87,6 +88,7 @@ impl Default for VideoRendererConfig {
             parser: "h264parse".to_owned(),
             rtp_pipeline: String::new(),
             decoder: "avdec_h264".to_owned(),
+            low_latency: false,
             converter: "videoconvert".to_owned(),
             video_sink: "autovideosink".to_owned(),
             video_sink_options: String::new(),
@@ -236,10 +238,22 @@ impl VideoRenderer {
 
     /// Initialize with a callback that receives source logger levels/messages.
     pub fn new_with_logger(
-        config: VideoRendererConfig,
+        mut config: VideoRendererConfig,
         logger: LogCallback,
     ) -> Result<Self, String> {
         gst::init().map_err(|error| format!("GStreamer initialization failed: {error}"))?;
+        let missing_d3d11 = d3d11_factories_missing(&config);
+        if !missing_d3d11.is_empty() {
+            log(
+                &logger,
+                LogLevel::Warning,
+                &format!(
+                    "video_renderer_init: D3D11 factories {} are unavailable; falling back to automatic selection for those components",
+                    missing_d3d11.join(", ")
+                ),
+            );
+            fallback_unavailable_d3d11_components(&mut config, &missing_d3d11);
+        }
         if glib::application_name().as_deref() != Some(config.server_name.as_str()) {
             glib::set_application_name(&config.server_name);
         }
@@ -1023,11 +1037,20 @@ fn pipeline_description(config: &VideoRendererConfig, codec: Codec) -> String {
     if jpeg {
         launch.push_str("jpegdec ");
     } else {
-        launch.push_str("queue ! ");
+        if config.low_latency && !rtp {
+            launch.push_str("queue max-size-buffers=16 max-size-bytes=0 max-size-time=0 ! ");
+        } else {
+            launch.push_str("queue ! ");
+        }
         launch.push_str(&config.parser);
         launch.push_str(" ! ");
         if !rtp {
             launch.push_str(&config.decoder);
+            if config.low_latency {
+                launch.push_str(
+                    " ! queue max-size-buffers=2 max-size-bytes=0 max-size-time=0 leaky=downstream",
+                );
+            }
         } else {
             launch.push_str("rtph264pay ");
             launch.push_str(&config.rtp_pipeline);
@@ -1062,6 +1085,45 @@ fn pipeline_description(config: &VideoRendererConfig, codec: Codec) -> String {
         Codec::H264 => launch.replace("h265", "h264"),
         Codec::H265 => launch.replace("h264", "h265"),
         Codec::Hls | Codec::Jpeg => launch,
+    }
+}
+
+fn d3d11_factories_missing(config: &VideoRendererConfig) -> Vec<String> {
+    if !config.rtp_pipeline.is_empty() {
+        return Vec::new();
+    }
+    let mut factories = Vec::new();
+    if config.decoder.contains("d3d11h264dec") || config.decoder.contains("d3d11h265dec") {
+        factories.push(config.decoder.replace("h265", "h264"));
+        if config.h265_support {
+            factories.push(config.decoder.replace("h264", "h265"));
+        }
+    }
+    if config.video_sink == "d3d11videosink" {
+        factories.push(config.video_sink.clone());
+    }
+    factories
+        .into_iter()
+        .filter(|factory| gst::ElementFactory::find(factory).is_none())
+        .collect()
+}
+
+fn fallback_unavailable_d3d11_components(
+    config: &mut VideoRendererConfig,
+    missing_factories: &[String],
+) {
+    if missing_factories
+        .iter()
+        .any(|factory| factory.starts_with("d3d11h"))
+    {
+        config.decoder = "decodebin".to_owned();
+    }
+    if missing_factories
+        .iter()
+        .any(|factory| factory == "d3d11videosink")
+    {
+        config.video_sink = "autovideosink".to_owned();
+        config.video_sink_options.clear();
     }
 }
 
@@ -1857,6 +1919,59 @@ mod tests {
             videoflip_description(VideoFlip::None, VideoFlip::None),
             None
         );
+    }
+
+    #[test]
+    fn low_latency_bounds_encoded_and_decoded_mirror_queues_only() {
+        let config = VideoRendererConfig {
+            low_latency: true,
+            h265_support: true,
+            video_sink: "fakesink".to_owned(),
+            ..VideoRendererConfig::default()
+        };
+
+        let h264 = pipeline_description(&config, Codec::H264);
+        assert!(h264.contains(
+            "queue max-size-buffers=16 max-size-bytes=0 max-size-time=0 ! h264parse ! avdec_h264 ! queue max-size-buffers=2 max-size-bytes=0 max-size-time=0 leaky=downstream"
+        ));
+
+        let h265_config = VideoRendererConfig {
+            decoder: "d3d11h264dec".to_owned(),
+            ..config.clone()
+        };
+        let h264_hardware = pipeline_description(&h265_config, Codec::H264);
+        assert!(h264_hardware.contains("h264parse ! d3d11h264dec !"));
+        let h265 = pipeline_description(&h265_config, Codec::H265);
+        assert!(h265.contains(
+            "queue max-size-buffers=16 max-size-bytes=0 max-size-time=0 ! h265parse ! d3d11h265dec ! queue max-size-buffers=2 max-size-bytes=0 max-size-time=0 leaky=downstream"
+        ));
+
+        let jpeg = pipeline_description(&config, Codec::Jpeg);
+        assert!(!jpeg.contains("max-size-buffers"));
+
+        let rtp_config = VideoRendererConfig {
+            rtp_pipeline: "pt=96 ! fakesink".to_owned(),
+            ..config
+        };
+        let rtp = pipeline_description(&rtp_config, Codec::H264);
+        assert!(!rtp.contains("max-size-buffers"));
+    }
+
+    #[test]
+    fn unavailable_d3d11_components_fall_back_independently() {
+        let mut decoder_config = VideoRendererConfig {
+            decoder: "d3d11h264dec".to_owned(),
+            video_sink: "d3d11videosink".to_owned(),
+            video_sink_options: " sync=false".to_owned(),
+            ..VideoRendererConfig::default()
+        };
+        fallback_unavailable_d3d11_components(&mut decoder_config, &["d3d11h265dec".to_owned()]);
+        assert_eq!(decoder_config.decoder, "decodebin");
+        assert_eq!(decoder_config.video_sink, "d3d11videosink");
+
+        fallback_unavailable_d3d11_components(&mut decoder_config, &["d3d11videosink".to_owned()]);
+        assert_eq!(decoder_config.video_sink, "autovideosink");
+        assert!(decoder_config.video_sink_options.is_empty());
     }
 
     #[test]

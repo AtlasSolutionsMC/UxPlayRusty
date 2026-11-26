@@ -1594,6 +1594,7 @@ fn video_renderer_config(options: &Options) -> VideoRendererConfig {
         parser,
         rtp_pipeline: options.video_rtp_pipeline.clone().unwrap_or_default(),
         decoder: options.video_decoder.clone(),
+        low_latency: options.low_latency,
         converter,
         video_sink: options.video_sink.clone(),
         video_sink_options: options.video_sink_options.clone(),

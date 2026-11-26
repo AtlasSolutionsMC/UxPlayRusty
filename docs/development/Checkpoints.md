@@ -12,7 +12,9 @@ The user has started a new Windows delivery goal using the attached scope and `D
 - Milestone 1 baseline is complete and `d5afffc` is published. See [`Map2Window.md`](../../Map2Window.md) for the full milestone map and evidence.
 - Milestone 2 workspace organization is complete in working tree: docs, app-case fixtures, and record-shim tools are moved; local links resolve; active oracle runners derive the sibling C reference checkout and MSYS2 from `%LOCALAPPDATA%`.
 - Post-move Windows GNU verification (2026-11-27): app all-targets passes 550 default and 552 with `external-dns-sd`; BLE companion passes 73; compat fixture crate passes 1. App/beacon/compat rustfmt checks and `git diff --check` pass. A standalone C compat-oracle runner still exits 1 without diagnostic output; its checked-in C oracle test passes. This is an oracle-runner host issue, not a Rust test failure.
-- Workspace commit/push is being prepared on `windows-delivery`; unrelated pre-existing workflow and unit checkpoint edits remain separate.
+- Milestone 2 was pushed as `cfa68cc` to `origin/windows-delivery`; unrelated pre-existing workflow and unit checkpoint edits remain separate.
+- Milestone 3 is in progress: `-lowlatency` adds bounded mirror-only encoded/decoded queues; `-d3d11` selects codec-specific D3D11 decoders and sink, warns and falls back per unavailable component, and remains independent from `-vsync`. Default/JPEG/HLS/RTP pipeline shape is preserved. Focused renderer tests pass 15/15; app tests pass 551 default and 553 external-DNS-SD; relevant Clippy and rustfmt checks pass. Help snapshots were updated and the help command exits 0.
+- Local GStreamer lists D3D11 H.264/H.265 decoder and video sink factories. No real GPU playback, iPhone streaming A/B, latency measurement, or video quality/sustained-session evidence is available yet; do not mark milestone 3 complete from fixtures.
 
 ## Goal
 Create a standalone Rust replacement for the reference project at `D:\Save\Uxplay\UxPlay`, preserving all agreed features, supported platforms, and externally visible behavior. Use the `rust-anything` whole-app workflow and retain the original project as reference.
