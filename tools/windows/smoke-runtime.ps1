@@ -31,7 +31,7 @@ try {
     $inspect = Join-Path $smokeRoot 'gst-inspect-1.0.exe'
     $factories = @(
         'appsrc', 'decodebin', 'avdec_aac', 'avdec_alac', 'h264parse', 'h265parse',
-        'audioconvert', 'audioresample', 'autoaudiosink', 'wasapisink',
+        'audioconvert', 'audioresample', 'volume', 'level', 'autoaudiosink', 'wasapisink',
         'videoconvert', 'videoscale', 'autovideosink', 'playbin3', 'hlsdemux',
         'd3d11videosink', 'vulkanupload', 'vulkansink'
     )

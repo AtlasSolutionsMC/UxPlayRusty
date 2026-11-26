@@ -70,7 +70,7 @@ $pluginNames = @(
     'libgstapp.dll', 'libgstcoreelements.dll', 'libgsttypefindfunctions.dll',
     'libgstplayback.dll', 'libgstlibav.dll', 'libgstautodetect.dll',
     'libgstvideoparsersbad.dll', 'libgstvideoconvertscale.dll',
-    'libgstaudioconvert.dll', 'libgstaudioresample.dll', 'libgstvolume.dll',
+    'libgstaudioconvert.dll', 'libgstaudioresample.dll', 'libgstvolume.dll', 'libgstlevel.dll',
     'libgstwasapi.dll', 'libgstd3d11.dll', 'libgstvulkan.dll', 'libgsthls.dll',
     'libgstsoup.dll', 'libgstrtp.dll', 'libgstudp.dll', 'libgstisomp4.dll',
     'libgstmpegtsdemux.dll', 'libgstsubparse.dll', 'libgstjpeg.dll',
