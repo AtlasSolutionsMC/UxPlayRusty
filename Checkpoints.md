@@ -1105,6 +1105,9 @@ Create a standalone Rust replacement for the reference project at `D:\Save\Uxpla
 - Compared `lib/raop_ntp.c` socket setup/receive behavior with `raop_ntp_runtime.rs`. C uses `SO_RCVTIMEO`; a negative timestamp receive result follows the timeout log path. Rust maps receive errors to that same timeout behavior. NTP does not call `select()` in this path, so this is not a missing implementation branch. OS error injection, timestamp hardware, and real-client timing are still unverified.
 - No code change was justified. Original C sources remain unchanged.
 
+### 2026-11-26 — README acceptance status refresh
+- Updated the repository front page with the latest verified Windows GNU gate counts, clean default/feature release builds, CLI evidence, raw-byte HTTP differential and the grouped replay limitation. Added a direct link to the Vulkan/iPhone Mirroring feasibility report. This is documentation only; the source and C reference were not changed.
+
 ### 2026-11-22 — HCI cleanup CalledProcessError parity
 - The wider callback/cleanup audit across the five Python beacon files and Rust backends found one remaining locally testable HCI mismatch: Python catches nonzero `CalledProcessError` during start/setup, but an HCI stop command is uncaught and prints a CPython traceback. Rust already preserved the source start-command sequence, but returned a plain stop diagnostic for nonzero exit.
 - `HciBackend::stop_with_context()` now builds the actual command output and, on nonzero exit, formats the uncaught `CalledProcessError` traceback for ordinary handoff removal and the chained Ctrl+C stop. Start/setup's caught nonzero behavior is unchanged. Added unchanged-source fake subprocess fixtures and Rust comparison tests for both cleanup routes.
