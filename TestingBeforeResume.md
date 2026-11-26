@@ -6,14 +6,20 @@
 
 ---
 
+## Current authoritative state — 2026-11-26
+
+This file begins with a historical snapshot from 2026-11-23; use the later addenda and current `README.md`/`rust/MAP.md` for present behavior. The Rust executable is now the only application path: the C launcher/fallback and `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER` selectors are absent. `fallback_log` only reports the migration harness counter. Do not follow the old fallback instructions in the historical snapshot below.
+
+Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in README and the latest checkpoint. Linux acceptance still needs a published Actions workflow, but GitHub denies the available credential's workflow-file write; no Linux Actions run exists. The current host also has no Docker, Podman, WSL or Linux native sysroot. The real iPhone video issue remains unresolved without full stderr, packet capture and same-device C comparison. The two current upstream UxPlay commits are in a separate detached worktree; the original C checkout is unchanged.
+
 ## 1. สิ่งที่ทำใน session นี้
 
-### 1.1 ตรวจสถานะพอร์ตก่อนรัน
+### 1.1 ตรวจสถานะพอร์ตก่อนรัน (snapshot วันที่ 2026-11-23)
 - อ่าน `rust/MAP.md`, `Checkpoints.md` → `Latest Resume State`, `rust/HANDOFF.md`, `README.md`
 - สรุปได้ว่าโปรเจกต์อยู่ใน阶段 **ยังไม่ cutover**:
   - 45 C units: complete 7, partial 27, pending 10, claimed 1
-  - startup ปกติยัง fallback ไป `baseline/original-build/uxplay.exe`
-  - ต้องตั้ง `UXPLAY_RUST_SERVER=1` ถึงจะให้ Rust ถือ listener เอง
+  - (historical; superseded) startup ปกติยัง fallback ไป `baseline/original-build/uxplay.exe`
+  - (historical; superseded) ต้องตั้ง `UXPLAY_RUST_SERVER=1` ถึงจะให้ Rust ถือ listener เอง
 
 ### 1.2 ทดสอบว่าเปิด/run ได้
 - `-h` ของ binary Rust และ C baseline ทำงาน exit 0 และข้อความตรงกัน
@@ -25,7 +31,7 @@ $env:Path = "$msys\bin;$env:Path"
 $env:GST_PLUGIN_PATH_1_0 = "$msys\lib\gstreamer-1.0"
 $env:GST_PLUGIN_SCANNER_1_0 = "$msys\libexec\gstreamer-1.0\gst-plugin-scanner.exe"
 $env:LANG = 'C.UTF-8'
-$env:UXPLAY_RUST_SERVER = '1'
+# Historical command from 2026-11-23. The current app ignores this variable.
 
 & 'D:\Save\Uxplay\UxPlayRusty\rust\app\target\acceptance-release\release\uxplay.exe' `
   -n opencode -p tcp <p1>,57788,<p3> -hls
@@ -94,12 +100,14 @@ GStreamer error (
 
 ---
 
-## 4. สิ่งที่ยังไม่ควรสรุป
+## 4. สิ่งที่ยังไม่ควรสรุป (คำแนะนำใน snapshot เก่า)
+
+สถานะเรื่อง fallback ด้านล่างถูก supersede แล้วเมื่อ 2026-11-26: Rust เป็น executable path เดียวและไม่มี runtime fallback ส่วนหลักฐาน/ข้อจำกัดเรื่อง Apple interoperability ยังมีผลอยู่
 
 - ยังไม่ควรสรุปว่า crypto port ผิดทั้งหมด:Pair Setup / FairPlay / audio transcript ผ่าน local oracle มาก่อนแล้ว
 - ยังไม่ควรสรุปว่า GStreamer ผิด: error message ถูกตัด และอาจเป็นผลจาก decrypt fail
 - ยังไม่ควรเปลี่ยน fixture/recorded case เพื่อให้ผ่าน; ถ้าจะแก้ต้องแก้ port ตามหลัก rust-anything workflow
-- ยังไม่ควรตัด fallback หรือทำ cutover
+- (superseded) ยังไม่ควรตัด fallback หรือทำ cutover
 
 ---
 
@@ -152,7 +160,7 @@ taskkill /PID 22432 /T /F
 
 - `D:\Save\Uxplay\UxPlayRusty\rust\MAP.md` — ledger หลัก / Critical-path priorities / Feature acceptance matrix
 - `D:\Save\Uxplay\UxPlayRusty\Checkpoints.md` → `Latest Resume State`
-- `D:\Save\Uxplay\UxPlayRusty\rust\app\src\main.rs` — จุดตัดสินใจ fallback vs `UXPLAY_RUST_SERVER`
+- `D:\Save\Uxplay\UxPlayRusty\rust\app\src\main.rs` — Rust-only startup; no reference-launch or environment selector remains
 - `D:\Save\Uxplay\UxPlayRusty\rust\app-cases\http\raw-byte-diff.ps1` — วิธี start server และรัน HTTP differential
 - `D:\Save\Uxplay\UxPlayRusty\rust\units\raop-rtp-mirror\`
 - `D:\Save\Uxplay\UxPlayRusty\rust\units\mirror-buffer\`

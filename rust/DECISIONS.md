@@ -55,13 +55,13 @@ Decision: keep explicit discovery adapters and the existing selection semantics.
 Consequences: do not silently substitute a Linux-only or mDNS-only implementation. Verify service type, TXT records, ports, addresses, TTL/withdrawal, interface selection and AWDL behavior.
 
 ## ADR-007: Migrate in reversible increments
-Status: accepted (2026-11-21)
+Status: superseded by ADR-009 (2026-11-26)
 
-Context: the user chose incremental migration with side-by-side comparison before cutover.
+Context: the user chose incremental migration with side-by-side comparison before cutover. The original C project remains a separate, unchanged development oracle.
 
-Decision: keep a Rust front door with a logged original fallback while units are being ported. Wire a unit only after its behavior cases and gate pass. Lift/remove fallback only after every case and unit is green; retain the original project as rollback/reference.
+Decision: during migration, use recorded cases, unchanged-source C oracles and differential replay to compare behavior. The delivered Rust app does not launch the reference executable and has no runtime fallback. Keep the original checkout outside this repository for development comparison; do not modify it as part of a Rust port.
 
-Consequences: the front door's measured fallback rate is tracked in `rust/MAP.md` and must keep decreasing as units wire in. Any nonzero fallback means migration is incomplete. Cutover instructions must include rollback to the original binary.
+Consequences: `fallback_log` exists only so the migration replay harness can observe a zero fallback rate; it is not a proxy or rollback mechanism. If a user needs the old behavior, they must independently build and run the separate C reference. A zero-fallback replay is necessary evidence but does not by itself prove platform, device or release acceptance.
 
 ## ADR-008: Preserve the existing protocol scope
 Status: accepted (2026-11-21)
@@ -75,8 +75,8 @@ Consequences: acceptance cases will cover supported endpoints and documented uns
 ## ADR-009: Make the Rust server the normal startup path
 Status: accepted (2026-11-26)
 
-Context: the user asked to continue the migration with essential functionality first and shorten the path to a safe cutover. The Rust server now owns discovery, pairing, protocol sessions and media delivery; its current Windows GNU all-target suite passes, the focused server replay passes with zero fallback, and the raw C/Rust HTTP differential matches all eight recorded responses.
+Context: the user asked to continue the migration with essential functionality first and shorten the path to a safe cutover. The standalone Rust application owns discovery, pairing, protocol sessions and media delivery. Current recorded evidence includes 118 Rust-only Windows CLI cases, Windows GNU default and `external-dns-sd` all-target suites, raw C/Rust HTTP byte comparison, and clean optimized Windows GNU builds.
 
-Decision: successfully parsed ASCII startup options launch the Rust server by default. `UXPLAY_REFERENCE=1` explicitly runs the unchanged reference as a rollback during migration. Existing `UXPLAY_RUST_SERVER=1` is no longer required. This advances the normal path only; it does not reduce the accepted feature, platform or compatibility scope in ADR-003/004/008.
+Decision: the Rust binary is the sole normal executable and serves valid startup options directly. There is no `UXPLAY_REFERENCE` path and the app has no call to the reference executable. `UXPLAY_RUST_SERVER` is not required or read by the current app. Preserve the full accepted feature, platform and compatibility scope in ADR-003/004/008.
 
-Consequences: Unicode CLI text and other inputs that the front door cannot parse may still reach the reference temporarily and must be recorded and ported. Do not claim the migration complete until residual fallback is removed, full CLI/server and unit acceptance passes, and the platform/device requirements in MAP are addressed. This supersedes only ADR-007's staged default-start choice; its full-gate and final-lift requirements remain in force.
+Consequences: no command-line input is forwarded to a C executable. Windows CLI evidence is Rust-only for the 118 recorded cases; platform-native CLI/runtime edges remain open where noted in `rust/MAP.md`. Do not claim the migration complete until full protocol, supported-platform, device and packaging acceptance in the MAP is addressed. This supersedes the temporary fallback model described in ADR-007.
