@@ -42,6 +42,18 @@ jobs:
         with:
           workspaces: rust/app -> target
 
+      - name: Format standalone BLE beacon
+        run: cargo fmt --manifest-path rust/beacon/Cargo.toml -- --check
+
+      - name: Test standalone BLE beacon
+        run: cargo test --manifest-path rust/beacon/Cargo.toml --all-targets
+
+      - name: Lint standalone BLE beacon
+        run: cargo clippy --manifest-path rust/beacon/Cargo.toml --all-targets -- -D warnings
+
+      - name: Build standalone BLE beacon
+        run: cargo build --manifest-path rust/beacon/Cargo.toml --release
+
       - name: Format
         run: cargo fmt --manifest-path rust/app/Cargo.toml -- --check
 
