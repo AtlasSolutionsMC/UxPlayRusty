@@ -1927,12 +1927,16 @@ mod tray_control_tests {
     use std::sync::atomic::Ordering;
 
     #[test]
-    fn exit_signals_shutdown_and_disconnect_closes_known_clients() {
+    fn exit_signals_shutdown() {
         let control = ServerControl::new();
         control.request_exit();
         assert!(control.shutdown.load(Ordering::Acquire));
         assert!(control.stop_requested.load(Ordering::Acquire));
+    }
 
+    #[test]
+    fn disconnect_closes_known_clients_without_stopping_the_server() {
+        let control = ServerControl::new();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
         let (server, _) = listener.accept().unwrap();
@@ -1941,6 +1945,12 @@ mod tray_control_tests {
         registration.set_class(ConnectionClass::AirPlay);
         control.attach_connections(&registry);
         control.request_disconnect();
+        assert!(!control.shutdown.load(Ordering::Acquire));
+        assert!(!control.stop_requested.load(Ordering::Acquire));
+
+        let _reconnect = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (accepted_reconnect, _) = listener.accept().unwrap();
+        assert!(accepted_reconnect.peer_addr().is_ok());
 
         let mut client = client;
         client
