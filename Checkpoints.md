@@ -1115,6 +1115,10 @@ Create a standalone Rust replacement for the reference project at `D:\Save\Uxpla
 - Published the checkpoint/MAP blocker record without changing the workflow path: latest verified target `master` is `b914743d846679618d5eca652de46ac470624e22`; the local workflow remains untracked in the review clone.
 - `gh auth status` confirms the active GitHub CLI credential has `repo` but not `workflow`; GitHub Actions API returns zero workflow runs on `master`. An authorization question is pending; no secrets or token values were inspected.
 
+### 2026-11-26 — pulled upstream reference commits safely
+- The original C checkout remains at its prior `master` with only pre-existing untracked probe artifacts. Added a detached worktree at `D:\Save\Uxplay\UxPlay-upstream-20261126`, checked out to `origin/master` `fbd040e70e754e01fa7e6df810fecd08b6484ada` (two commits ahead).
+- Re-read both `uxplay.cpp` patches: PIN mode now returns password sentinel `-2`; restricted admission allows clients without a DeviceID; registration output strips CR/LF from client names. Rust already carries these compatibility behaviors/tests. No new Rust change was indicated.
+
 ### 2026-11-22 — HCI cleanup CalledProcessError parity
 - The wider callback/cleanup audit across the five Python beacon files and Rust backends found one remaining locally testable HCI mismatch: Python catches nonzero `CalledProcessError` during start/setup, but an HCI stop command is uncaught and prints a CPython traceback. Rust already preserved the source start-command sequence, but returned a plain stop diagnostic for nonzero exit.
 - `HciBackend::stop_with_context()` now builds the actual command output and, on nonzero exit, formats the uncaught `CalledProcessError` traceback for ordinary handoff removal and the chained Ctrl+C stop. Start/setup's caught nonzero behavior is unchanged. Added unchanged-source fake subprocess fixtures and Rust comparison tests for both cleanup routes.

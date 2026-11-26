@@ -226,3 +226,9 @@ taskkill /PID 22432 /T /F
 - GitHub rejected both `git push` and the connected GitHub Contents API write for `.github/workflows/rust-linux.yml` (Git credential lacks OAuth `workflow` scope; Contents API returned 403 `Resource not accessible by integration`). No remote workflow or Actions run exists. The latest checkpoint/MAP update is pushed to target `master` as `1fcb65afa1fa899c068720786b71651cf39f58fa`. Keep Linux acceptance open; publish with an authorized credential/integration, then inspect and fix any actual Linux failures.
 - Follow-up confirms the active `gh` credential has `repo` scope only; the GitHub Actions API currently reports zero runs on `master`. User authorization to refresh/add the `workflow` scope is pending.
 - The latest documentation-only checkpoint commit is `b914743d846679618d5eca652de46ac470624e22`; remote `master` and local HEAD matched after fetch. The only unsynced path is the drafted workflow, which the current credential cannot publish.
+
+## 18. Addendum: isolated upstream refresh (2026-11-26)
+
+- To honor the request to pull the two upstream UxPlay commits without changing the C reference checkout, created detached worktree `D:\Save\Uxplay\UxPlay-upstream-20261126` at upstream `fbd040e70e754e01fa7e6df810fecd08b6484ada`. The original `D:\Save\Uxplay\UxPlay` stays on its prior `master`; its untracked probe artifacts predate this task.
+- Both commits only change `uxplay.cpp`: PIN password callback sentinel `-2`, missing-DeviceID admission under `-restrict`, and CR/LF sanitization of pairing-register client names. Rust already implements these source behaviors. No merge to the reference or Rust code change was needed.
+- Resume by reading this section and `Checkpoints.md` first. Target Rusty `master` last verified at `ccddf2b0d5f41208b077eb289b0a0ec29ef86f77`; the current local workflow is still untracked in the target review clone because Git writes lack the `workflow` scope. GitHub reports no Actions run yet.
