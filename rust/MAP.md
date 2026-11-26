@@ -229,3 +229,6 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — Linux Clippy portability follow-up
 - CI run `45799885614` passed format and embedded-mDNS tests, then exposed three Clippy findings only present on Unix targets. Removed the redundant Linux byte cast, made `localtime_r`'s epoch reference immutable, and used the Unix `home_directory()` block's tail expression. These are source-shape changes only; release and external-DNS-SD gates remain unverified.
 - Continue with the current Linux workflow until all two-mode test, Clippy and release build steps pass.
+
+### 2026-11-26 — Windows-only DNS-SD helper gating
+- Latest CI run `45801082556` passed embedded-mDNS format/tests/Clippy/release and external-DNS-SD tests. External-DNS-SD Clippy found the Windows Bonjour DLL export-check table/helper unused on Linux. Gated them to Windows or tests and scoped `dead_code` allowance to the init-error enum in Unix external-DNS-SD builds. Re-run all gates; external-DNS-SD lint/release and full green status still open.

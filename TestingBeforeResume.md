@@ -266,3 +266,4 @@ taskkill /PID 22432 /T /F
 - Fixed the Unix non-UTF-8 `-rc` test to pass the absolute temp-file path it created; the previous test wrote under a temp directory but invoked `-rc` with only the basename.
 - Next: sync these changes, push a checkpoint, and inspect the full Ubuntu rerun through tests, Clippy and both release configurations. Linux acceptance is still open.
 - Linux Clippy fixes are in `rust/app/src/host_identity.rs`, `pairing_registry.rs`, and `server_runtime.rs`; rerun native CI for both DNS-SD modes.
+- External DNS-SD Linux Clippy follow-up: Windows Bonjour DLL export helpers are now compiled only on Windows or tests; narrow Unix external-DNS-SD dead-code allowance added for the error variants needed by shared API typing.

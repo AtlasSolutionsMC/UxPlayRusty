@@ -57,6 +57,7 @@ struct RegistrationRequest {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(all(unix, feature = "external-dns-sd"), allow(dead_code))]
 enum DnsSdInitError {
     LibraryNotFound,
     ProcedureNotFound,
@@ -76,6 +77,7 @@ impl DnsSdInitError {
     }
 }
 
+#[cfg(any(windows, test))]
 const REQUIRED_WINDOWS_DNS_SD_EXPORTS: [&[u8]; 7] = [
     b"DNSServiceRegister\0",
     b"DNSServiceRefDeallocate\0",
@@ -86,6 +88,7 @@ const REQUIRED_WINDOWS_DNS_SD_EXPORTS: [&[u8]; 7] = [
     b"TXTRecordDeallocate\0",
 ];
 
+#[cfg(any(windows, test))]
 fn missing_windows_dns_sd_exports(mut has_export: impl FnMut(&[u8]) -> bool) -> bool {
     REQUIRED_WINDOWS_DNS_SD_EXPORTS
         .iter()
