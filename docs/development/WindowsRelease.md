@@ -57,9 +57,10 @@ checks cleanup:
 It refuses to run if the current user already has a UxPlay installation or a
 running `uxplay.exe`; it temporarily backs up and restores the current user's
 config, BLE handoff, startup value and UxPlay shortcut. This checks installer
-plumbing on the development machine, not the required clean-machine acceptance
-flow. The final release still needs installation, sign-in startup, tray/media
-operation and uninstall on a clean Windows system.
+plumbing on the development machine. The clean-runner install/uninstall and
+tray/server startup gate passed in run `45898164036`; sign-in startup, tray
+menus, connected-client controls and Apple-device media remain manual
+acceptance checks before a final release.
 
 The `Windows installer smoke` workflow builds a provisional installer on one
 fresh GitHub-hosted Windows runner, then transfers it as a one-day workflow
