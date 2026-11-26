@@ -4,6 +4,7 @@ use crate::{BeaconBackend, BeaconOptions};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 use windows::Devices::Bluetooth::Advertisement::{
     BluetoothLEAdvertisement, BluetoothLEAdvertisementPublisher,
     BluetoothLEAdvertisementPublisherStatus,
@@ -13,6 +14,7 @@ use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataWriter;
 
 const APPLE_COMPANY_ID: u16 = 0x004c;
+const PUBLISHER_STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Builds the manufacturer-specific payload used by UxPlay's WinRT module.
 pub fn manufacturer_payload(address: Ipv4Addr, port: u16) -> Result<Vec<u8>, String> {
@@ -186,19 +188,48 @@ impl BeaconBackend for WinRtBackend {
             .publisher
             .Stop()
             .map_err(|error| error.to_string());
-        if stop_result.is_ok() {
-            let status = publisher
-                .publisher
-                .Status()
-                .map(status_name)
-                .unwrap_or("UNKNOWN");
-            crate::source_println!("Publisher stop requested; status is: {status}");
+        if let Err(error) = stop_result {
+            return finish_stop(
+                &mut self.publisher,
+                &mut self.advertised_port,
+                &mut self.advertised_address,
+                Err(error),
+            );
         }
+
+        let publisher = self.publisher.as_ref().expect("publisher remains active");
+        let stopped = wait_for_stopped_status(
+            || {
+                publisher.stopped.load(Ordering::Acquire)
+                    || publisher.publisher.Status().is_ok_and(|status| {
+                        matches!(
+                            status,
+                            BluetoothLEAdvertisementPublisherStatus::Stopped
+                                | BluetoothLEAdvertisementPublisherStatus::Aborted
+                        )
+                    })
+            },
+            PUBLISHER_STOP_TIMEOUT,
+        );
+        let status = publisher
+            .publisher
+            .Status()
+            .map(status_name)
+            .unwrap_or("UNKNOWN");
+        crate::source_println!("Publisher stop completed with status: {status}");
+        if !stopped {
+            return Err(format!(
+                "WinRT publisher did not reach STOPPED within {} seconds (current status: {status})",
+                PUBLISHER_STOP_TIMEOUT.as_secs()
+            ));
+        }
+        publisher.stopped.store(true, Ordering::Release);
+
         finish_stop(
             &mut self.publisher,
             &mut self.advertised_port,
             &mut self.advertised_address,
-            stop_result,
+            Ok(()),
         )
     }
 
@@ -206,6 +237,20 @@ impl BeaconBackend for WinRtBackend {
         let start_result = self.start(options, 1);
         let publisher_was_created = self.publisher.is_some();
         finish_preflight(start_result, publisher_was_created, || self.stop())
+    }
+}
+
+fn wait_for_stopped_status(mut is_stopped: impl FnMut() -> bool, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if is_stopped() {
+            return true;
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return false;
+        }
+        std::thread::sleep(remaining.min(Duration::from_millis(50)));
     }
 }
 
@@ -300,6 +345,16 @@ mod tests {
             manufacturer_payload(Ipv4Addr::LOCALHOST, 0).unwrap_err(),
             "AirPlay port must be greater than zero"
         );
+    }
+
+    #[test]
+    fn stopped_status_wait_returns_when_publisher_is_stopped() {
+        assert!(wait_for_stopped_status(|| true, PUBLISHER_STOP_TIMEOUT));
+    }
+
+    #[test]
+    fn stopped_status_wait_is_bounded() {
+        assert!(!wait_for_stopped_status(|| false, Duration::ZERO));
     }
 
     #[test]

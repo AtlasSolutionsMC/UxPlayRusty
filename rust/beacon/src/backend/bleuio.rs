@@ -458,6 +458,7 @@ mod tests {
             advmax: Some(100),
             index: None,
             device: None,
+            exit_when_stopped: false,
             notices: Vec::new(),
         };
 

@@ -84,6 +84,8 @@ struct Args {
     index: Option<i64>,
     #[arg(long, help = "Required BLE adapter or serial device address")]
     device: Option<String>,
+    #[arg(long, hide = true)]
+    exit_when_stopped: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -96,6 +98,8 @@ pub struct BeaconOptions {
     pub advmax: Option<i64>,
     pub index: Option<i64>,
     pub device: Option<String>,
+    /// Exit after an app-managed handoff is removed and advertising has stopped.
+    pub exit_when_stopped: bool,
     pub notices: Vec<String>,
 }
 
@@ -336,6 +340,7 @@ fn resolve_options(args: Args, home: PathBuf) -> Result<BeaconOptions, OptionsEr
         advmax,
         index,
         device,
+        exit_when_stopped: args.exit_when_stopped,
         notices,
     })
 }
@@ -832,6 +837,9 @@ where
             break true;
         }
         state.tick(options, backend, verifier)?;
+        if options.exit_when_stopped && !state.running && !options.path.is_file() {
+            break false;
+        }
         std::thread::sleep(Duration::from_secs(1));
     };
     finish_monitor(&state, backend, was_interrupted, |line| {
@@ -996,12 +1004,51 @@ mod tests {
     }
 
     #[test]
+    fn hidden_app_lifecycle_flag_is_parsed_without_changing_default() {
+        let args = Args::try_parse_from([
+            "uxplay-beacon",
+            "--ipv4",
+            "192.0.2.8",
+            "--path",
+            "beacon.ble",
+            "--exit-when-stopped",
+        ])
+        .unwrap();
+        let options = resolve_options(args, PathBuf::from("nonexistent-home")).unwrap();
+        assert!(options.exit_when_stopped);
+
+        let args = Args::try_parse_from(["uxplay-beacon", "--ipv4", "192.0.2.8"]).unwrap();
+        let options = resolve_options(args, PathBuf::from("nonexistent-home")).unwrap();
+        assert!(!options.exit_when_stopped);
+    }
+
+    #[test]
     fn bluez_port_one_is_a_success_sentinel_only_for_preflight() {
         assert_eq!(bluez_port_one_start_result(true), Ok(1));
         assert_eq!(
             bluez_port_one_start_result(false),
             Err("Failed to start beacon:\ngiving up, check Bluetooth adapter".to_owned())
         );
+    }
+
+    #[test]
+    fn app_managed_monitor_exits_when_handoff_is_absent() {
+        let directory = temp_dir();
+        let mut options = options(directory.join("uxplay.ble"));
+        options.exit_when_stopped = true;
+        let mut backend = FakeBackend::default();
+        let mut verifier = FakeVerifier {
+            pid_exists: true,
+            name_matches: true,
+        };
+
+        assert_eq!(
+            run_monitor(&options, &mut backend, &mut verifier, || false),
+            Ok(())
+        );
+        assert!(backend.starts.is_empty());
+        assert_eq!(backend.stops, 0);
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[derive(Default)]
@@ -1092,6 +1139,7 @@ mod tests {
             advmax: Some(100),
             index: None,
             device: None,
+            exit_when_stopped: false,
             notices: Vec::new(),
         }
     }
@@ -1107,6 +1155,7 @@ mod tests {
             advmax: Some(250),
             index: Some(2),
             device: Some("adapter-1".to_owned()),
+            exit_when_stopped: false,
         };
         let options = resolve_options(args, PathBuf::from("nonexistent-home")).unwrap();
         assert_eq!(

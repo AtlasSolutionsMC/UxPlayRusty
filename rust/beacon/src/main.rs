@@ -223,6 +223,7 @@ mod tests {
             advmax: (ble_type != BleType::WinRt).then_some(100),
             index: (ble_type == BleType::BlueZ).then_some(0),
             device: None,
+            exit_when_stopped: false,
             notices: Vec::new(),
         }
     }

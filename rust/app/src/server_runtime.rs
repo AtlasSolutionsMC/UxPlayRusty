@@ -619,7 +619,10 @@ impl BeaconManager {
 #[cfg(windows)]
 fn beacon_companion_command(executable: &Path, handoff_path: &Path) -> std::process::Command {
     let mut command = std::process::Command::new(executable);
-    command.arg("--path").arg(handoff_path);
+    command
+        .arg("--path")
+        .arg(handoff_path)
+        .arg("--exit-when-stopped");
     command
 }
 
@@ -677,9 +680,9 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
     let worker = std::thread::spawn(move || {
         loop {
             if thread_stop.load(std::sync::atomic::Ordering::Acquire) {
-                // Removing the handoff asks uxplay-beacon to stop its platform publisher cleanly.
+                // Removing the handoff asks uxplay-beacon to stop and exit cleanly.
                 let _ = std::fs::remove_file(&handoff_path);
-                let deadline = Instant::now() + Duration::from_secs(3);
+                let deadline = Instant::now() + Duration::from_secs(8);
                 while Instant::now() < deadline {
                     match child.try_wait() {
                         Ok(Some(_)) => {
@@ -742,7 +745,10 @@ mod beacon_companion_tests {
             .map(|argument| argument.to_string_lossy().into_owned())
             .collect::<Vec<_>>();
 
-        assert_eq!(arguments, ["--path", "runtime/uxplay.ble"]);
+        assert_eq!(
+            arguments,
+            ["--path", "runtime/uxplay.ble", "--exit-when-stopped"]
+        );
     }
 }
 
