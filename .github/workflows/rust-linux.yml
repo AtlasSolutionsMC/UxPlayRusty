@@ -60,6 +60,44 @@ jobs:
           env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -h >/dev/null
           env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
 
+      - name: Smoke Rust server endpoint
+        run: |
+          set -euo pipefail
+          home="$(mktemp -d)"
+          log="$(mktemp)"
+          body="$(mktemp)"
+          port=27100
+          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" \
+            rust/app/target/release/uxplay -n CodexLinuxSmoke -a -vs 0 \
+              -p tcp "$((port + 1)),$port,$((port + 2))" >"$log" 2>&1 &
+          pid=$!
+          cleanup() {
+            kill -INT "$pid" 2>/dev/null || true
+            for _ in $(seq 1 30); do
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.1
+            done
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            rm -rf "$home" "$log" "$body"
+          }
+          trap cleanup EXIT
+          for _ in $(seq 1 50); do
+            if curl --silent --show-error --fail --max-time 1 \
+              -H 'X-Apple-Session-ID: smoke' \
+              "http://127.0.0.1:${port}/server-info" --output "$body"; then
+              grep -q '<key>deviceid</key>' "$body"
+              exit 0
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$log"
+              exit 1
+            fi
+            sleep 0.2
+          done
+          cat "$log"
+          exit 1
+
       - name: Test external DNS-SD configuration
         run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features external-dns-sd
 
