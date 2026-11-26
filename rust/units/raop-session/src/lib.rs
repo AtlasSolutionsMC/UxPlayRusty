@@ -481,11 +481,20 @@ pub fn setup(
                 transition.response.disconnect = true;
                 continue;
             };
-            match unsigned_value(Some(stream_dict), "type") {
+            let stream_type = unsigned_value(Some(stream_dict), "type");
+            transition.effects.push(SessionEffect::Log {
+                level: SessionLogLevel::Debug,
+                message: format!("type = {stream_type}"),
+            });
+            match stream_type {
                 110 => {
                     transition.effects.push(SessionEffect::ClearHlsVideoData);
                     let stream_connection_id =
                         unsigned_value(Some(stream_dict), "streamConnectionID");
+                    transition.effects.push(SessionEffect::Log {
+                        level: SessionLogLevel::Debug,
+                        message: format!("streamConnectionID (needed for AES-CTR video decryption key and iv): {stream_connection_id}"),
+                    });
                     if state.mirror_exists {
                         transition.effects.push(SessionEffect::InitializeMirrorAes {
                             stream_connection_id,
@@ -494,8 +503,16 @@ pub fn setup(
                             requested_port: context.ports.mirror_data_local,
                             show_client_fps_data: context.client_fps_data,
                         });
+                        transition.effects.push(SessionEffect::Log {
+                            level: SessionLogLevel::Debug,
+                            message: "Mirroring initialized successfully".into(),
+                        });
                         state.mirror_running = true;
                     } else {
+                        transition.effects.push(SessionEffect::Log {
+                            level: SessionLogLevel::Error,
+                            message: "Mirroring not initialized at SETUP, playing will fail!".into(),
+                        });
                         transition.response.disconnect = true;
                     }
                     state.mirror_data_port = Some(context.ports.mirror_data_local);
@@ -533,6 +550,10 @@ pub fn setup(
                             format,
                             sample_rate: AUDIO_SAMPLE_RATE,
                         });
+                        transition.effects.push(SessionEffect::Log {
+                            level: SessionLogLevel::Debug,
+                            message: "RAOP initialized success".into(),
+                        });
                         state.audio_running = true;
                         state.audio_ports = Some(AudioPorts {
                             control_remote: remote_control_port,
@@ -540,6 +561,10 @@ pub fn setup(
                             data_local: context.ports.audio_data_local,
                         });
                     } else {
+                        transition.effects.push(SessionEffect::Log {
+                            level: SessionLogLevel::Error,
+                            message: "RAOP not initialized at SETUP, playing will fail!".into(),
+                        });
                         transition.response.disconnect = true;
                     }
                     response_streams.push(plist_dict([
@@ -554,7 +579,13 @@ pub fn setup(
                         ("type", Value::from(96)),
                     ]));
                 }
-                _ => transition.response.disconnect = true,
+                _ => {
+                    transition.effects.push(SessionEffect::Log {
+                        level: SessionLogLevel::Error,
+                        message: format!("SETUP tries to setup stream of unknown type {stream_type}"),
+                    });
+                    transition.response.disconnect = true;
+                }
             }
         }
         response_plist.insert("streams".into(), Value::Array(response_streams));
@@ -1021,6 +1052,18 @@ mod tests {
         dictionary.insert("isRemoteControlOnly".into(), Value::Boolean(true));
         dictionary.insert("timingProtocol".into(), Value::String("None".into()));
         dictionary.remove("timingPort");
+        let audio_stream = dictionary["streams"].as_array().unwrap()[0].clone();
+        dictionary.insert(
+            "streams".into(),
+            Value::Array(vec![
+                plist_dict([
+                    ("type", Value::from(110)),
+                    ("streamConnectionID", Value::from(123)),
+                ]),
+                audio_stream,
+                plist_dict([("type", Value::from(42))]),
+            ]),
+        );
 
         let transition = setup(
             &mut RaopSessionState::default(),
@@ -1073,8 +1116,22 @@ mod tests {
                     SessionLogLevel::Error,
                     "Client did not supply timing_rport, may be using unsupported AirPlay2 \"Remote Control\" protocol",
                 ),
+                (SessionLogLevel::Debug, "type = 110"),
+                (
+                    SessionLogLevel::Debug,
+                    "streamConnectionID (needed for AES-CTR video decryption key and iv): 123",
+                ),
+                (SessionLogLevel::Debug, "Mirroring initialized successfully"),
+                (SessionLogLevel::Debug, "type = 96"),
+                (SessionLogLevel::Debug, "RAOP initialized success"),
+                (SessionLogLevel::Debug, "type = 42"),
+                (
+                    SessionLogLevel::Error,
+                    "SETUP tries to setup stream of unknown type 42",
+                ),
             ]
         );
+        assert!(transition.response.disconnect);
         assert!(transition.effects.contains(&SessionEffect::StartTiming {
             remote_address: "192.0.2.1".into(),
             remote_port: 0,
