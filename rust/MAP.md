@@ -236,3 +236,4 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ### 2026-11-26 — Ubuntu Linux gates passed
 - Workflow run `45801697290` succeeded at `5b8fec0e8572e6ed9c114128085743d9e7096f04`: fmt, all-target tests, Clippy with warnings denied, and release builds passed in both embedded-mDNS and `external-dns-sd` configurations. The dedicated Linux CI gate is complete for both configurations; physical/native OS runtime acceptance remains open.
 - Latest pushed code/checkpoint is `5b8fec0e8572e6ed9c114128085743d9e7096f04`. Resume by reading `Checkpoints.md` and `TestingBeforeResume.md` before making the next port change.
+- Portability lint uses a narrow `#[expect(dead_code)]` on the non-test Unix external-DNS-SD build; tests continue compiling and checking the Windows loader errors.

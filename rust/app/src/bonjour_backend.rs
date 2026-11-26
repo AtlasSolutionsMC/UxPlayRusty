@@ -57,7 +57,13 @@ struct RegistrationRequest {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(all(unix, feature = "external-dns-sd"), allow(dead_code))]
+#[cfg_attr(
+    all(unix, feature = "external-dns-sd", not(test)),
+    expect(
+        dead_code,
+        reason = "Only the Windows Bonjour loader constructs these errors."
+    )
+)]
 enum DnsSdInitError {
     LibraryNotFound,
     ProcedureNotFound,
