@@ -10,7 +10,7 @@
 
 This file begins with a historical snapshot from 2026-11-23; use the later addenda and current `README.md`/`rust/MAP.md` for present behavior. The Rust executable is now the only application path: the C launcher/fallback and `UXPLAY_REFERENCE` / `UXPLAY_RUST_SERVER` selectors are absent. `fallback_log` only reports the migration harness counter. Do not follow the old fallback instructions in the historical snapshot below.
 
-Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in README and the latest checkpoint. Linux acceptance still needs a published Actions workflow, but GitHub denies the available credential's workflow-file write; no Linux Actions run exists. The current host also has no Docker, Podman, WSL or Linux native sysroot. The real iPhone video issue remains unresolved without full stderr, packet capture and same-device C comparison. The two current upstream UxPlay commits are in a separate detached worktree; the original C checkout is unchanged.
+Windows GNU tests/builds and the unchanged-C HTTP differential are recorded in README and the latest checkpoint. Linux CI is published and Ubuntu 24.04 run `45806443997` passes format, all-target tests, Clippy with warnings denied, optimized release builds in both DNS-SD modes, and release CLI smoke. Workflow-only documentation commits are ignored by CI. The current host also has no Docker, Podman, WSL or Linux native sysroot. The real iPhone video issue remains unresolved without full stderr, packet capture and same-device C comparison. The two current upstream UxPlay commits are in a separate detached worktree; the original C checkout is unchanged.
 
 ## 1. สิ่งที่ทำใน session นี้
 
