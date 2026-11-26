@@ -54,6 +54,52 @@ pub fn attach_console_for_cli() {
     }
 }
 
+/// Prefer the private runtime shipped beside the installed executable.
+/// Development builds without this layout keep using the system GStreamer paths.
+pub fn prepare_bundled_runtime() {
+    let Ok(executable) = std::env::current_exe() else {
+        return;
+    };
+    let Some(install_dir) = executable.parent() else {
+        return;
+    };
+    let runtime_dir = install_dir.join("runtime");
+    let plugin_dir = runtime_dir.join("plugins");
+    let scanner = runtime_dir
+        .join("libexec")
+        .join("gstreamer-1.0")
+        .join("gst-plugin-scanner.exe");
+    if !plugin_dir.is_dir() || !scanner.is_file() {
+        return;
+    }
+
+    let mut search_path = vec![install_dir.to_path_buf()];
+    if let Some(existing) = std::env::var_os("PATH") {
+        search_path.extend(std::env::split_paths(&existing));
+    }
+    if let Ok(search_path) = std::env::join_paths(search_path) {
+        unsafe { std::env::set_var("PATH", search_path) };
+    }
+    let registry = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .map(|path| {
+            path.join("UxPlay")
+                .join("cache")
+                .join("gstreamer-registry.bin")
+        });
+    if let Some(registry) = registry {
+        if let Some(parent) = registry.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        unsafe { std::env::set_var("GST_REGISTRY", registry) };
+    }
+    unsafe {
+        std::env::set_var("GST_PLUGIN_PATH_1_0", &plugin_dir);
+        std::env::set_var("GST_PLUGIN_SYSTEM_PATH_1_0", &plugin_dir);
+        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+    }
+}
+
 pub fn initialize_gui_logging(configured_path: Option<&std::path::Path>) {
     let Some(appdata) = std::env::var_os("APPDATA") else {
         return;

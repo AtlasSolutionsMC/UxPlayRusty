@@ -154,6 +154,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
+    #[cfg(windows)]
+    windows_tray::prepare_bundled_runtime();
     fallback_log::report_fallbacks();
     let native_argv: Vec<OsString> = std::env::args_os().collect();
     #[cfg(windows)]

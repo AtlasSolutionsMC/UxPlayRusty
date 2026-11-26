@@ -58,6 +58,6 @@ Build and run an individual port from its crate directory; for example:
 cargo test --manifest-path rust/units/playfair-sap-hash/Cargo.toml
 ```
 
-The final build will require the native GStreamer runtime/plugins and OpenSSL selected in [`docs/architecture/DECISIONS.md`](docs/architecture/DECISIONS.md).
+Source builds require the native GStreamer runtime/plugins and OpenSSL selected in [`docs/architecture/DECISIONS.md`](docs/architecture/DECISIONS.md). Windows installer build and smoke instructions are in [`Windows release packaging`](docs/development/WindowsRelease.md).
 
 Windows first-run configuration and the supported `config.toml` settings are documented in [`docs/development/WindowsConfig.md`](docs/development/WindowsConfig.md).
