@@ -267,3 +267,7 @@ taskkill /PID 22432 /T /F
 - Next: sync these changes, push a checkpoint, and inspect the full Ubuntu rerun through tests, Clippy and both release configurations. Linux acceptance is still open.
 - Linux Clippy fixes are in `rust/app/src/host_identity.rs`, `pairing_registry.rs`, and `server_runtime.rs`; rerun native CI for both DNS-SD modes.
 - External DNS-SD Linux Clippy follow-up: Windows Bonjour DLL export helpers are now compiled only on Windows or tests; narrow Unix external-DNS-SD dead-code allowance added for the error variants needed by shared API typing.
+
+### 2026-11-26 — Linux CI green
+- Ubuntu 24.04 workflow run `45801697290` succeeded on commit `5b8fec0e8572e6ed9c114128085743d9e7096f04`: format, all-target tests, Clippy (`-D warnings`) and optimized release builds all passed for embedded mDNS and `external-dns-sd`.
+- Linux CI acceptance for those two configurations is closed. Native Linux device/runtime validation and macOS/BSD acceptance remain open. Resume by reading this file and `Checkpoints.md`; the published target `master` is at the above commit.
