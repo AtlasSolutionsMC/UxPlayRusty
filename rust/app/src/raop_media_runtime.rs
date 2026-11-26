@@ -41,6 +41,9 @@ use video_renderer_rs::port::{
 };
 
 #[cfg(test)]
+use video_renderer_rs::port::VideoRendererKind;
+
+#[cfg(test)]
 pub(crate) static VIDEO_RENDERER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Keep GStreamer's main loop and bus watches alive while the protocol server runs.
@@ -1586,6 +1589,7 @@ fn video_renderer_config(options: &Options) -> VideoRendererConfig {
         converter = format!("{converter} ! video/x-raw,colorimetry=sRGB,format=RGBx ! {converter}");
     }
     VideoRendererConfig {
+        renderer: options.renderer,
         server_name: options.server_name.clone(),
         flip: [
             renderer_flip(options.video_flip),
@@ -2518,6 +2522,17 @@ mod volume_tests {
         });
         assert_eq!(disabled.parser, "h264parse");
         assert_eq!(disabled.converter, "videoconvert");
+    }
+
+    #[test]
+    fn renderer_selection_and_low_latency_reach_the_video_renderer() {
+        let config = video_renderer_config(&Options {
+            renderer: VideoRendererKind::Vulkan,
+            low_latency: true,
+            ..Options::default()
+        });
+        assert_eq!(config.renderer, VideoRendererKind::Vulkan);
+        assert!(config.low_latency);
     }
 
     #[test]

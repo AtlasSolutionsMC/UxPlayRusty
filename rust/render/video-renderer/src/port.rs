@@ -34,6 +34,14 @@ pub enum LogLevel {
 
 pub type LogCallback = Arc<dyn Fn(LogLevel, &str) + Send + Sync + 'static>;
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum VideoRendererKind {
+    #[default]
+    Auto,
+    D3d11,
+    Vulkan,
+}
+
 /// The six `videoflip_t` values accepted by the original renderer.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[repr(i32)]
@@ -63,6 +71,7 @@ impl VideoFlip {
 /// Renderer settings captured by `video_renderer_init`.
 #[derive(Clone, Debug)]
 pub struct VideoRendererConfig {
+    pub renderer: VideoRendererKind,
     pub server_name: String,
     pub flip: [VideoFlip; 2],
     pub parser: String,
@@ -83,6 +92,7 @@ pub struct VideoRendererConfig {
 impl Default for VideoRendererConfig {
     fn default() -> Self {
         Self {
+            renderer: VideoRendererKind::Auto,
             server_name: "UxPlay".to_owned(),
             flip: [VideoFlip::None; 2],
             parser: "h264parse".to_owned(),
@@ -238,10 +248,43 @@ impl VideoRenderer {
 
     /// Initialize with a callback that receives source logger levels/messages.
     pub fn new_with_logger(
-        mut config: VideoRendererConfig,
+        config: VideoRendererConfig,
         logger: LogCallback,
     ) -> Result<Self, String> {
+        if config.renderer != VideoRendererKind::Vulkan {
+            return Self::build(config, logger);
+        }
+        if config.uri.is_some() {
+            log(
+                &logger,
+                LogLevel::Warning,
+                "video_renderer_init: Vulkan mirror renderer does not support HLS; falling back to the configured video sink",
+            );
+            let mut fallback = config;
+            fallback.renderer = VideoRendererKind::Auto;
+            return Self::build(fallback, logger);
+        }
+
+        match Self::build(config.clone(), Arc::clone(&logger)) {
+            Ok(renderer) => Ok(renderer),
+            Err(error) => {
+                log(
+                    &logger,
+                    LogLevel::Warning,
+                    &format!(
+                        "video_renderer_init: Vulkan initialization failed ({error}); falling back to the configured video sink"
+                    ),
+                );
+                let mut fallback = config;
+                fallback.renderer = VideoRendererKind::Auto;
+                Self::build(fallback, logger)
+            }
+        }
+    }
+
+    fn build(mut config: VideoRendererConfig, logger: LogCallback) -> Result<Self, String> {
         gst::init().map_err(|error| format!("GStreamer initialization failed: {error}"))?;
+        apply_renderer_mode(&mut config);
         let missing_d3d11 = d3d11_factories_missing(&config);
         if !missing_d3d11.is_empty() {
             log(
@@ -258,6 +301,13 @@ impl VideoRenderer {
             glib::set_application_name(&config.server_name);
         }
         let hls_video = config.uri.is_some();
+        if config.renderer == VideoRendererKind::Vulkan && config.coverart_support {
+            log(
+                &logger,
+                LogLevel::Warning,
+                "video_renderer_init: Vulkan is used for H.264/H.265 mirror video only; JPEG cover art keeps the configured video sink",
+            );
+        }
         let hls_state = HlsState::default();
         let mut renderers = Vec::with_capacity(3);
         let mut type_h264 = None;
@@ -1031,6 +1081,8 @@ pub fn videoflip_description(flip: VideoFlip, rotation: VideoFlip) -> Option<&'s
 }
 
 fn pipeline_description(config: &VideoRendererConfig, codec: Codec) -> String {
+    let mut config = config.clone();
+    apply_renderer_mode(&mut config);
     let jpeg = codec == Codec::Jpeg;
     let rtp = !config.rtp_pipeline.is_empty();
     let mut launch = String::from("appsrc name=video_source ! ");
@@ -1069,12 +1121,19 @@ fn pipeline_description(config: &VideoRendererConfig, codec: Codec) -> String {
             launch
                 .push_str(" imagefreeze allow-replace=TRUE ! textoverlay name=metadata_overlay ! ");
         }
-        launch.push_str(&config.video_sink);
-        launch.push_str(" name=");
-        launch.push_str(&config.video_sink);
-        launch.push('_');
-        launch.push_str(codec.name());
-        launch.push_str(&config.video_sink_options);
+        if config.renderer == VideoRendererKind::Vulkan && !jpeg {
+            launch.push_str(&format!(
+                "vulkanupload ! vulkansink name=vulkansink_{}",
+                codec.name()
+            ));
+        } else {
+            launch.push_str(&config.video_sink);
+            launch.push_str(" name=");
+            launch.push_str(&config.video_sink);
+            launch.push('_');
+            launch.push_str(codec.name());
+            launch.push_str(&config.video_sink_options);
+        }
         launch.push_str(if config.video_sync && !jpeg {
             " sync=true"
         } else {
@@ -1112,6 +1171,9 @@ fn fallback_unavailable_d3d11_components(
     config: &mut VideoRendererConfig,
     missing_factories: &[String],
 ) {
+    if !missing_factories.is_empty() {
+        config.renderer = VideoRendererKind::Auto;
+    }
     if missing_factories
         .iter()
         .any(|factory| factory.starts_with("d3d11h"))
@@ -1123,6 +1185,19 @@ fn fallback_unavailable_d3d11_components(
         .any(|factory| factory == "d3d11videosink")
     {
         config.video_sink = "autovideosink".to_owned();
+        config.video_sink_options.clear();
+    }
+}
+
+fn apply_renderer_mode(config: &mut VideoRendererConfig) {
+    if config.renderer != VideoRendererKind::D3d11 {
+        return;
+    }
+    if matches!(config.decoder.as_str(), "decodebin" | "avdec_h264") {
+        config.decoder = "d3d11h264dec".to_owned();
+    }
+    if config.video_sink == "autovideosink" {
+        config.video_sink = "d3d11videosink".to_owned();
         config.video_sink_options.clear();
     }
 }
@@ -1955,6 +2030,93 @@ mod tests {
         };
         let rtp = pipeline_description(&rtp_config, Codec::H264);
         assert!(!rtp.contains("max-size-buffers"));
+    }
+
+    #[test]
+    fn vulkan_is_only_inserted_for_mirror_video() {
+        let config = VideoRendererConfig {
+            renderer: VideoRendererKind::Vulkan,
+            h265_support: true,
+            video_sink: "fakesink".to_owned(),
+            ..VideoRendererConfig::default()
+        };
+        let h264 = pipeline_description(&config, Codec::H264);
+        assert!(h264.contains("videoconvert ! videoscale ! vulkanupload ! vulkansink"));
+        assert!(h264.contains("vulkansink_h264 sync=true"));
+
+        let h265 = pipeline_description(&config, Codec::H265);
+        assert!(h265.contains("h265parse ! avdec_h265"));
+        assert!(
+            h265.contains("vulkanupload ! vulkansink name=vulkansink_h265 sync=true"),
+            "{h265}"
+        );
+
+        let jpeg = pipeline_description(&config, Codec::Jpeg);
+        assert!(jpeg.contains("textoverlay name=metadata_overlay ! fakesink name=fakesink_jpeg"));
+        assert!(!jpeg.contains("vulkanupload"));
+
+        let rtp_config = VideoRendererConfig {
+            rtp_pipeline: "pt=96 ! fakesink".to_owned(),
+            ..config
+        };
+        let rtp = pipeline_description(&rtp_config, Codec::H264);
+        assert!(!rtp.contains("vulkanupload"));
+    }
+
+    #[test]
+    fn d3d11_renderer_kind_selects_hardware_components() {
+        let config = VideoRendererConfig {
+            renderer: VideoRendererKind::D3d11,
+            h265_support: true,
+            ..VideoRendererConfig::default()
+        };
+
+        let h264 = pipeline_description(&config, Codec::H264);
+        assert!(h264.contains("h264parse ! d3d11h264dec"));
+        assert!(h264.contains("d3d11videosink name=d3d11videosink_h264"));
+
+        let h265 = pipeline_description(&config, Codec::H265);
+        assert!(h265.contains("h265parse ! d3d11h265dec"));
+        assert!(h265.contains("d3d11videosink name=d3d11videosink_h265"));
+    }
+
+    #[test]
+    fn vulkan_renderer_initializes_or_logs_automatic_fallback() {
+        let messages = Arc::new(Mutex::new(Vec::<String>::new()));
+        let captured = Arc::clone(&messages);
+        let renderer = VideoRenderer::new_with_logger(
+            VideoRendererConfig {
+                renderer: VideoRendererKind::Vulkan,
+                parser: "identity".to_owned(),
+                decoder: "identity".to_owned(),
+                converter: "videoconvert".to_owned(),
+                video_sink: "fakesink".to_owned(),
+                ..VideoRendererConfig::default()
+            },
+            Arc::new(move |_, message| {
+                captured
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .push(message.to_owned());
+            }),
+        )
+        .expect("automatic sink fallback should keep renderer initialization available");
+        match renderer.config.renderer {
+            VideoRendererKind::Vulkan => assert!(
+                renderer
+                    .pipeline_description("h264")
+                    .unwrap()
+                    .contains("vulkanupload ! vulkansink")
+            ),
+            VideoRendererKind::Auto => assert!(
+                messages
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .iter()
+                    .any(|message| message.contains("Vulkan initialization failed"))
+            ),
+            VideoRendererKind::D3d11 => unreachable!("Vulkan cannot fall back to D3D11 silently"),
+        }
     }
 
     #[test]

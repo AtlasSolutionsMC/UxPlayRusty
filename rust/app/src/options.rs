@@ -7,6 +7,7 @@
 use std::cell::RefCell;
 use std::ffi::OsString;
 use std::path::PathBuf;
+use video_renderer_rs::port::VideoRendererKind;
 
 const VERSION: &str = "1.74";
 const LOWEST_ALLOWED_PORT: u32 = 1024;
@@ -178,6 +179,7 @@ pub struct Options {
     pub video_parser: String,
     pub video_decoder: String,
     pub low_latency: bool,
+    pub renderer: VideoRendererKind,
     pub video_converter: String,
     pub video_sink: String,
     pub video_sink_options: String,
@@ -273,6 +275,7 @@ impl Options {
             video_parser: "h264parse".into(),
             video_decoder: "decodebin".into(),
             low_latency: false,
+            renderer: VideoRendererKind::Auto,
             video_converter: "videoconvert".into(),
             video_sink: "autovideosink".into(),
             video_sink_options: String::new(),
@@ -752,9 +755,15 @@ where
                 let Some(value) = required_arg(arg, next, &notices) else { return fail_missing(arg, notices); };
                 match arg {
                     "-vp" => options.video_parser = value.into(),
-                    "-vd" => options.video_decoder = value.into(),
+                    "-vd" => {
+                        options.video_decoder = value.into();
+                        if options.renderer == VideoRendererKind::D3d11 {
+                            options.renderer = VideoRendererKind::Auto;
+                        }
+                    }
                     "-vc" => options.video_converter = value.into(),
                     "-vs" => {
+                        options.renderer = VideoRendererKind::Auto;
                         options.video_sink = value.into();
                         if let Some(pos) = options.video_sink.find(' ') {
                             options.video_sink_options = options.video_sink[pos..].to_owned();
@@ -763,6 +772,20 @@ where
                     }
                     _ => options.audio_sink = value.into(),
                 }
+                i += 1;
+            }
+            "-renderer" => {
+                let Some(value) = required_arg(arg, next, &notices) else {
+                    return fail_missing(arg, notices);
+                };
+                let Some(renderer) = parse_video_renderer(value) else {
+                    return fail(
+                        1,
+                        notices,
+                        format!("invalid renderer \"{value}\"; choose auto, d3d11, or vulkan\n"),
+                    );
+                };
+                set_video_renderer(&mut options, renderer);
                 i += 1;
             }
             "-t" => return fail(1, notices, "The uxplay option \"-t\" has been removed: it was a workaround for an  Avahi issue.\nThe correct solution is to open network port UDP 5353 in the firewall for mDNS queries\n".into()),
@@ -775,7 +798,7 @@ where
                 }
             }
             "-avdec" => { options.video_parser = "h264parse".into(); options.video_decoder = "avdec_h264".into(); options.video_converter = "videoconvert".into(); }
-            "-d3d11" => { options.video_decoder = "d3d11h264dec".into(); options.video_sink = "d3d11videosink".into(); options.video_sink_options.clear(); }
+            "-d3d11" => set_video_renderer(&mut options, VideoRendererKind::D3d11),
             "-lowlatency" => options.low_latency = true,
             "-v4l2" => { options.video_decoder = "v4l2h264dec".into(); options.video_converter = "v4l2convert".into(); }
             "-fs" => options.fullscreen = true,
@@ -1011,6 +1034,33 @@ fn parse_c_f32(text: &str) -> Option<f32> {
         return None;
     }
     text.parse::<f32>().ok()
+}
+
+fn parse_video_renderer(value: &str) -> Option<VideoRendererKind> {
+    match value.to_ascii_lowercase().as_str() {
+        "auto" => Some(VideoRendererKind::Auto),
+        "d3d11" => Some(VideoRendererKind::D3d11),
+        "vulkan" => Some(VideoRendererKind::Vulkan),
+        _ => None,
+    }
+}
+
+fn set_video_renderer(options: &mut Options, renderer: VideoRendererKind) {
+    if options.renderer == VideoRendererKind::D3d11 {
+        if options.video_decoder == "d3d11h264dec" {
+            options.video_decoder = "decodebin".to_owned();
+        }
+        if options.video_sink == "d3d11videosink" {
+            options.video_sink = "autovideosink".to_owned();
+            options.video_sink_options.clear();
+        }
+    }
+    options.renderer = renderer;
+    if renderer == VideoRendererKind::D3d11 {
+        options.video_decoder = "d3d11h264dec".to_owned();
+        options.video_sink = "d3d11videosink".to_owned();
+        options.video_sink_options.clear();
+    }
 }
 
 fn parse_display(text: &str, options: &mut Options) -> bool {
@@ -1302,6 +1352,7 @@ mod tests {
     fn low_latency_and_d3d11_preset_are_opt_in_and_overridable() {
         let options = ready(parse(&["-lowlatency", "-d3d11"]));
         assert!(options.low_latency);
+        assert_eq!(options.renderer, VideoRendererKind::D3d11);
         assert_eq!(options.video_decoder, "d3d11h264dec");
         assert_eq!(options.video_sink, "d3d11videosink");
 
@@ -1309,6 +1360,20 @@ mod tests {
         assert_eq!(overridden.video_decoder, "avdec_h264");
         assert_eq!(overridden.video_sink, "fakesink");
         assert!(!overridden.low_latency);
+    }
+
+    #[test]
+    fn renderer_selection_accepts_auto_d3d11_and_vulkan() {
+        let vulkan = ready(parse(&["-renderer", "Vulkan"]));
+        assert_eq!(vulkan.renderer, VideoRendererKind::Vulkan);
+        assert_eq!(vulkan.video_decoder, "decodebin");
+
+        let reset = ready(parse(&["-d3d11", "-renderer", "auto"]));
+        assert_eq!(reset.renderer, VideoRendererKind::Auto);
+        assert_eq!(reset.video_decoder, "decodebin");
+        assert_eq!(reset.video_sink, "autovideosink");
+
+        assert_eq!(exited(parse(&["-renderer", "invalid"])).code, 1);
     }
 
     #[test]

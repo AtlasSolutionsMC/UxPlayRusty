@@ -368,6 +368,7 @@ pub unsafe extern "C" fn video_renderer_init(
     };
     let config = port::VideoRendererConfig {
         server_name: owned_c_string(server_name, "UxPlay"),
+        renderer: port::VideoRendererKind::Auto,
         flip: flip_values.map(port::VideoFlip::from_source_value),
         parser: owned_c_string(parser, "h264parse"),
         rtp_pipeline: owned_c_string(rtp_pipeline, ""),
