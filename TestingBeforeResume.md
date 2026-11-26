@@ -281,3 +281,4 @@ taskkill /PID 22432 /T /F
 
 ### 2026-11-26 — generated llhttp replacement mapped
 - Reviewed `http_request.c` callback/getter use with `http_request.rs`. The 10,007 LOC generated parser and its API/HTTP support files are replaced by the Rust `HttpRequest` boundary (`httparse` plus source-specific state/error rules), not copied line-for-line. Reclassified the three analyzer rows as replaced and kept residual malformed/incremental parser edges on the `http_request.c` row. Current Linux CI run `45806443997` already passed both modes; this is documentation-only.
+- 2026-11-26 `dnssdint.h` review: active TXT constants and fields are runtime-covered by the Rust TXT builder and its C oracle; commented alternatives are inactive. No source change required.
