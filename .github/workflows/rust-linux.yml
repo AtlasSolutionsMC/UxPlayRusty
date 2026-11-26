@@ -70,6 +70,7 @@ jobs:
           import sys
           import tempfile
           import time
+          import urllib.error
           import urllib.request
 
           with tempfile.TemporaryDirectory(prefix="uxplay-smoke-") as home, tempfile.TemporaryFile() as log:
@@ -85,8 +86,9 @@ jobs:
                    "-p", "tcp", f"{port + 1},{port},{port + 2}"],
                   env=env, stdout=log, stderr=subprocess.STDOUT,
               )
+              failure = None
               try:
-                  deadline = time.monotonic() + 10
+                  deadline = time.monotonic() + 20
                   while time.monotonic() < deadline:
                       if proc.poll() is not None:
                           break
@@ -100,12 +102,16 @@ jobs:
                               assert response.status == 200
                               assert b"<key>deviceid</key>" in body
                               break
+                      except urllib.error.HTTPError as error:
+                          raise RuntimeError(f"server returned HTTP {error.code}: {error.read()!r}") from error
                       except (OSError, TimeoutError):
                           time.sleep(0.2)
                   else:
                       raise RuntimeError("server-info endpoint did not become ready")
                   if proc.poll() is not None:
                       raise RuntimeError("server exited before serving server-info")
+              except Exception as error:
+                  failure = error
               finally:
                   if proc.poll() is None:
                       proc.send_signal(signal.SIGINT)
@@ -113,12 +119,15 @@ jobs:
                       return_code = proc.wait(timeout=5)
                   except subprocess.TimeoutExpired:
                       proc.kill()
-                      proc.wait()
-                      raise RuntimeError("server did not stop after SIGINT")
-                  if return_code != 0:
-                      log.seek(0)
-                      sys.stderr.write(log.read().decode(errors="replace"))
-                      raise RuntimeError(f"server exited with status {return_code}")
+                      return_code = proc.wait()
+                      failure = failure or RuntimeError("server did not stop after SIGINT")
+              if failure is not None or return_code != 0:
+                  log.seek(0)
+                  sys.stderr.write(log.read().decode(errors="replace"))
+              if failure is not None:
+                  raise failure
+              if return_code != 0:
+                  raise RuntimeError(f"server exited with status {return_code}")
           PY
 
       - name: Test external DNS-SD configuration

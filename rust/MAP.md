@@ -209,7 +209,7 @@ This application-level matrix is independent of analyzer unit counts. Each row d
 ## Feature acceptance frontier
 
 - [x] Toolchain and native Windows build dependencies installed.
-- [x] Linux CI build acceptance: `.github/workflows/rust-linux.yml` is published and Ubuntu 24.04 run `45806443997` passed format, all-target tests, Clippy and release builds in embedded-mDNS and `external-dns-sd` modes plus release CLI smoke. Native server endpoint acceptance is being added; run `45808449616` exposed and led to a fix for `-vs 0` incorrectly initializing the video renderer. The fix is awaiting rerun.
+- [x] Linux CI build acceptance: `.github/workflows/rust-linux.yml` is published and Ubuntu 24.04 run `45806443997` passed format, all-target tests, Clippy and release builds in embedded-mDNS and `external-dns-sd` modes plus release CLI smoke. Native server endpoint acceptance remains open: run `45808449616` exposed and led to a fix for `-vs 0` incorrectly initializing the video renderer, and `45809905058` timed out waiting for `/server-info` without showing server logs. The next workflow run prints the child's diagnostics and HTTP status.
 - [x] Reference CMake build succeeds; source tree unchanged.
 - [x] App recorder baseline exists and original replay is 118/118.
 - [x] Rust server is the default for valid ASCII startup; the explicit reference launcher and implicit fallback are removed. Focused `/server-info` replay passes 1/1 at 0 fallback, and raw-byte C/Rust HTTP differential passes 8/8. The generic HTTP reader is 5/8 on persistent responses.
