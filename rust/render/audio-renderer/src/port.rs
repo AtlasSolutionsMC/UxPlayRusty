@@ -1038,4 +1038,67 @@ mod tests {
             "valid ALAC input did not reach fakesink through appsrc and avdec_alac"
         );
     }
+
+    #[test]
+    fn valid_aac_eld_fixture_decodes_through_appsrc_to_fakesink() {
+        gst::init().expect("GStreamer must be initialized before querying factories");
+        if [
+            "appsrc",
+            "queue",
+            "avdec_aac",
+            "audioconvert",
+            "audioresample",
+            "volume",
+            "level",
+            "fakesink",
+        ]
+        .into_iter()
+        .any(|factory| gst::ElementFactory::find(factory).is_none())
+        {
+            return;
+        }
+
+        let config = AudioRendererConfig::new(
+            "fakesink name=fakesink_aac signal-handoffs=true",
+            false,
+            false,
+        );
+        let mut renderer = AudioRenderer::new(config).expect("AAC-ELD decoder pipeline");
+        let sink = renderer.formats[0]
+            .pipeline
+            .by_name("fakesink_aac")
+            .expect("named AAC fakesink");
+        let handoffs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let sink_handoffs = Arc::clone(&handoffs);
+        let _handoff_handler = sink.connect("handoff", false, move |_| {
+            sink_handoffs.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            None
+        });
+
+        assert_eq!(
+            renderer.start(AudioFormat::AacEld.ct()),
+            StartOutcome::Started(AudioFormat::AacEld)
+        );
+        // This is a standard raw AAC-ELD access unit. Push it directly so the
+        // test covers decoder capability independently of AirPlay's outer
+        // packet marker validation in `render_buffer`.
+        let packet = include_bytes!("../testdata/aac-eld-silence-44100-stereo.bin");
+        let buffer = gst::Buffer::from_mut_slice(packet.to_vec());
+        renderer.formats[0]
+            .appsrc
+            .push_buffer(buffer)
+            .expect("appsrc should accept the AAC-ELD access unit");
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        renderer.destroy();
+        assert!(
+            handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
+            "valid AAC-ELD input did not reach fakesink through appsrc and avdec_aac"
+        );
+    }
 }

@@ -2038,6 +2038,95 @@ mod volume_tests {
     }
 
     #[test]
+    fn h264_aac_eld_callbacks_finalize_mixed_mp4() {
+        let _renderer_guard = VIDEO_RENDERER_TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        gstreamer::init().expect("GStreamer is required for the mixed A/V mux test");
+        if ["appsrc", "queue", "h264parse", "aacparse", "mp4mux"]
+            .into_iter()
+            .any(|factory| gstreamer::ElementFactory::find(factory).is_none())
+        {
+            return;
+        }
+
+        let mux_prefix = temporary_prefix("mirror-mixed-mp4");
+        let options = Options {
+            use_audio: true,
+            audio_sink: "fakesink".into(),
+            video_sink: "fakesink".into(),
+            mux_to_file: true,
+            mux_filename: mux_prefix.to_string_lossy().into_owned(),
+            ..Options::default()
+        };
+        let mut output_runtime = MediaOutputRuntime::new(&options)
+            .expect("app output runtime should initialize mixed A/V mux");
+        output_runtime.connection_opened();
+        output_runtime.select_audio_codec(8);
+        let outputs = Arc::new(Mutex::new(output_runtime));
+        let callbacks = RendererMirrorCallbacks {
+            outputs: Arc::clone(&outputs),
+            logger: None,
+            use_video: false,
+            nofreeze: false,
+        };
+
+        let audio_frame =
+            include_bytes!("../../render/audio-renderer/testdata/aac-eld-silence-44100-stereo.bin");
+        for timestamp in [2_000_000_000, 2_010_000_000, 2_020_000_000] {
+            lock(&outputs).process_audio(8, audio_frame, timestamp);
+        }
+
+        assert!(callbacks.event(MirrorEvent::CodecConfigured {
+            codec: VideoCodec::H264,
+            dimensions: uxplay_raop_rtp_mirror::VideoDimensions {
+                width_source: 0,
+                height_source: 0,
+                x_offset: 0,
+                y_offset: 0,
+                width: 0,
+                height: 0,
+            },
+        }));
+        let fixture = include_bytes!("../../render/video-renderer/testdata/hls/mirror-frame.h264");
+        let nalus = annex_b_nalus(fixture);
+        let mut encoded_frame = Vec::new();
+        for nalu in nalus.iter().copied().filter(|nalu| {
+            nalu.first()
+                .is_some_and(|byte| matches!(byte & 0x1f, 7 | 8 | 5))
+        }) {
+            encoded_frame.extend_from_slice(&[0, 0, 0, 1]);
+            encoded_frame.extend_from_slice(nalu);
+        }
+        assert!(callbacks.event(MirrorEvent::VideoFrame(
+            uxplay_raop_rtp_mirror::VideoFrame {
+                codec: VideoCodec::H264,
+                data: encoded_frame,
+                nal_count: 3,
+                ntp_time_local: 2_000_000_000,
+                ntp_time_remote: 2_000_000_000,
+            }
+        )));
+        lock(&outputs).connection_closed(false, None);
+
+        let mp4_path = std::path::PathBuf::from(format!("{}.1.H264.AAC.mp4", mux_prefix.display()));
+        let mp4 = std::fs::read(&mp4_path).expect("mixed A/V callback should finalize its MP4");
+        assert!(
+            mp4.len() > 128,
+            "finalized mixed MP4 is only {} bytes",
+            mp4.len()
+        );
+        for atom in [b"ftyp".as_slice(), b"moov", b"mdat", b"avc1", b"mp4a"] {
+            assert!(
+                mp4.windows(atom.len()).any(|window| window == atom),
+                "finalized mixed MP4 does not contain the {} atom/sample entry",
+                String::from_utf8_lossy(atom)
+            );
+        }
+        std::fs::remove_file(mp4_path).unwrap();
+    }
+
+    #[test]
     fn h265_mirror_callback_finalizes_video_only_mp4() {
         let _renderer_guard = VIDEO_RENDERER_TEST_LOCK
             .lock()

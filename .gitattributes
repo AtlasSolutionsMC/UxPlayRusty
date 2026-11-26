@@ -1,1 +1,2 @@
 rust/record-shims/*.bin -text -diff
+rust/render/audio-renderer/testdata/*.bin -text -diff
