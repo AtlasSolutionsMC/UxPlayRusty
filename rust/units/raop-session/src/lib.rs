@@ -400,9 +400,7 @@ pub fn setup(
                 message: "Client identifed as using old protocol (unhashed) AES audio key)".into(),
             });
         }
-        if !old_protocol
-            && let Some(pairing_session) = context.pairing_session
-        {
+        if !old_protocol && let Some(pairing_session) = context.pairing_session {
             let mut ecdh_secret = [0; 32];
             if pairing_session.get_ecdh_secret_key(&mut ecdh_secret) > 0 {
                 // lib/crypto.c's sha_init() is SHA-512; the C handler copies
@@ -531,7 +529,8 @@ pub fn setup(
                     } else {
                         transition.effects.push(SessionEffect::Log {
                             level: SessionLogLevel::Error,
-                            message: "Mirroring not initialized at SETUP, playing will fail!".into(),
+                            message: "Mirroring not initialized at SETUP, playing will fail!"
+                                .into(),
                         });
                         transition.response.disconnect = true;
                     }
@@ -602,7 +601,9 @@ pub fn setup(
                 _ => {
                     transition.effects.push(SessionEffect::Log {
                         level: SessionLogLevel::Error,
-                        message: format!("SETUP tries to setup stream of unknown type {stream_type}"),
+                        message: format!(
+                            "SETUP tries to setup stream of unknown type {stream_type}"
+                        ),
                     });
                     transition.response.disconnect = true;
                 }
@@ -1084,7 +1085,9 @@ mod tests {
     fn setup_emits_source_timing_diagnostics_in_order() {
         let fairplay = FairPlay::new(std::ptr::null_mut());
         let mut request = parse_binary_plist_or_empty(&setup_body_with_audio());
-        let dictionary = request.as_dictionary_mut().expect("setup request is a dictionary");
+        let dictionary = request
+            .as_dictionary_mut()
+            .expect("setup request is a dictionary");
         dictionary.insert("isRemoteControlOnly".into(), Value::Boolean(true));
         dictionary.insert("timingProtocol".into(), Value::String("None".into()));
         dictionary.remove("timingPort");
@@ -1140,10 +1143,7 @@ mod tests {
         assert_eq!(
             logs,
             vec![
-                (
-                    SessionLogLevel::Debug,
-                    "fairplay_decrypt ret = -1",
-                ),
+                (SessionLogLevel::Debug, "fairplay_decrypt ret = -1",),
                 (
                     SessionLogLevel::Error,
                     "Client specified AirPlay2 \"Remote Control\" protocol\n Only AirPlay v1 protocol (using NTP and timing port) is supported",
