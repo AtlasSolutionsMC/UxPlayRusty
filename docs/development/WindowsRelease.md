@@ -77,9 +77,35 @@ SPDX declaration and upstream URL are recorded in `THIRD-PARTY-NOTICES.txt`.
 The current UCRT64 bundle includes GPL-labeled FFmpeg, x264 and x265 runtime
 packages; the staged `avcodec-63.dll` imports the x264 and x265 DLLs. Their
 staged directories contain `LICENSE-REFERENCE.txt` rather than the package
-license text or corresponding source. FFmpeg documents that enabling GPL parts
-makes GPL apply to FFmpeg and describes distributing the exact matching source
-and build information ([FFmpeg legal considerations](https://www.ffmpeg.org/legal.html)).
+license text or corresponding source. The exact package source archives have
+now been collected separately; FFmpeg documents that enabling GPL parts makes
+GPL apply to FFmpeg and describes distributing the exact matching source and
+build information ([FFmpeg legal considerations](https://www.ffmpeg.org/legal.html)).
 Treat `Setup.exe` as provisional: do not publish it until the exact source/build
 inputs and notices are resolved for the runtime, or the runtime is rebuilt with
 a reviewed license profile.
+
+## Matching MSYS2 source packages
+
+To collect the exact MSYS2 source package archives for the staged runtime and
+write a SHA-256 manifest, run:
+
+```powershell
+$msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
+.\tools\windows\collect-source-packages.ps1 `
+    -StageDirectory .\dist\windows\stage `
+    -Msys2Root $msysRoot `
+    -CreateTar
+```
+
+The script maps runtime package names to their MSYS2 base packages, downloads
+the exact package-version source archives, validates each Zstandard archive,
+and writes `dist/windows/source-packages.tar`. The companion archive contains
+the matching source package archives, `SOURCE-PACKAGES.txt` with hashes and
+source URLs, and a copy of `THIRD-PARTY-NOTICES.txt`. The current staged
+runtime produces 99 unique source archives for 102 package owners (about
+1.18 GiB). The source set is separate from `Setup.exe`; include it alongside
+the installer when publishing a release. Archive validation and a package
+index do not replace a license-obligation review. Keep the installer
+provisional until the exact binary/source relationship, notices, and release
+presentation have been reviewed.
