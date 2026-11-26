@@ -1118,6 +1118,7 @@ Create a standalone Rust replacement for the reference project at `D:\Save\Uxpla
 ### 2026-11-26 — pulled upstream reference commits safely
 - The original C checkout remains at its prior `master` with only pre-existing untracked probe artifacts. Added a detached worktree at `D:\Save\Uxplay\UxPlay-upstream-20261126`, checked out to `origin/master` `fbd040e70e754e01fa7e6df810fecd08b6484ada` (two commits ahead).
 - Re-read both `uxplay.cpp` patches: PIN mode now returns password sentinel `-2`; restricted admission allows clients without a DeviceID; registration output strips CR/LF from client names. Rust already carries these compatibility behaviors/tests. No new Rust change was indicated.
+- Current resume verification: target clone `HEAD` equals `origin/master` at `dc0f914c204f8628fb5023be5854cb10fb1178eb`; `.github/workflows/rust-linux.yml` is the only untracked path. A scan of integrated app/renderer/beacon source found no `todo!`/`unimplemented!`; its only FIXME is the deliberately source-compatible `playlistInsert` no-op, already recorded in MAP and the unchanged C handler.
 
 ### 2026-11-22 — HCI cleanup CalledProcessError parity
 - The wider callback/cleanup audit across the five Python beacon files and Rust backends found one remaining locally testable HCI mismatch: Python catches nonzero `CalledProcessError` during start/setup, but an HCI stop command is uncaught and prints a CPython traceback. Rust already preserved the source start-command sequence, but returned a plain stop diagnostic for nonzero exit.
