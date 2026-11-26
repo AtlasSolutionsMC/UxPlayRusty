@@ -82,7 +82,7 @@ jobs:
               env["HOME"] = home
               env["XDG_CONFIG_HOMEDIR"] = home
               proc = subprocess.Popen(
-                  ["rust/app/target/release/uxplay", "-n", "CodexLinuxSmoke", "-a", "-vs", "0",
+                  ["rust/app/target/release/uxplay", "-n", "CodexLinuxSmoke", "-a", "-hls", "-vs", "0",
                    "-p", "tcp", f"{port + 1},{port},{port + 2}"],
                   env=env, stdout=log, stderr=subprocess.STDOUT,
               )
