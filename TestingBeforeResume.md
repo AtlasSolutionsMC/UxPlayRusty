@@ -253,3 +253,9 @@ taskkill /PID 22432 /T /F
 - Rechecked for Docker, Podman, WSL, Linux GCC/Clang, Zig and cross-build wrappers; none are installed. This host cannot provide the native Linux app build/runtime gate.
 - Targeted static review found no `todo!`/`unimplemented!` in integrated app/renderer/beacon code and no obvious unhandled protocol session effect; the only FIXME is the source-compatible `playlistInsert` no-op. Avoid speculative parser/crypto changes without a source discrepancy.
 - Remaining concrete blockers: authorization to publish `.github/workflows/rust-linux.yml` and inspect/fix the resulting Linux Actions run; full iPhone stderr/raw packets and same-device C comparison for the reported mirror frame failure; native supported-OS/device/release acceptance. The migration is not complete.
+
+## 21. Addendum: first native Linux CI failure and fix (2026-11-26)
+
+- User authorized GitHub CLI `workflow` scope. Pushed `.github/workflows/rust-linux.yml`; first Ubuntu 24.04 run is `45798130202` on workflow commit `dd73925021fe61c016b240402d3d6155efdfe413`.
+- Native dependencies installed and fmt passed. Test compilation failed in Unix NTP ancillary timestamp parsing: `libc::CMSG_LEN(...) as _` left the comparison target ambiguous on Linux (`E0282`, `raop_ntp_runtime.rs:1255`). `size_of`/`size_of_val` imports also warned unused on Unix.
+- Fixed by comparing CMSG length in explicit `usize` and gating the Windows-only imports with `#[cfg(windows)]`. `cargo +stable-x86_64-pc-windows-gnu fmt --manifest-path rust/app/Cargo.toml -- --check` passes. Push this source fix, then inspect the next complete Linux run; no Linux pass is claimed yet.

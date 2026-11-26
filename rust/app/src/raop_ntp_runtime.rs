@@ -18,6 +18,7 @@ use crate::ntp_math::{
     timestamp_to_nanoseconds, unix_nanoseconds_to_ntp_q32_32,
 };
 use std::io;
+#[cfg(windows)]
 use std::mem::{size_of, size_of_val};
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
@@ -1244,6 +1245,10 @@ fn receive_timestamped_unix(socket: &UdpSocket, buffer: &mut [u8]) -> io::Result
     let clock_time_ns = unix_time_ns();
     let mut kernel_time_ns = 0;
     if message.msg_flags & libc::MSG_CTRUNC == 0 {
+        // `cmsghdr::cmsg_len` varies between libc ABIs; compare in usize so
+        // Linux and BSD do not rely on an inferred `as _` target type.
+        let timestamp_cmsg_len =
+            unsafe { libc::CMSG_LEN(std::mem::size_of::<libc::timeval>() as u32) as usize };
         // SAFETY: recvmsg initialized the control metadata within `control`.
         let mut header = unsafe { libc::CMSG_FIRSTHDR(&message) };
         while !header.is_null() {
@@ -1251,8 +1256,7 @@ fn receive_timestamped_unix(socket: &UdpSocket, buffer: &mut [u8]) -> io::Result
             let current = unsafe { &*header };
             if current.cmsg_level == libc::SOL_SOCKET
                 && current.cmsg_type == libc::SCM_TIMESTAMP
-                && current.cmsg_len
-                    >= unsafe { libc::CMSG_LEN(std::mem::size_of::<libc::timeval>() as u32) as _ }
+                && current.cmsg_len as usize >= timestamp_cmsg_len
             {
                 // SAFETY: cmsg length was checked and CMSG_DATA is suitably aligned, but
                 // use an unaligned read to remain correct on every libc ABI.
