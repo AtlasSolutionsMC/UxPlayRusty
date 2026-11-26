@@ -206,3 +206,9 @@ taskkill /PID 22432 /T /F
 - Rust Anything server replay reports 5/8 at 0 fallback; the three failures are close/reset reads (`hls-master-missing-current-video`, `play-invalid-body-with-session`, `server-info`), each of which passes its own 1/1 replay. Raw C/Rust HTTP byte comparison passes 8/8 after normalizing only `Date`.
 - Upstream source refresh fetched exactly two commits, both touching `uxplay.cpp`: PIN-mode password callback sentinel, `-restrict` admission for missing DeviceID, and registration-name CR/LF sanitation. The behaviors are present in the Rust port. No merge/update was applied to the original C checkout to keep it unchanged.
 - Target clone was current with remote `master` before synchronization. Mirrored the workspace source/docs while excluding `.git`, `target`, `baseline` and generated artifacts. Compared exact filtered path sets: 811/811 tracked paths, with no source-only or destination-only files. `git diff --cached --check` passed. Pushed code at `9d9e15b9d32b45230a25fd8dd6fffcdabafb39d7`; fetch confirmed the remote `master` SHA. The C reference checkout remains unchanged.
+
+## 15. Addendum: generic app-lift refusal (2026-11-26)
+
+- Ran `rust-anything app_lift` as the final workflow check. It refused because its generated unit metadata does not recognize the hand-integrated app (`no unit is wired yet`) and its subprocess used the default MSVC toolchain without `link.exe`.
+- This is not a product build failure: the same app passed clean default/feature Windows GNU release builds and all test/Clippy/fmt gates using the installed `stable-x86_64-pc-windows-gnu` toolchain plus MSYS2 UCRT64 linker. No code change was made for the generic tool's mismatch.
+- Reconciled the Feature acceptance frontier: all 118 Windows CLI cases are Rust-only; fallback is removed; clean manual build/replay is complete. Native Unix/platform, live-device, and packaging gates remain open.
