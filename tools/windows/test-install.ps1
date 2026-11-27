@@ -78,6 +78,9 @@ try {
         'enabled = true'
         "handoff_path = `"$bleHandoffToml`""
         ''
+        '[startup]'
+        'enabled = true'
+        ''
         '[logging]'
         'level = "debug"'
         "file = `"$launchLogToml`""
@@ -203,6 +206,9 @@ public static class UxPlaySessionEndProbe {
         '[ble]'
         'enabled = true'
         "handoff_path = `"$($activeBleHandoff.Replace('\', '/'))`""
+        ''
+        '[startup]'
+        'enabled = true'
         ''
         '[logging]'
         'level = "debug"'
