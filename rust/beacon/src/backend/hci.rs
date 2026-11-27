@@ -602,6 +602,10 @@ fn run_check_output<S: AsRef<OsStr>>(
             return Err(error);
         }
     };
+    // `Command` retains the parent's stdout/stderr handles after spawning.
+    // Close those copies so the reader thread can observe EOF after the child
+    // exits instead of waiting forever in `read_to_end`.
+    drop(command);
     let status = match child.wait() {
         Ok(status) => status,
         Err(error) => {
