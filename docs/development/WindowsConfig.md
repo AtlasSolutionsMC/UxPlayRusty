@@ -40,6 +40,19 @@ the offending key and reason. The application does not silently ignore typos.
 The file is plain TOML and can be edited in any text editor. Save it and use the
 tray's Restart action to apply changes once the tray milestone is available.
 
+## Network and firewall
+
+AirPlay discovery uses mDNS on UDP 5353 and advertises the service ports that
+UxPlay actually bound. Windows may assign those TCP/UDP ports dynamically, so a
+fixed-port firewall exception can miss the active connections. When Windows
+Firewall prompts on first launch, allow `uxplay.exe` for the network where the
+iPhone/iPad is connected. On a trusted LAN, prefer the Private profile or an
+application rule restricted to `LocalSubnet`; avoid opening the receiver to
+all remote addresses on a Public network. If the receiver appears on the phone
+but no stream starts, check the active Windows network profile and inbound
+UxPlay rules, then inspect the configured log for AirPlay connection and video
+packet diagnostics.
+
 When BLE is enabled, UxPlay writes the negotiated AirPlay port and its process
 identity to the handoff file, then starts the Windows Runtime BLE companion next
 to `uxplay.exe`. If the companion binary or an adapter is unavailable, UxPlay
