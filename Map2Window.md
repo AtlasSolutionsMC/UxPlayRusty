@@ -405,3 +405,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - Added `docs/development/WindowsABAcceptance.md` for the pending iPhone measurement: it creates unique temporary TOML profiles, keeps renderer/codec/resolution/FPS/vsync constant, alternates default and low-latency runs, captures logs plus repeated display-delay observations, and classifies missing first-video ingress separately from renderer/display failure. The procedure never edits the user's normal config and records the package revision/runtime context.
 - Parsed the embedded PowerShell setup example with the PowerShell AST parser and ran `git diff --check`; both passed. No phone stream was claimed or tested in this checkpoint; actual results remain for the user's next device session.
+
+### 2026-11-27 — Verify exact Windows firewall diagnostic commands
+
+- Extended `docs/development/WindowsConfig.md` with a temporary firewall diagnostic: it queries enabled inbound block rules, matches only the running `uxplay.exe` application path and active profile, allows inbound traffic only from `LocalSubnet`, and provides rollback commands to remove the test allow and restore the original blocks. No host firewall setting was changed.
+- Parsed every embedded PowerShell snippet, then ran only the read/query portion against current state. It identified exactly two enabled inbound `Public` block rules matching the active test executable; the Ethernet profile is `Public`. This confirms the previously suspected host ingress obstacle for this candidate. The receiver remains listening on TCP 56754; iPhone streaming has not been retried since the earlier attempt.
+- The two rule-changing commands are documented for the user to run in an elevated PowerShell session if they choose to retest. No implicit authorization to alter firewall settings was inferred.
