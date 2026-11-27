@@ -15,7 +15,7 @@ The Rust API and FFI implementation are in `src/port.rs` and `src/lib.rs`. Four 
 status/body bytes, empty-body variants, reinitialization/state and capacity growth. The linked C
 smoke harness in `.rust-anything/ffi_link_smoke.c` compares the Rust shared library directly with a
 symbol-renamed copy of the original C implementation for four end-to-end scenarios. The reference
-copy in `../../staging/http-response/` is test-only and is not linked into the Rust library.
+copy in `build/staging/http-response/` is a local archived reference, excluded from the repository and not linked into the Rust library.
 
 ## Source provenance
 

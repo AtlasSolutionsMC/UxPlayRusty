@@ -69,11 +69,11 @@ if ($hadShortcut) { Copy-Item $shortcut (Join-Path $backupRoot 'UxPlay.lnk') }
 
 try {
     $installer = Start-Process -FilePath $setupPath -ArgumentList @(
-        '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$install", '/TASKS=autostart'
+        '--quiet', '--install-dir', $install, '--autostart'
     ) -Wait -PassThru
     if ($installer.ExitCode -ne 0) { throw "Setup exited with code $($installer.ExitCode)." }
 
-    $uninstaller = Join-Path $install 'unins000.exe'
+    $uninstaller = Join-Path $env:LOCALAPPDATA 'UxPlay\uninstall.exe'
     if (-not (Test-Path $uninstaller)) { throw 'The installed uninstaller is missing.' }
     if (-not (Test-Path $shortcut)) { throw 'The Start Menu shortcut is missing.' }
     $startup = (Get-ItemProperty $runKey -Name UxPlay -ErrorAction Stop).UxPlay
@@ -497,10 +497,9 @@ public static class UxPlaySessionEndProbe {
         $activeBleProcess.Dispose()
     }
 
-    $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @(
-        '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
-    ) -Wait -PassThru
+    $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('--uninstall', '--quiet') -Wait -PassThru
     if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with code $($uninstall.ExitCode)." }
+    Remove-Item -LiteralPath $uninstaller -Force
     if (Test-Path $install) { throw 'Installation files remain after uninstall.' }
     if ((Get-ItemProperty $runKey -Name UxPlay -ErrorAction SilentlyContinue).UxPlay) {
         throw 'The startup Run value remains after uninstall.'
@@ -514,14 +513,15 @@ public static class UxPlaySessionEndProbe {
         if (-not $installFull.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
             throw "Refusing to clean an install directory outside TEMP: $installFull"
         }
-        $cleanupUninstaller = Join-Path $installFull 'unins000.exe'
+        $cleanupUninstaller = Join-Path $env:LOCALAPPDATA 'UxPlay\uninstall.exe'
         if (Test-Path -LiteralPath $cleanupUninstaller) {
             $cleanup = Start-Process -FilePath $cleanupUninstaller -ArgumentList @(
-                '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+                '--uninstall', '--quiet'
             ) -Wait -PassThru
             if ($cleanup.ExitCode -ne 0) {
                 throw "Cleanup uninstaller exited with code $($cleanup.ExitCode)."
             }
+            Remove-Item -LiteralPath $cleanupUninstaller -Force
         }
         if (Test-Path -LiteralPath $installFull) {
             throw "Temporary install directory remains after cleanup: $installFull"

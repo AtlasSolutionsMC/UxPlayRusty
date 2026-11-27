@@ -4,8 +4,6 @@ param(
 
     [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'dist\windows'),
 
-    [string]$InnoSetupCompiler = (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
-
     [string]$SourcePackageDirectory,
 
     [switch]$ReplaceExistingStage
@@ -205,26 +203,26 @@ Set-Content -LiteralPath (Join-Path $stage 'BUILD-INFO.txt') -Encoding utf8 -Val
     "MSYS2 UCRT64 runtime files: $($bundled.Count) DLLs, $($pluginFiles.Count) plugins"
 )
 
-$compilerPath = (Resolve-Path -LiteralPath $InnoSetupCompiler -ErrorAction SilentlyContinue).Path
-if (-not $compilerPath) { throw "Inno Setup 6 compiler not found at '$InnoSetupCompiler'." }
-$previousStageDirectory = $env:UXPLAY_STAGE_DIR
-$previousOutputDirectory = $env:UXPLAY_OUTPUT_DIR
-$previousVersion = $env:UXPLAY_VERSION
+$env:UXPLAY_STAGE_DIR = $stageFull
+$previousInstallerVersion = $env:UXPLAY_VERSION
+$env:UXPLAY_VERSION = $appVersion
+$previousRustflags = $env:RUSTFLAGS
+$env:RUSTFLAGS = '-C target-feature=+crt-static -C link-arg=-static'
+Push-Location $repoRoot
 try {
-    $env:UXPLAY_STAGE_DIR = $stageFull
-    $env:UXPLAY_OUTPUT_DIR = $outputRoot
-    $env:UXPLAY_VERSION = $appVersion
-    & $compilerPath (Join-Path $PSScriptRoot 'UxPlay.iss')
-    if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
+    & cargo build --manifest-path packaging/windows-installer/Cargo.toml --release
+    if ($LASTEXITCODE -ne 0) { throw "Rust installer build failed with exit code $LASTEXITCODE" }
 } finally {
-    if ($null -eq $previousStageDirectory) { Remove-Item Env:UXPLAY_STAGE_DIR -ErrorAction SilentlyContinue }
-    else { $env:UXPLAY_STAGE_DIR = $previousStageDirectory }
-    if ($null -eq $previousOutputDirectory) { Remove-Item Env:UXPLAY_OUTPUT_DIR -ErrorAction SilentlyContinue }
-    else { $env:UXPLAY_OUTPUT_DIR = $previousOutputDirectory }
-    if ($null -eq $previousVersion) { Remove-Item Env:UXPLAY_VERSION -ErrorAction SilentlyContinue }
-    else { $env:UXPLAY_VERSION = $previousVersion }
+    Pop-Location
+    Remove-Item Env:UXPLAY_STAGE_DIR -ErrorAction SilentlyContinue
+    if ($null -eq $previousInstallerVersion) { Remove-Item Env:UXPLAY_VERSION -ErrorAction SilentlyContinue }
+    else { $env:UXPLAY_VERSION = $previousInstallerVersion }
+    if ($null -eq $previousRustflags) { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
+    else { $env:RUSTFLAGS = $previousRustflags }
 }
-
+$installer = Join-Path $repoRoot 'packaging\windows-installer\target\release\Setup.exe'
+if (-not (Test-Path -LiteralPath $installer)) { throw "Rust installer build did not produce '$installer'." }
 $setup = Join-Path $outputRoot 'Setup.exe'
-if (-not (Test-Path -LiteralPath $setup)) { throw "Inno Setup did not produce '$setup'." }
+Copy-Item -LiteralPath $installer -Destination $setup -Force
+if (-not (Test-Path -LiteralPath $setup)) { throw "Rust installer build did not produce '$setup'." }
 Get-Item -LiteralPath $setup | Select-Object FullName,Length,LastWriteTime

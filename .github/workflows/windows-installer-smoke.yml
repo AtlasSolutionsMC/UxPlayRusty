@@ -13,6 +13,7 @@ on:
       - 'render/**'
       - 'units/**'
       - 'packaging/windows/**'
+      - 'packaging/windows-installer/**'
       - 'README.md'
       - 'LICENSE'
 
@@ -81,23 +82,12 @@ jobs:
           cargo clippy --manifest-path .\render\video-renderer\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Install Inno Setup
-        shell: pwsh
-        run: choco install innosetup --yes --no-progress
-
-      - name: Build provisional installer
+      - name: Build Rust installer
         shell: pwsh
         env:
           MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: |
-          $compilerCandidates = @(
-            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
-            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
-            (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
-          )
-          $compiler = $compilerCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
-          if (-not $compiler) { throw 'Could not locate ISCC.exe after installing Inno Setup.' }
-          .\packaging\windows\package-release.ps1 -Msys2Root $env:MSYS2_ROOT -InnoSetupCompiler $compiler
+          .\packaging\windows\package-release.ps1 -Msys2Root $env:MSYS2_ROOT
 
       - name: Smoke bundled runtime
         shell: pwsh
