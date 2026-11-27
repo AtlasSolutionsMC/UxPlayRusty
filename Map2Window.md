@@ -429,3 +429,10 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - The repository currently has no GitHub releases. The local verified review candidate contains a 54,613,601-byte `Setup.exe` and a 1,269,568,000-byte source companion archive. GitHub blocks regular Git files above 100 MiB, while its official [release asset limits](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) allow each release file below 2 GiB. Therefore M10 should publish the installer and source archive as release assets, with checksums/provenance in the release notes; do not add these large binaries to the branch history.
 - No release or tag was created. Publishing remains deferred until main acceptance and Final cleanup.
+
+### 2026-11-27 — Graceful Windows session shutdown
+
+- Updated `rust/app/src/windows_tray.rs` to accept `WM_QUERYENDSESSION` and defer `WM_ENDSESSION` cleanup through the existing `WM_CLOSE` path. That path exits the message loop, requests server shutdown, joins the server, and removes the tray icon, so AirPlay and BLE cleanup share normal Exit behavior.
+- Extended `tools/windows/test-install.ps1` to locate the installed tray window, verify it belongs to the smoke-test process, send `WM_QUERYENDSESSION`, post `WM_ENDSESSION`, and require clean process exit plus release of AirPlay listener and BLE handoff before uninstall.
+- `cargo fmt --manifest-path rust/app/Cargo.toml` applied formatting; PowerShell AST parsing passed for `test-install.ps1`; `git diff --check` passed. A local Windows cross-check was attempted but could not build this app here: the MSVC host lacks `link.exe`, and the GNU toolchain invocation lacks the CI-provisioned MSYS2 OpenSSL/GStreamer/pkg-config environment. This is an environment limitation, not a successful build. The Windows installer workflow provisions UCRT64 and will be the authoritative compile/install lifecycle check after push.
+- No user receiver process was targeted. Existing unrelated edits in `.github/workflows/rust-linux.yml`, `rust/units/pairing/CHECKPOINTS.md`, and `rust/units/srp/CHECKPOINTS.md` remain out of this change.

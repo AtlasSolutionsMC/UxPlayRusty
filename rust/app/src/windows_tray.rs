@@ -28,7 +28,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     DispatchMessageW, GetMessageW, LoadIconW, MB_ICONERROR, MB_OK, MF_SEPARATOR, MF_STRING, MSG,
     MessageBoxW, PostMessageW, PostThreadMessageW, RegisterClassW, SetForegroundWindow,
     TPM_RETURNCMD, TPM_RIGHTBUTTON, TranslateMessage, WM_APP, WM_CLOSE, WM_CONTEXTMENU, WM_DESTROY,
-    WM_LBUTTONDBLCLK, WM_RBUTTONUP, WNDCLASSW,
+    WM_ENDSESSION, WM_LBUTTONDBLCLK, WM_QUERYENDSESSION, WM_RBUTTONUP, WNDCLASSW,
 };
 
 const CALLBACK_MESSAGE: u32 = WM_APP + 10;
@@ -352,6 +352,12 @@ unsafe extern "system" fn window_proc(
             }
             0
         }
+        WM_QUERYENDSESSION => 1,
+        WM_ENDSESSION if wparam != 0 => {
+            unsafe { PostMessageW(hwnd, WM_CLOSE, 0, 0) };
+            0
+        }
+        WM_ENDSESSION => 0,
         WM_CLOSE => {
             unsafe { DestroyWindow(hwnd) };
             0

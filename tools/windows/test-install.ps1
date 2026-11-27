@@ -130,6 +130,52 @@ try {
                 throw 'AirPlay did not open a TCP listener and clean the BLE handoff after the missing-companion failure.'
             }
             Write-Output 'PASS AirPlay listener stays active when the BLE companion is missing; handoff is cleaned up'
+
+            if (-not ('UxPlaySessionEndProbe' -as [type])) {
+                Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class UxPlaySessionEndProbe {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr FindWindow(string className, string windowName);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SendMessageTimeout(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessage(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+}
+'@
+            }
+            $trayWindow = [UxPlaySessionEndProbe]::FindWindow('UxPlayRustyTrayHost', 'UxPlay')
+            if ($trayWindow -eq [IntPtr]::Zero) { throw 'Could not find the installed tray host window.' }
+            [uint32]$windowProcessId = 0
+            [void][UxPlaySessionEndProbe]::GetWindowThreadProcessId($trayWindow, [ref]$windowProcessId)
+            if ($windowProcessId -ne $guiProcess.Id) {
+                throw "Tray host belongs to PID $windowProcessId instead of installed app PID $($guiProcess.Id)."
+            }
+            [UIntPtr]$queryResult = [UIntPtr]::Zero
+            $querySent = [UxPlaySessionEndProbe]::SendMessageTimeout(
+                $trayWindow, 0x0011, [UIntPtr]::Zero, [IntPtr]::Zero, 0x0002, 5000, [ref]$queryResult
+            )
+            if ($querySent -eq [IntPtr]::Zero -or $queryResult.ToUInt64() -ne 1) {
+                throw 'Tray host did not accept WM_QUERYENDSESSION.'
+            }
+            if (-not [UxPlaySessionEndProbe]::PostMessage($trayWindow, 0x0016, [UIntPtr]::new(1), [IntPtr]::Zero)) {
+                throw 'Could not post WM_ENDSESSION to the tray host.'
+            }
+            if (-not $guiProcess.WaitForExit(30000)) {
+                throw 'Installed app did not shut down within 30 seconds after WM_ENDSESSION.'
+            }
+            if ($guiProcess.ExitCode -ne 0) {
+                throw "Installed app exited with code $($guiProcess.ExitCode) after WM_ENDSESSION."
+            }
+            if (@(Get-NetTCPConnection -State Listen -OwningProcess $guiProcess.Id -ErrorAction SilentlyContinue).Count -gt 0) {
+                throw 'AirPlay listener remained after Windows session shutdown.'
+            }
+            if (Test-Path -LiteralPath $bleHandoff) { throw 'BLE handoff remained after Windows session shutdown.' }
+            Write-Output 'PASS Windows session shutdown exits cleanly and releases AirPlay and BLE state'
         } finally {
             $guiProcess.Refresh()
             if (-not $guiProcess.HasExited) {
