@@ -174,6 +174,7 @@ try {
             }
             Write-Output 'PASS current-user startup Run target launches the installed tray app; AirPlay stays active when the BLE companion is missing and handoff is cleaned up'
 
+
             if (-not ('UxPlaySessionEndProbe' -as [type])) {
                 Add-Type -TypeDefinition @'
 using System;
@@ -188,9 +189,51 @@ public static class UxPlaySessionEndProbe {
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool PostMessage(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr state);
+    private delegate bool EnumWindowsProc(IntPtr window, IntPtr state);
+    public static int CloseTopLevelWindowsForProcess(uint targetProcessId) {
+        int closed = 0;
+        EnumWindowsProc callback = (window, state) => {
+            uint ownerProcessId;
+            GetWindowThreadProcessId(window, out ownerProcessId);
+            if (ownerProcessId == targetProcessId && PostMessage(window, 0x0010, UIntPtr.Zero, IntPtr.Zero)) closed++;
+            return true;
+        };
+        EnumWindows(callback, IntPtr.Zero);
+        return closed;
+    }
 }
 '@
             }
+
+            $duplicateStartInfo = [Diagnostics.ProcessStartInfo]::new()
+            $duplicateStartInfo.FileName = $startupExecutable
+            $duplicateStartInfo.WorkingDirectory = $install
+            $duplicateStartInfo.UseShellExecute = $false
+            $duplicateStartInfo.Environment['UXPLAY_CONFIG'] = $launchConfig
+            $duplicateProcess = [Diagnostics.Process]::Start($duplicateStartInfo)
+            try {
+                $duplicateDeadline = [DateTime]::UtcNow.AddSeconds(10)
+                do {
+                    $duplicateProcess.Refresh()
+                    if ($duplicateProcess.HasExited) { break }
+                    [void][UxPlaySessionEndProbe]::CloseTopLevelWindowsForProcess([uint32]$duplicateProcess.Id)
+                    Start-Sleep -Milliseconds 100
+                } while ([DateTime]::UtcNow -lt $duplicateDeadline)
+                if (-not $duplicateProcess.HasExited) { throw 'Second tray app instance did not exit within 10 seconds.' }
+                if ($duplicateProcess.ExitCode -ne 0) { throw "Second tray app instance exited with code $($duplicateProcess.ExitCode)." }
+                if (@(Get-NetTCPConnection -State Listen -OwningProcess $guiProcess.Id -ErrorAction SilentlyContinue).Count -eq 0) {
+                    throw 'Original AirPlay listener stopped when the duplicate app instance exited.'
+                }
+                Write-Output 'PASS second tray app instance exits cleanly and leaves the original AirPlay listener active'
+            } finally {
+                $duplicateProcess.Refresh()
+                if (-not $duplicateProcess.HasExited) { Stop-Process -Id $duplicateProcess.Id -Force; $duplicateProcess.WaitForExit(5000) | Out-Null }
+                $duplicateProcess.Dispose()
+            }
+
             $trayWindow = [UxPlaySessionEndProbe]::FindWindow('UxPlayRustyTrayHost', 'UxPlay')
             if ($trayWindow -eq [IntPtr]::Zero) { throw 'Could not find the installed tray host window.' }
             [uint32]$windowProcessId = 0
@@ -311,6 +354,16 @@ public static class UxPlaySessionEndProbe {
         if ($activeWindowProcessId -ne $activeBleProcess.Id) {
             throw "Active BLE tray window belongs to PID $activeWindowProcessId instead of $($activeBleProcess.Id)."
         }
+        if (-not [UxPlaySessionEndProbe]::PostMessage($activeTrayWindow, 0x800B, [UIntPtr]::new(1003), [IntPtr]::Zero)) {
+            throw 'Could not dispatch the tray Disconnect command.'
+        }
+        Start-Sleep -Milliseconds 500
+        $activeBleProcess.Refresh()
+        if ($activeBleProcess.HasExited -or
+            @(Get-NetTCPConnection -State Listen -OwningProcess $activeBleProcess.Id -ErrorAction SilentlyContinue).Count -eq 0) {
+            throw 'Tray Disconnect did not leave the AirPlay server running when no client was connected.'
+        }
+        Write-Output 'PASS tray Disconnect command leaves the AirPlay listener running with no active client'
         if (-not [UxPlaySessionEndProbe]::PostMessage($activeTrayWindow, 0x800B, [UIntPtr]::new(1001), [IntPtr]::Zero)) {
             throw 'Could not dispatch the tray Config command.'
         }
