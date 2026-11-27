@@ -4,7 +4,9 @@ param(
 
     [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'dist\windows'),
 
-    [string]$InnoSetupCompiler = (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
+    [string]$InnoSetupCompiler = (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
+
+    [string]$SourcePackageDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -169,6 +171,13 @@ Set-Content -LiteralPath (Join-Path $stage 'THIRD-PARTY-NOTICES.txt') -Encoding 
     ''
     $packageInfo
 )
+
+if ($SourcePackageDirectory) {
+    & (Join-Path $PSScriptRoot 'include-source-license-texts.ps1') `
+        -StageDirectory $stage `
+        -SourcePackageDirectory $SourcePackageDirectory `
+        -Msys2Root $msysRoot
+}
 
 $revision = (& git -C $repoRoot rev-parse --short HEAD).Trim()
 $gstVersion = (& (Join-Path $binaryRoot 'gst-inspect-1.0.exe') --version | Select-Object -First 2) -join ' '

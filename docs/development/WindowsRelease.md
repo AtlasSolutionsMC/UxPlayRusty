@@ -3,8 +3,9 @@
 The Windows installer is assembled from the GNU/MSYS2 UCRT64 release build.
 The packager builds both executables, follows PE DLL imports for the app,
 beacon, GStreamer plugins and plugin scanner, collects the required runtime
-files, records MSYS2 package metadata and available license texts, then compiles
-Inno Setup's installer.
+files, records MSYS2 package metadata and installed license texts, then compiles
+Inno Setup's installer. When exact source packages are supplied, the packager
+can also include top-level license texts from those version-matched sources.
 
 ## Build
 
@@ -109,3 +110,25 @@ the installer when publishing a release. Archive validation and a package
 index do not replace a license-obligation review. Keep the installer
 provisional until the exact binary/source relationship, notices, and release
 presentation have been reviewed.
+
+## Include source-tree license texts in Setup
+
+The MSYS2 runtime may not install a separate license file for every package.
+After collecting the exact-version source packages above, rebuild the installer
+with the source directory:
+
+```powershell
+$msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
+./tools/windows/package-release.ps1 `
+    -Msys2Root $msysRoot `
+    -SourcePackageDirectory ./dist/windows/source-packages
+```
+
+The packager checks package versions against `THIRD-PARTY-NOTICES.txt`, verifies
+each source archive's SHA-256 from `SOURCE-PACKAGES.txt`, and adds top-level
+`COPYING`/`LICENSE` texts with source paths and hashes under each package's
+`third-party-licenses/<package>/source/` directory. It fails on missing or
+mismatched inputs. This does not include the source archive in `Setup.exe`,
+does not collect nested vendor notices, and is not a legal compliance
+determination; distribute the matching source companion and have the notice set
+reviewed before publishing.
