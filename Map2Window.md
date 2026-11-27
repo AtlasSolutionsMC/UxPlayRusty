@@ -575,3 +575,10 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - Downloaded the `windows-setup-smoke` artifact from successful Windows run [`45985731368`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45985731368), whose source revision is `8e4bf30`, into the new isolated local folder `dist/windows/provisional-8e4bf30/`. Its `Setup.exe` is 54,608,096 bytes; SHA-256 is `051E4D76E7DE48D24443E3E99D74E51971BFE9E701CDFAB8D2E76A689C778657`.
 - Download command: `gh run download 45985731368 --name windows-setup-smoke --dir dist/windows/provisional-8e4bf30`; hash command: `Get-FileHash -LiteralPath 'dist/windows/provisional-8e4bf30/Setup.exe' -Algorithm SHA256`. The artifact is staged for later user-device validation only; it was not installed or launched on this workstation. Existing receiver PID `1576` and all unrelated local edits were left untouched.
+
+### 2026-11-27 — Build a fresh local Windows installer candidate
+
+- Built app and beacon release binaries, bundled the current UCRT64 runtime and source license texts, and compiled a new Setup in isolated output `dist/windows/user-build-4b62bdd/` using:
+  `tools/windows/package-release.ps1 -Msys2Root "$env:LOCALAPPDATA/Programs/MSYS2" -OutputDirectory dist/windows/user-build-4b62bdd -SourcePackageDirectory dist/windows/source-packages`
+- Build completed successfully. `stage/BUILD-INFO.txt` identifies source revision `4b62bdd`, Rust `1.100.0`, GStreamer `1.28.9`, 142 runtime DLLs and 25 plugins. `Setup.exe` is 54,614,771 bytes; SHA-256 `5E22682F2436C8BD7BB4DE860D515B90CB2DDBBBBBFB86C1434DF60215AD3EA4`.
+- This was a build only. The new installer was not launched or installed on the workstation; clean-machine installation acceptance remains represented by hosted workflow `45985731368`. Existing old receiver and unrelated local work were not changed.
