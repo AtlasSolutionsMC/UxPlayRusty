@@ -53,6 +53,11 @@ jobs:
         run: cargo fmt --manifest-path rust/app/Cargo.toml -- --check
 
       - name: Test macOS Bonjour and P2P configuration
+        # The hosted runner registers VideoToolbox, but its HLS fixture is
+        # software-only and VideoToolbox cannot decode it in this headless test.
+        # Apply the documented rank override before GStreamer initializes.
+        env:
+          GST_PLUGIN_FEATURE_RANK: "vtdechw0:NONE,avdec_h264:MAX"
         run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features apple-p2p
 
       - name: Lint macOS Bonjour and P2P configuration

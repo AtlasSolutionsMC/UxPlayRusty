@@ -938,7 +938,6 @@ fn finish_hls_playback_after_eos(
 mod hls_lifecycle_tests {
     use super::*;
     use crate::http_transport::ConnectionClass;
-    use gstreamer::prelude::PluginFeatureExtManual;
     use std::io::{Read, Write};
     use std::net::{Shutdown, TcpStream};
     use std::sync::atomic::AtomicUsize;
@@ -979,21 +978,6 @@ mod hls_lifecycle_tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         gstreamer::init().expect("GStreamer is required for the runtime HLS test");
-        // VideoToolbox's decoder can be registered even on hosted macOS runners
-        // where it cannot decode this software fixture. Keep this integration
-        // test deterministic by preferring avdec_h264, then restore GStreamer's
-        // process-wide rank when the test exits.
-        struct RestoreDecoderRank(gstreamer::ElementFactory, gstreamer::Rank);
-        impl Drop for RestoreDecoderRank {
-            fn drop(&mut self) {
-                self.0.set_rank(self.1);
-            }
-        }
-        let _decoder_rank_guard = gstreamer::ElementFactory::find("vtdechw0").map(|factory| {
-            let rank = factory.rank();
-            factory.set_rank(gstreamer::Rank::NONE);
-            RestoreDecoderRank(factory, rank)
-        });
         if [
             "playbin3",
             "hlsdemux2",
