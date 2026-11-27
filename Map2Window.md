@@ -532,3 +532,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - Expanded `docs/development/WindowsABAcceptance.md` with a distinct `video.vsync` comparison that holds `low_latency` and other stream settings fixed, clarifies timestamp scheduling versus monitor refresh, and avoids inferring lower latency from `max-lateness` while sync is disabled.
 - Added a 20-minute continuous-stream observation period for accumulating delay, dropped/frozen frames, audio drift, window size changes, and optional CPU/GPU load. No unsupported pass/fail latency target is introduced.
 - `git diff --check` passed. This is documentation for the later real-device session; no new device evidence is claimed. The code under test remains `8d37186` until a follow-up implementation change.
+
+### 2026-11-27 — Check the legacy receiver's GStreamer log without interruption
+
+- Read-only inspection found PID `1576` still running from the pre-existing local candidate at revision `ab27afc`. Its configured `%APPDATA%` log's last write is 05:50, before the process started at 11:38; the log contains an older `no element "level"` startup error. Do not attribute that stale entry to the later receiver session or the current source revision. The process was left untouched.
+- In a separate one-shot environment pointing at that staged runtime, `gst-inspect-1.0 level` successfully identified GStreamer 1.28.9's `level` factory from the bundled `libgstlevel.dll`. This confirms the staged plugin can be discovered by the isolated inspector; it does not retroactively prove that old process startup or the user's video render succeeded.
+- No application files were changed by this diagnostic. Current live-phone render acceptance remains open and should use the latest tested candidate once the existing receiver session is no longer needed.
