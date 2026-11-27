@@ -582,3 +582,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
   `tools/windows/package-release.ps1 -Msys2Root "$env:LOCALAPPDATA/Programs/MSYS2" -OutputDirectory dist/windows/user-build-4b62bdd -SourcePackageDirectory dist/windows/source-packages`
 - Build completed successfully. `stage/BUILD-INFO.txt` identifies source revision `4b62bdd`, Rust `1.100.0`, GStreamer `1.28.9`, 142 runtime DLLs and 25 plugins. `Setup.exe` is 54,614,771 bytes; SHA-256 `5E22682F2436C8BD7BB4DE860D515B90CB2DDBBBBBFB86C1434DF60215AD3EA4`.
 - This was a build only. The new installer was not launched or installed on the workstation; clean-machine installation acceptance remains represented by hosted workflow `45985731368`. Existing old receiver and unrelated local work were not changed.
+
+### 2026-11-27 — Expand the isolated GUI-test configuration
+
+- Expanded `%TEMP%/uxplay-gui-mode-test-f42a372/config.toml` from the tracked `rust/app/assets/config.example.toml`, preserving `server.name = "UxPlay-GUI-Test"`, `ble.enabled = false`, `logging.level = "debug_data"`, and the existing log file path.
+- The file now lists every supported section/key, including video renderer, H.265, low latency, VSync and startup. Optional resolution, max FPS and BLE handoff path remain commented so their current defaults/absence are preserved.
+- This was a config-file edit only; no receiver process was restarted and no new runtime result is claimed.
