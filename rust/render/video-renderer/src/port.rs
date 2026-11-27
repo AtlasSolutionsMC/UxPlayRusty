@@ -1229,14 +1229,16 @@ fn install_window_handle_handler(bus: &gst::Bus, handle: Arc<std::sync::atomic::
     bus.set_sync_handler(move |_bus, message| {
         if gst_video::is_video_overlay_prepare_window_handle_message(message) {
             let window_handle = handle.load(std::sync::atomic::Ordering::SeqCst);
-            if window_handle != 0 {
-                if let Some(source) = message
-                    .src()
-                    .and_then(|source| source.downcast_ref::<gst::Element>().cloned())
-                {
-                    crate::set_video_overlay_window_handle(&source, window_handle);
-                }
-            }
+            let Some(source) = message
+                .src()
+                .and_then(|source| source.downcast_ref::<gst::Element>().cloned())
+            else {
+                return gst::BusSyncReply::Pass;
+            };
+            // A zero handle tells GstVideoOverlay to create its own window. This
+            // application has no parent video window, so still answer the sync
+            // message explicitly instead of dropping it without a target.
+            crate::set_video_overlay_window_handle(&source, window_handle);
             gst::BusSyncReply::Drop
         } else {
             gst::BusSyncReply::Pass
