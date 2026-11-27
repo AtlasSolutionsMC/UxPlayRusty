@@ -193,6 +193,104 @@ public static class UxPlaySessionEndProbe {
         }
     }
 
+    $activeBleLog = Join-Path $backupRoot 'ble-active-launch.log'
+    $activeBleConfig = Join-Path $backupRoot 'ble-active-config.toml'
+    $activeBleHandoff = Join-Path $backupRoot 'ble-active.ble'
+    $activeBleConfigText = @(
+        '[server]'
+        'name = "UxPlay-Install-BLE-Smoke"'
+        ''
+        '[ble]'
+        'enabled = true'
+        "handoff_path = `"$($activeBleHandoff.Replace('\', '/'))`""
+        ''
+        '[logging]'
+        'level = "debug"'
+        "file = `"$($activeBleLog.Replace('\', '/'))`""
+    )
+    Set-Content -LiteralPath $activeBleConfig -Encoding utf8 -Value $activeBleConfigText
+    $activeBleStartInfo = [Diagnostics.ProcessStartInfo]::new()
+    $activeBleStartInfo.FileName = $appPath
+    $activeBleStartInfo.WorkingDirectory = $install
+    $activeBleStartInfo.UseShellExecute = $false
+    $activeBleStartInfo.Environment['UXPLAY_CONFIG'] = $activeBleConfig
+    $activeBleProcess = [Diagnostics.Process]::Start($activeBleStartInfo)
+    try {
+        $activeBleDeadline = [DateTime]::UtcNow.AddSeconds(30)
+        $companionPid = 0
+        do {
+            $activeBleProcess.Refresh()
+            if ($activeBleProcess.HasExited) {
+                throw "Installed tray app exited during BLE companion launch (exit $($activeBleProcess.ExitCode))."
+            }
+            if (Test-Path -LiteralPath $activeBleLog) {
+                $activeBleText = Get-Content -LiteralPath $activeBleLog -Raw
+                $activeBleFailure = Select-String -LiteralPath $activeBleLog -Pattern 'UxPlay Rust: server startup failed:'
+                if ($activeBleFailure) {
+                    throw "Installed tray app could not start with BLE enabled: $($activeBleFailure.Line)"
+                }
+                $companionStart = [regex]::Match($activeBleText, 'Started Windows BLE companion \(pid (?<pid>\d+)\)\.')
+                if ($companionStart.Success) { $companionPid = [int]$companionStart.Groups['pid'].Value }
+            }
+            if ($companionPid -ne 0 -and
+                @(Get-NetTCPConnection -State Listen -OwningProcess $activeBleProcess.Id -ErrorAction SilentlyContinue).Count -gt 0) {
+                break
+            }
+            Start-Sleep -Milliseconds 250
+        } while ([DateTime]::UtcNow -lt $activeBleDeadline)
+
+        if ($companionPid -eq 0) {
+            throw 'The installed app did not launch its packaged BLE companion.'
+        }
+        if (-not (Test-Path -LiteralPath $activeBleHandoff)) {
+            throw 'The installed app did not create the active BLE handoff.'
+        }
+        Write-Output "PASS installed app launches packaged BLE companion (PID $companionPid) while AirPlay listens"
+
+        $activeTrayWindow = [UxPlaySessionEndProbe]::FindWindow('UxPlayRustyTrayHost', 'UxPlay')
+        if ($activeTrayWindow -eq [IntPtr]::Zero) { throw 'Could not find tray host during active BLE shutdown smoke.' }
+        [uint32]$activeWindowProcessId = 0
+        [void][UxPlaySessionEndProbe]::GetWindowThreadProcessId($activeTrayWindow, [ref]$activeWindowProcessId)
+        if ($activeWindowProcessId -ne $activeBleProcess.Id) {
+            throw "Active BLE tray window belongs to PID $activeWindowProcessId instead of $($activeBleProcess.Id)."
+        }
+        [UIntPtr]$activeQueryResult = [UIntPtr]::Zero
+        $activeQuerySent = [UxPlaySessionEndProbe]::SendMessageTimeout(
+            $activeTrayWindow, 0x0011, [UIntPtr]::Zero, [IntPtr]::Zero, 0x0002, 5000, [ref]$activeQueryResult
+        )
+        if ($activeQuerySent -eq [IntPtr]::Zero -or $activeQueryResult.ToUInt64() -ne 1) {
+            throw 'Tray host did not accept WM_QUERYENDSESSION while the BLE companion was active.'
+        }
+        if (-not [UxPlaySessionEndProbe]::PostMessage($activeTrayWindow, 0x0016, [UIntPtr]::new(1), [IntPtr]::Zero)) {
+            throw 'Could not post WM_ENDSESSION while the BLE companion was active.'
+        }
+        if (-not $activeBleProcess.WaitForExit(30000)) {
+            throw 'Installed app did not shut down within 30 seconds with the BLE companion active.'
+        }
+        if ($activeBleProcess.ExitCode -ne 0) {
+            throw "Installed app exited with code $($activeBleProcess.ExitCode) while stopping the BLE companion."
+        }
+        $childExitDeadline = [DateTime]::UtcNow.AddSeconds(10)
+        do {
+            $remainingCompanion = Get-Process -Id $companionPid -ErrorAction SilentlyContinue
+            if (-not $remainingCompanion) { break }
+            Start-Sleep -Milliseconds 250
+        } while ([DateTime]::UtcNow -lt $childExitDeadline)
+        if ($remainingCompanion) { throw "BLE companion process $companionPid remained after app shutdown." }
+        if (Test-Path -LiteralPath $activeBleHandoff) { throw 'Active BLE handoff remained after app shutdown.' }
+        if (@(Get-NetTCPConnection -State Listen -OwningProcess $activeBleProcess.Id -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw 'AirPlay listener remained after active BLE app shutdown.'
+        }
+        Write-Output 'PASS Windows session shutdown stops packaged BLE companion, removes handoff, and releases AirPlay'
+    } finally {
+        $activeBleProcess.Refresh()
+        if (-not $activeBleProcess.HasExited) {
+            Stop-Process -Id $activeBleProcess.Id -Force
+            $activeBleProcess.WaitForExit(5000) | Out-Null
+        }
+        $activeBleProcess.Dispose()
+    }
+
     $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @(
         '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
     ) -Wait -PassThru
