@@ -58,6 +58,21 @@ or starting the next profile.
    sink), first AirPlay video packet acceptance, and any first GStreamer flow
    error. The pipeline is logged at Info, so the normal log level is sufficient.
 
+After the low-latency comparison, run a separate synchronization comparison if
+you want to check `video.vsync`. Keep `video.low_latency`, renderer, codec,
+resolution, FPS, sender, and network fixed; change only `video.vsync` between
+`true` and `false`. Alternate the order and use the same scene and measurement
+method. This setting controls media timestamp scheduling; it does not change
+the monitor refresh rate. Record audio/video alignment and smoothness as well
+as delay. The sink's `max-lateness` setting is not evidence of lower latency
+when synchronization is disabled.
+
+For the chosen settings, keep a continuous stream running for at least 20
+minutes and record whether delay grows, frames freeze/drop, audio drifts, or
+the window changes size unexpectedly. Capture CPU/GPU load if readily
+available. Report observations rather than applying an unsupported latency
+pass threshold.
+
 If no sender connection or first-video-packet diagnostic appears, classify the
 run as **ingress/network not established** and do not score it as a renderer or
 latency result. If packets are accepted but the window stays blank, preserve the
@@ -73,6 +88,13 @@ Record one row per run:
 | 2 | low-latency | | | | | | | |
 | 3 | low-latency | | | | | | | |
 | 4 | default | | | | | | | |
+
+Separate synchronization runs (keep the low-latency setting fixed):
+
+| Trial | `video.vsync` | Renderer/decoder | Codec and source/frame size | Median delay | Worst delay | Audio/video alignment and smoothness | Log file |
+|---:|---|---|---|---:|---:|---|---|
+| 1 | true | | | | | | |
+| 2 | false | | | | | | |
 
 Keep the raw camera recording and logs with the worksheet. Report the measured
 difference and any smoothness/quality change; do not call either mode better

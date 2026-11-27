@@ -526,3 +526,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - The clean runner logs show the BLE companion created the service registration and then WinRT publisher state became `ABORTED`, reporting a possible missing Bluetooth interface. AirPlay stayed available and the app cleaned the child/handoff; this is failure-isolation evidence, not BLE radio or second-device discovery acceptance.
 - Added Info-level negotiated codec, source/frame dimensions, crop offsets, and renderer selection outcome to the mirror callback, completing the log fields needed by the phone A/B worksheet. The focused Windows GNU regression passed 1/1; formatting and `git diff --check` passed. This does not substitute for the real iPhone A/V and repeated same-device latency/quality A/B.
 - Local work remains limited to the three pre-existing unrelated modifications listed above; they were not included in this checkpoint. Final checkout remains untouched.
+
+### 2026-11-27 — Separate synchronization and soak measurements
+
+- Expanded `docs/development/WindowsABAcceptance.md` with a distinct `video.vsync` comparison that holds `low_latency` and other stream settings fixed, clarifies timestamp scheduling versus monitor refresh, and avoids inferring lower latency from `max-lateness` while sync is disabled.
+- Added a 20-minute continuous-stream observation period for accumulating delay, dropped/frozen frames, audio drift, window size changes, and optional CPU/GPU load. No unsupported pass/fail latency target is introduced.
+- `git diff --check` passed. This is documentation for the later real-device session; no new device evidence is claimed. The code under test remains `8d37186` until a follow-up implementation change.
