@@ -1428,10 +1428,36 @@ impl MirrorRuntimeCallbacks for RendererMirrorCallbacks {
 
     fn event(&self, event: MirrorEvent) -> bool {
         match event {
-            MirrorEvent::CodecConfigured { codec, .. } => {
+            MirrorEvent::CodecConfigured { codec, dimensions } => {
                 lock(&self.outputs).select_video_codec(codec == VideoCodec::H265);
-                !self.use_video
-                    || video_renderer_choose_codec_and_size(false, codec == VideoCodec::H265) == 0
+                let renderer_selected = !self.use_video
+                    || video_renderer_choose_codec_and_size(false, codec == VideoCodec::H265) == 0;
+                if let Some(logger) = &self.logger {
+                    let codec_name = match codec {
+                        VideoCodec::H264 => "H.264",
+                        VideoCodec::H265 => "H.265",
+                    };
+                    let renderer_state = if !self.use_video {
+                        "disabled"
+                    } else if renderer_selected {
+                        "selected"
+                    } else {
+                        "rejected"
+                    };
+                    logger.log(
+                        crate::logger::INFO,
+                        format!(
+                            "AirPlay mirror codec configured: {codec_name}; source={}x{}; frame={}x{} at {},{}; renderer={renderer_state}",
+                            dimensions.width_source,
+                            dimensions.height_source,
+                            dimensions.width,
+                            dimensions.height,
+                            dimensions.x_offset,
+                            dimensions.y_offset,
+                        ),
+                    );
+                }
+                renderer_selected
             }
             MirrorEvent::VideoFrame(frame) => {
                 let mut outputs = lock(&self.outputs);
@@ -2334,12 +2360,27 @@ mod volume_tests {
         let mut expected_xml = Vec::new();
         report.to_writer_xml(&mut expected_xml).unwrap();
 
+        assert!(callbacks.event(MirrorEvent::CodecConfigured {
+            codec: VideoCodec::H265,
+            dimensions: uxplay_raop_rtp_mirror::VideoDimensions {
+                width_source: 1920,
+                height_source: 1080,
+                x_offset: 0,
+                y_offset: 0,
+                width: 1920,
+                height: 1080,
+            },
+        }));
         callbacks.log(MirrorLogLevel::DebugData, "mirror packet timing");
         assert!(callbacks.event(MirrorEvent::ClientStreamingReport(binary)));
 
         assert_eq!(
             *lock(&events),
             [
+                (
+                    crate::logger::INFO,
+                    b"AirPlay mirror codec configured: H.265; source=1920x1080; frame=1920x1080 at 0,0; renderer=disabled".to_vec(),
+                ),
                 (crate::logger::DEBUG_DATA, b"mirror packet timing".to_vec()),
                 (crate::logger::INFO, expected_xml),
             ]

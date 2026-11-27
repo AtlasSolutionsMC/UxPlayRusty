@@ -20,12 +20,26 @@ $lowLatencyToml = $template.Replace('low_latency = false', 'low_latency = true')
 [IO.File]::WriteAllText((Join-Path $testRoot 'low-latency.toml'), $lowLatencyToml, [Text.UTF8Encoding]::new($false))
 ```
 
-Use the same packaged `uxplay.exe` for every run. Set `UXPLAY_CONFIG` to the
-selected file before starting it, then launch the executable from the same
-PowerShell session so it inherits that setting. Exit the previous receiver
-through its tray menu before changing profiles; do not start a duplicate instance. Leave
-`renderer`, `h265`, resolution, FPS, and `vsync` identical in both files. If
-testing a specific renderer, set the same value (for example `d3d11`) in both.
+Use the same packaged `uxplay.exe` for every run. The standard per-user install
+path and launch example are:
+
+```powershell
+$exe = Join-Path $env:LOCALAPPDATA 'Programs\UxPlay\uxplay.exe'
+if (-not (Test-Path -LiteralPath $exe)) { throw "UxPlay is not installed at $exe" }
+Get-Content (Join-Path (Split-Path $exe) 'BUILD-INFO.txt')
+Get-FileHash -LiteralPath $exe -Algorithm SHA256
+
+$env:UXPLAY_CONFIG = Join-Path $testRoot 'default.toml'
+Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
+```
+
+Exit that run from the tray before changing profile. Set `UXPLAY_CONFIG` to
+`low-latency.toml` and run the same command for the next trial. Do not start a
+second instance. Keep `renderer`, `h265`, resolution, FPS, and `vsync` identical
+in both files; only `video.low_latency` and the per-run log filename should
+differ. If testing a specific renderer, set the same value (for example
+`d3d11`) in both configs. Wait for each process to exit before reading its log
+or starting the next profile.
 
 ## Run and measure
 
@@ -38,9 +52,11 @@ testing a specific renderer, set the same value (for example `d3d11`) in both.
    Compare at least five matching on-screen timestamps or frame changes per run;
    record median and worst observed delay, plus visible freezes/drops. Use the
    same camera, angle, brightness, and display refresh settings for both modes.
-4. Save the UxPlay log for each run. Record whether it reports the first AirPlay
-   video packet accepted, the selected renderer/decoder, negotiated codec and
-   dimensions, and any first GStreamer flow error.
+4. Save the UxPlay log for each run. Record the `AirPlay mirror codec
+   configured` line (codec, source/frame dimensions and renderer selection), the
+   `GStreamer video pipeline` line matching that codec (decoder, queues and
+   sink), first AirPlay video packet acceptance, and any first GStreamer flow
+   error. The pipeline is logged at Info, so the normal log level is sufficient.
 
 If no sender connection or first-video-packet diagnostic appears, classify the
 run as **ingress/network not established** and do not score it as a renderer or
@@ -51,10 +67,12 @@ log and classify it as a renderer/display failure.
 
 Record one row per run:
 
-| Profile | Renderer/decoder | Codec and size | Median delay | Worst delay | Drops/freezes | First packet accepted | Log file |
-|---|---|---|---:|---:|---|---|---|
-| default | | | | | | | |
-| low-latency | | | | | | | |
+| Trial | Profile | Renderer/decoder | Codec and source/frame size | Median delay | Worst delay | Drops/freezes | First packet accepted | Log file |
+|---:|---|---|---|---:|---:|---|---|---|
+| 1 | default | | | | | | | |
+| 2 | low-latency | | | | | | | |
+| 3 | low-latency | | | | | | | |
+| 4 | default | | | | | | | |
 
 Keep the raw camera recording and logs with the worksheet. Report the measured
 difference and any smoothness/quality change; do not call either mode better

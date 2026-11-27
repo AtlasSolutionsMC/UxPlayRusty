@@ -513,3 +513,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - Updated `docs/development/WindowsRelease.md` to describe the installed Run-key startup entry and current fresh-runner smoke coverage at `45976352552`: startup preference toggles, duplicate instance, tray command routing, session shutdown, companion checks and uninstall.
 - Clarified that tray commands are dispatched programmatically in CI and do not prove visible menu interaction or live-client disconnect. Updated the Config action description in `docs/development/WindowsTray.md` to match the tested Notepad behavior.
 - `git diff --check` passed. Documentation-only; no workflow or test results are claimed by this edit.
+
+### 2026-11-27 — Log negotiated mirror codec and dimensions
+
+- The real-device A/B worksheet asked users to record the negotiated codec and dimensions, but the callback did not emit those values. `RendererMirrorCallbacks` now logs an Info-level line with H.264/H.265, source/frame size, crop offset, and whether the codec renderer was selected, disabled, or rejected. The following pipeline Info line identifies decoder, queues and sink.
+- Extended the logger regression to assert the exact H.265/1920×1080 message and preserved report/debug log ordering. Windows GNU focused test `cargo test --manifest-path rust/app/Cargo.toml raop_media_runtime::volume_tests::mirror_runtime_logs_keep_source_levels_and_streaming_report_xml -- --exact` passed (1/1); Windows GNU app `cargo fmt --check` and `git diff --check` passed.
+- Updated `docs/development/WindowsABAcceptance.md` with installed executable/hash/BUILD-INFO commands, a run-launch example using isolated `UXPLAY_CONFIG`, explicit profile alternation, actual codec/pipeline log fields, and four worksheet rows for the repeated A/B sequence. Hosted full gates pending after push.
