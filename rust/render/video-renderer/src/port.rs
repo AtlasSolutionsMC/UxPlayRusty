@@ -1432,6 +1432,18 @@ fn handle_bus_message(
                         .src()
                         .and_then(|source| source.downcast_ref::<gst::Element>().cloned())
                     {
+                        let factory_name = source
+                            .factory()
+                            .map(|factory| factory.name().to_string())
+                            .unwrap_or_else(|| source.type_().name().to_string());
+                        log(
+                            logger,
+                            LogLevel::Info,
+                            &format!(
+                                "video renderer: selected sink {factory_name} ({})",
+                                source.name()
+                            ),
+                        );
                         *discovered_sink
                             .lock()
                             .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(source);
