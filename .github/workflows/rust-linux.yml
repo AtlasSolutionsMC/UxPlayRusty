@@ -2,7 +2,7 @@ name: Rust Linux acceptance
 
 on:
   push:
-    branches: [master]
+    branches: [master, windows-delivery]
     paths-ignore:
       - "**/*.md"
   pull_request:
