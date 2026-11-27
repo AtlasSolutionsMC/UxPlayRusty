@@ -78,6 +78,17 @@ run as **ingress/network not established** and do not score it as a renderer or
 latency result. If packets are accepted but the window stays blank, preserve the
 log and classify it as a renderer/display failure.
 
+For a blank-display follow-up, repeat one stream run with
+`logging.level = "debug"` in an isolated config. Keep renderer and video
+settings fixed; this is a diagnostic run, not another latency trial. Record the
+Info message naming the selected sink (emitted when that sink reaches at least
+`Ready`), plus the Debug `prepare-window-handle` message showing which sink
+requested a window and whether it was given an application handle or asked to
+create its own. Also capture any GStreamer flow/state errors and whether a
+receiver window appeared.
+Restore `normal` logging for the measured A/B runs unless extra detail is
+needed.
+
 ## Results sheet
 
 Record one row per run:

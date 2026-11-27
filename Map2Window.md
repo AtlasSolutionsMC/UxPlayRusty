@@ -543,3 +543,8 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - The initial macOS job for code revision `8d37186` was cancelled while still queued due runner capacity and had executed no steps. Reran that cancelled job as [`45978840844`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45978840844), job `140445429817`; it passed dependency setup, beacon format/tests/Clippy/build, app format, macOS Bonjour/P2P tests and Clippy, release build, and CLI smoke in 2m43s.
 - Linux [`45978840812`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45978840812) and Windows [`45978840837`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45978840837) for the same source revision also passed. This closes hosted CI evidence on all three platforms for `8d37186`; Windows real-device and hardware acceptance remains open as listed above.
+
+### 2026-11-27 — Document the blank-display diagnostic run
+
+- Updated `docs/development/WindowsABAcceptance.md` to distinguish a repeatable latency A/B from a separate debug-level blank-display diagnostic. The latter records the selected sink's `Ready` message, the `prepare-window-handle` request/handle mode, GStreamer flow/state errors, and whether a receiver window appeared.
+- This makes the existing renderer instrumentation usable if the iPhone connects but the screen remains blank; it does not claim a successful render or substitute the diagnostic run for measured A/B trials. `git diff --check` passed.
