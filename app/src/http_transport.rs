@@ -99,6 +99,15 @@ pub struct ConnectionRegistry {
 }
 
 impl ConnectionRegistry {
+    #[cfg(windows)]
+    pub(crate) fn has_connections(&self) -> bool {
+        !self
+            .connections
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_empty()
+    }
+
     pub(crate) fn register(
         self: &Arc<Self>,
         stream: &TcpStream,

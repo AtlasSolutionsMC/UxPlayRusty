@@ -18,6 +18,7 @@ Options:
 -scrsv n  Screensaver override n: 0=off 1=on while displaying video 2=always on
 -pin[xxxx]Use a 4-digit pin code to control client access (default: no)
           default pin is random: optionally use fixed pin xxxx
+-no-pin   Disable client-access PIN and password requirements
 -p2p      Advertise and accept AirPlay over Apple peer-to-peer (macOS only)
           uses a one-time pin; makes UxPlay visible to nearby Apple devices
 -reg [fn] Keep a register in $HOME/.uxplay.register to verify returning

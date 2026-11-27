@@ -165,47 +165,15 @@ mod windows_network {
     use std::mem::size_of;
     use std::net::Ipv4Addr;
     use std::ptr;
-    use std::slice;
     use windows_sys::Win32::Foundation::ERROR_BUFFER_OVERFLOW;
     use windows_sys::Win32::NetworkManagement::IpHelper::{
-        GAA_FLAG_INCLUDE_GATEWAYS, GetAdaptersAddresses, IF_TYPE_SOFTWARE_LOOPBACK,
-        IP_ADAPTER_ADDRESSES_LH,
+        GetAdaptersAddresses, GetIfEntry2, IF_TYPE_SOFTWARE_LOOPBACK, IP_ADAPTER_ADDRESSES_LH,
+        MIB_IF_ROW2,
     };
     use windows_sys::Win32::NetworkManagement::Ndis::IfOperStatusUp;
     use windows_sys::Win32::Networking::WinSock::AF_INET;
 
     const INITIAL_BUFFER_LENGTH: u32 = 15_000;
-    const HYPER_V: &[u16] = &[
-        b'H' as u16,
-        b'y' as u16,
-        b'p' as u16,
-        b'e' as u16,
-        b'r' as u16,
-        b'-' as u16,
-        b'V' as u16,
-    ];
-    const VIRTUAL: &[u16] = &[
-        b'V' as u16,
-        b'i' as u16,
-        b'r' as u16,
-        b't' as u16,
-        b'u' as u16,
-        b'a' as u16,
-        b'l' as u16,
-    ];
-    const WSL: &[u16] = &[b'W' as u16, b'S' as u16, b'L' as u16];
-    const VETHERNET: &[u16] = &[
-        b'v' as u16,
-        b'E' as u16,
-        b't' as u16,
-        b'h' as u16,
-        b'e' as u16,
-        b'r' as u16,
-        b'n' as u16,
-        b'e' as u16,
-        b't' as u16,
-    ];
-
     pub(super) fn default_ipv4_address() -> Option<Ipv4Addr> {
         let mut buffer_length = INITIAL_BUFFER_LENGTH;
         let mut buffer = allocate_buffer(buffer_length);
@@ -213,7 +181,7 @@ mod windows_network {
         let mut result = unsafe {
             GetAdaptersAddresses(
                 u32::from(AF_INET),
-                GAA_FLAG_INCLUDE_GATEWAYS,
+                0,
                 ptr::null(),
                 buffer.as_mut_ptr().cast::<IP_ADAPTER_ADDRESSES_LH>(),
                 &mut buffer_length,
@@ -225,7 +193,7 @@ mod windows_network {
             result = unsafe {
                 GetAdaptersAddresses(
                     u32::from(AF_INET),
-                    GAA_FLAG_INCLUDE_GATEWAYS,
+                    0,
                     ptr::null(),
                     buffer.as_mut_ptr().cast::<IP_ADAPTER_ADDRESSES_LH>(),
                     &mut buffer_length,
@@ -236,14 +204,13 @@ mod windows_network {
             return None;
         }
 
+        let mut candidates = Vec::new();
         let mut adapter = buffer.as_mut_ptr().cast::<IP_ADAPTER_ADDRESSES_LH>();
         while !adapter.is_null() {
             // SAFETY: API-provided adapter nodes remain valid while `buffer` is alive.
             let current = unsafe { &*adapter };
             if current.OperStatus == IfOperStatusUp
                 && current.IfType != IF_TYPE_SOFTWARE_LOOPBACK
-                && !current.FirstGatewayAddress.is_null()
-                && !contains_filtered_description(current.Description)
                 && !current.FirstUnicastAddress.is_null()
             {
                 // SAFETY: the unicast list is owned by the API buffer and first node is non-null.
@@ -261,37 +228,55 @@ mod windows_network {
                                 .cast::<[u8; 4]>(),
                         )
                     };
-                    return Some(Ipv4Addr::from(octets));
+                    let address = Ipv4Addr::from(octets);
+                    if !address.is_unspecified()
+                        && !address.is_loopback()
+                        && !address.is_multicast()
+                    {
+                        let hardware = is_hardware_interface(current.Luid).unwrap_or(false);
+                        candidates.push((hardware, current.Ipv4Metric, address));
+                    }
                 }
             }
             adapter = current.Next;
         }
-        None
+        candidates
+            .into_iter()
+            .min_by_key(|(hardware, metric, _)| interface_priority(*hardware, *metric))
+            .map(|(_, _, address)| address)
     }
 
     fn allocate_buffer(bytes: u32) -> Vec<u64> {
         vec![0; (bytes as usize).div_ceil(size_of::<u64>())]
     }
 
-    fn contains_filtered_description(description: windows_sys::core::PWSTR) -> bool {
-        wide_contains(description, HYPER_V)
-            || wide_contains(description, VIRTUAL)
-            || wide_contains(description, WSL)
-            || wide_contains(description, VETHERNET)
+    fn is_hardware_interface(
+        luid: windows_sys::Win32::NetworkManagement::Ndis::NET_LUID_LH,
+    ) -> Option<bool> {
+        let mut row = MIB_IF_ROW2 {
+            InterfaceLuid: luid,
+            ..Default::default()
+        };
+        // SAFETY: GetIfEntry2 receives a writable row initialized with its interface LUID.
+        if unsafe { GetIfEntry2(&mut row) } != 0 {
+            return None;
+        }
+        // MIB_IF_ROW2's first status bit is HardwareInterface.
+        Some(row.InterfaceAndOperStatusFlags._bitfield & 1 != 0)
     }
 
-    fn wide_contains(value: windows_sys::core::PWSTR, needle: &[u16]) -> bool {
-        if value.is_null() {
-            return false;
-        }
-        let mut length = 0;
-        // SAFETY: adapter descriptions are NUL-terminated UTF-16 strings owned by Windows.
-        unsafe {
-            while *value.add(length) != 0 {
-                length += 1;
-            }
-            let value = slice::from_raw_parts(value, length);
-            value.windows(needle.len()).any(|window| window == needle)
+    fn interface_priority(hardware: bool, metric: u32) -> (bool, u32) {
+        (!hardware, metric)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::interface_priority;
+
+        #[test]
+        fn physical_interfaces_precede_virtual_and_use_metric_for_ties() {
+            assert!(interface_priority(true, 25) < interface_priority(false, 1));
+            assert!(interface_priority(true, 25) < interface_priority(true, 35));
         }
     }
 }

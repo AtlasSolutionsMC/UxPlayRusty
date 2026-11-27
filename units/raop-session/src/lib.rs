@@ -509,9 +509,17 @@ pub fn setup(
                     transition.effects.push(SessionEffect::ClearHlsVideoData);
                     let stream_connection_id =
                         unsigned_value(Some(stream_dict), "streamConnectionID");
+                    let stream_connection_id_value = stream_dict
+                        .get("streamConnectionID")
+                        .map(|value| format!("{value:?}"))
+                        .unwrap_or_else(|| "<missing>".into());
+                    let top_level_stream_connection_id = request_dict
+                        .and_then(|dictionary| dictionary.get("streamConnectionID"))
+                        .map(|value| format!("{value:?}"))
+                        .unwrap_or_else(|| "<missing>".into());
                     transition.effects.push(SessionEffect::Log {
                         level: SessionLogLevel::Debug,
-                        message: format!("streamConnectionID (needed for AES-CTR video decryption key and iv): {stream_connection_id}"),
+                        message: format!("streamConnectionID (needed for AES-CTR video decryption key and iv): {stream_connection_id}; stream value={stream_connection_id_value}; top-level value={top_level_stream_connection_id}"),
                     });
                     if state.mirror_exists {
                         transition.effects.push(SessionEffect::InitializeMirrorAes {
@@ -810,7 +818,14 @@ fn string_value(dictionary: Option<&Dictionary>, key: &str) -> Option<String> {
 fn unsigned_value(dictionary: Option<&Dictionary>, key: &str) -> u64 {
     dictionary
         .and_then(|dictionary| dictionary.get(key))
-        .and_then(Value::as_unsigned_integer)
+        .and_then(|value| {
+            value
+                .as_unsigned_integer()
+                // AirPlay IDs are uint64 values. The plist reader can expose
+                // high-bit binary-plist integers as signed i64 values, while
+                // libplist's plist_get_uint_val reads the same bits as u64.
+                .or_else(|| value.as_signed_integer().map(|signed| signed as u64))
+        })
         .unwrap_or_default()
 }
 
@@ -864,6 +879,7 @@ mod tests {
         assert!(is_old_protocol_client(Some("AirMyPC/7200")));
         assert!(is_old_protocol_client(Some("Player AirMyPC/2.0")));
         assert!(is_old_protocol_client(Some("prefixAirMyPC/2.0suffix")));
+        assert!(!is_old_protocol_client(Some("AirPlay/870.14.1")));
         assert!(!is_old_protocol_client(Some("AirPlay/2.0")));
     }
 
@@ -871,6 +887,22 @@ mod tests {
         let mut bytes = Vec::new();
         plist::to_writer_binary(&mut bytes, &value).expect("test plist encodes");
         bytes
+    }
+
+    #[test]
+    fn unsigned_value_preserves_high_bit_uint64_from_binary_plist() {
+        let stream_connection_id = 0xf5f0_1234_89ab_cdef;
+        let body = binary_plist(plist_dict([(
+            "streamConnectionID",
+            Value::from(stream_connection_id),
+        )]));
+        let decoded = Value::from_reader(Cursor::new(body)).expect("binary plist decodes");
+        let dictionary = decoded.as_dictionary().expect("root is a dictionary");
+
+        assert_eq!(
+            unsigned_value(Some(dictionary), "streamConnectionID"),
+            stream_connection_id
+        );
     }
 
     fn streams_body(types: &[u64]) -> Vec<u8> {

@@ -1,7 +1,7 @@
 <table>
 <tr>
 <td width="220" align="center" valign="middle">
-<img src="assets/uxplayrusty-logo.png" alt="UxPlayRusty logo" width="190">
+<img src="assets/uxplayrusty-logo-transparent.png" alt="UxPlayRusty logo" width="190">
 </td>
 <td valign="middle">
 <h1>UxPlayRusty</h1>

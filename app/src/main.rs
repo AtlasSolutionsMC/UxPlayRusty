@@ -157,8 +157,32 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     #[cfg(windows)]
     windows_tray::prepare_bundled_runtime();
-    fallback_log::report_fallbacks();
     let native_argv: Vec<OsString> = std::env::args_os().collect();
+    #[cfg(windows)]
+    if native_argv
+        .get(1)
+        .is_some_and(|argument| argument == "--internal-tail-log")
+    {
+        windows_tray::attach_console_for_log_terminal();
+        let Some(path) = native_argv.get(2) else {
+            write_stderr("UxPlay log terminal requires a log-file path.\n");
+            return ExitCode::from(2);
+        };
+        return windows_tray::run_log_terminal(std::path::Path::new(path));
+    }
+    fallback_log::report_fallbacks();
+    #[cfg(windows)]
+    let (native_argv, start_hidden) = {
+        let hidden = native_argv
+            .iter()
+            .skip(1)
+            .any(|argument| argument == "--start-hidden");
+        let arguments = native_argv
+            .into_iter()
+            .filter(|argument| argument != "--start-hidden")
+            .collect::<Vec<_>>();
+        (arguments, hidden)
+    };
     #[cfg(windows)]
     if native_argv.len() > 1 {
         windows_tray::attach_console_for_cli();
@@ -205,7 +229,7 @@ fn main() -> ExitCode {
                 }
                 #[cfg(windows)]
                 if argv.len() == 1 {
-                    return windows_tray::run(success.options, argv);
+                    return windows_tray::run(success.options, argv, !start_hidden);
                 }
                 return server_runtime::run(success.options);
             }

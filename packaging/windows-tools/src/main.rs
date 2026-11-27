@@ -67,13 +67,9 @@ fn package_release(msys_root: PathBuf) -> Result<(), Box<dyn std::error::Error>>
     }
     let output = root.join("dist/windows");
     fs::create_dir_all(&output)?;
-    let stage = output.join("stage");
+    let stage = output.join("stage.next");
     if stage.exists() {
-        return Err(format!(
-            "stage already exists: {}. Remove it or use a fresh output directory.",
-            stage.display()
-        )
-        .into());
+        fs::remove_dir_all(&stage)?;
     }
     let stage_plugins = stage.join("runtime/plugins");
     let stage_scanner = stage.join("runtime/libexec/gstreamer-1.0");
@@ -85,54 +81,24 @@ fn package_release(msys_root: PathBuf) -> Result<(), Box<dyn std::error::Error>>
     if app_version != beacon_version {
         return Err("app and beacon versions do not match".into());
     }
-    let mut build = Command::new("cargo");
+    let mut build = msys_cargo(&msys_root, &root);
     build
-        .current_dir(&root)
         .env("RUSTUP_TOOLCHAIN", "stable-x86_64-pc-windows-gnu")
-        .env(
-            "PATH",
-            format!("{};{}", bin.display(), env::var("PATH").unwrap_or_default()),
-        )
-        .env(
-            "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER",
-            bin.join("gcc.exe"),
-        )
-        .env(
-            "PKG_CONFIG_PATH",
-            format!(
-                "{};{}",
-                ucrt.join("lib/pkgconfig").display(),
-                ucrt.join("share/pkgconfig").display()
-            ),
-        );
+        .env("CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER", "/ucrt64/bin/gcc")
+        .env("PKG_CONFIG_PATH", "/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig");
     run_command(
         build
-            .arg("build")
+            .args(["build"])
             .args(["--manifest-path", "app/Cargo.toml", "--release"]),
     )?;
-    let mut build = Command::new("cargo");
+    let mut build = msys_cargo(&msys_root, &root);
     build
-        .current_dir(&root)
         .env("RUSTUP_TOOLCHAIN", "stable-x86_64-pc-windows-gnu")
-        .env(
-            "PATH",
-            format!("{};{}", bin.display(), env::var("PATH").unwrap_or_default()),
-        )
-        .env(
-            "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER",
-            bin.join("gcc.exe"),
-        )
-        .env(
-            "PKG_CONFIG_PATH",
-            format!(
-                "{};{}",
-                ucrt.join("lib/pkgconfig").display(),
-                ucrt.join("share/pkgconfig").display()
-            ),
-        );
+        .env("CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER", "/ucrt64/bin/gcc")
+        .env("PKG_CONFIG_PATH", "/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig");
     run_command(
         build
-            .arg("build")
+            .args(["build"])
             .args(["--manifest-path", "beacon/Cargo.toml", "--release"]),
     )?;
 
@@ -217,17 +183,17 @@ fn package_release(msys_root: PathBuf) -> Result<(), Box<dyn std::error::Error>>
     write_runtime_notices(&pacman, &ucrt, &stage, &plugins, &dll_index, &bundled)?;
 
     let version = app_version;
-    let mut setup = Command::new("cargo");
+    let mut setup = msys_cargo(&msys_root, &root);
     setup
-        .current_dir(&root)
         .env("RUSTUP_TOOLCHAIN", "stable-x86_64-pc-windows-gnu")
+        .env("CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER", "/ucrt64/bin/gcc")
         .env("UXPLAY_STAGE_DIR", &stage)
         .env("UXPLAY_VERSION", &version)
         .env(
             "RUSTFLAGS",
             "-C target-feature=+crt-static -C link-arg=-static",
         );
-    run_command(setup.arg("build").args([
+    run_command(setup.args(["build"]).args([
         "--manifest-path",
         "packaging/windows-installer/Cargo.toml",
         "--release",
@@ -236,8 +202,31 @@ fn package_release(msys_root: PathBuf) -> Result<(), Box<dyn std::error::Error>>
         root.join("packaging/windows-installer/target/release/Setup.exe"),
         output.join("Setup.exe"),
     )?;
+    let published_stage = output.join("stage");
+    if published_stage.exists() {
+        fs::remove_dir_all(&published_stage)?;
+    }
+    fs::rename(&stage, &published_stage)?;
     println!("Created {}", output.join("Setup.exe").display());
     Ok(())
+}
+
+fn msys_cargo(msys_root: &Path, root: &Path) -> Command {
+    let cargo = env::split_paths(&env::var_os("PATH").unwrap_or_default())
+        .map(|directory| directory.join("cargo.exe"))
+        .find(|candidate| candidate.is_file())
+        .expect("cargo.exe must be available on PATH");
+    let mut command = Command::new(msys_root.join("usr/bin/bash.exe"));
+    command
+        .current_dir(root)
+        .env("UXPLAY_CARGO_EXE", cargo)
+        .env("UXPLAY_REPO_ROOT", root)
+        .args([
+            "-lc",
+            "export MSYSTEM=UCRT64; export MSYS2_PATH_TYPE=inherit; export MINGW_PREFIX=/ucrt64; export CHERE_INVOKING=1; export PATH=/ucrt64/bin:$PATH; cd \"$(cygpath -u \"$UXPLAY_REPO_ROOT\")\" || exit; cargo_exe=$(cygpath -u \"$UXPLAY_CARGO_EXE\"); exec \"$cargo_exe\" \"$@\"",
+            "uxplay-msys-cargo",
+        ]);
+    command
 }
 
 fn smoke_runtime(stage: PathBuf, msys_root: PathBuf) -> Result<(), Box<dyn std::error::Error>> {

@@ -621,6 +621,7 @@ where
                 i += 1;
             }
             "-nh" => options.append_hostname = false,
+            "-append-hostname" => options.append_hostname = true,
             "-rpi" => {
                 let Some(value) = optional_non_option(next) else {
                     return fail(0, notices, format!("invalid: \"-rpi\" must be followed by a model code:\n{RPI_HELP}\n"));
@@ -708,14 +709,15 @@ where
                 i += 1;
             }
             "-o" => options.overscanned = true,
+            "-no-o" => options.overscanned = false,
             "-f" => {
                 let Some(value) = required_arg(arg, next, &notices) else { return fail_missing(arg, notices); };
-                options.video_flip = match value { "H" => VideoFlip::Horizontal, "V" => VideoFlip::Vertical, "I" => VideoFlip::Invert, _ => return fail(1, notices, format!("invalid \"-f {value}\" , unknown flip type, choices are H, V, I\n")) };
+                options.video_flip = match value { "N" => VideoFlip::None, "H" => VideoFlip::Horizontal, "V" => VideoFlip::Vertical, "I" => VideoFlip::Invert, _ => return fail(1, notices, format!("invalid \"-f {value}\" , unknown flip type, choices are N, H, V, I\n")) };
                 i += 1;
             }
             "-r" => {
                 let Some(value) = required_arg(arg, next, &notices) else { return fail_missing(arg, notices); };
-                options.video_rotation = match value { "R" => VideoRotation::Right, "L" => VideoRotation::Left, _ => return fail(1, notices, format!("invalid \"-r {value}\" , unknown rotation  type, choices are R, L\n")) };
+                options.video_rotation = match value { "N" => VideoRotation::None, "R" => VideoRotation::Right, "L" => VideoRotation::Left, _ => return fail(1, notices, format!("invalid \"-r {value}\" , unknown rotation  type, choices are N, R, L\n")) };
                 i += 1;
             }
             "-p" => {
@@ -746,6 +748,12 @@ where
             }
             "-m" => {
                 if let Some(value) = optional_non_option(next) {
+                    if value == "default" {
+                        options.mac_address = None;
+                        options.random_mac_address = false;
+                        i += 1;
+                        continue;
+                    }
                     if !valid_mac(value) {
                         return fail(1, notices, format!("invalid mac address \"{value}\": address must have form \"xx:xx:xx:xx:xx:xx\", x = 0-9, A-F or a-f\n"));
                     }
@@ -757,6 +765,7 @@ where
                 }
             }
             "-a" => options.use_audio = false,
+            "-audio" => options.use_audio = true,
             "-d" => {
                 if let Some(value) = optional_non_option(next) {
                     if parse_uint(value, 1) != Some(1) {
@@ -834,6 +843,7 @@ where
             "-nolowlatency" => options.low_latency = false,
             "-v4l2" => { options.video_decoder = "v4l2h264dec".into(); options.video_converter = "v4l2convert".into(); }
             "-fs" => options.fullscreen = true,
+            "-no-fs" => options.fullscreen = false,
             "-FPSdata" => options.show_client_fps = true,
             "-reset" => {
                 let Some(value) = required_arg(arg, next, &notices) else { return fail_missing(arg, notices); };
@@ -915,6 +925,7 @@ where
                 if next == Some("no") { options.srgb_fix = false; i += 2; continue; }
             }
             "-nohold" => options.nohold = true,
+            "-hold" => options.nohold = false,
             "-al" => {
                 if let Some(value) = optional_non_option(next).and_then(parse_c_f32) {
                     let micros = (value * 1_000_000.0) as i32;
@@ -930,11 +941,21 @@ where
             "-pin" => {
                 options.legacy_pairing = true;
                 options.pin_password_mode = 1;
+                options.password = None;
+                options.pin = None;
                 if let Some(value) = optional_non_option(next) {
                     let Some(n) = parse_uint(value, 9999).filter(|n| *n != 0) else { return fail(1, notices, format!("invalid \"-pin {value}\"; -pin nnnn : nnnn range [0001:9999], (4 digits)\n")); };
                     options.pin = Some((n + 10000) as u16);
                     i += 1;
                 }
+            }
+            "-no-pin" => {
+                options.legacy_pairing = false;
+                options.pin_password_mode = 0;
+                options.pin = None;
+                options.password = None;
+                options.registration_list = false;
+                options.registration_file = None;
             }
             "-p2p" => {
                 if !capabilities.apple_p2p {
@@ -961,6 +982,9 @@ where
             }
             "-pw" => {
                 options.legacy_pairing = false;
+                options.pin = None;
+                options.registration_list = false;
+                options.registration_file = None;
                 if let Some(value) = optional_non_option(next) {
                     if value.len() < 4 { return fail(1, notices, format!("invalid client-access password \"{value}\": length must be at least 4 characters\n")); }
                     options.password = Some(value.into());
@@ -976,6 +1000,7 @@ where
                 }
             }
             "-taper" => options.taper_volume = true,
+            "-no-taper" => options.taper_volume = false,
             "-db" => {
                 let Some(value) = next else { return fail(1, notices, "invalid \"-db\": this option requires a value: db value must be \"low\" or \"low:high\", low < 0 and high > low are decibel gains\n".into()); };
                 let initial_value = value.split_once(':').map_or(value, |(initial, _)| initial);
@@ -1007,6 +1032,7 @@ where
                     i += 1;
                 }
             }
+            "-no-hls" => options.hls_support = false,
             "-lang" | "-slang" => {
                 let value = optional_non_option(next).unwrap_or("").replace(' ', "");
                 if arg == "-lang" { options.requested_language = value; } else { options.subtitle_language = value; }
@@ -1015,6 +1041,14 @@ where
             "-h265" => options.h265_support = true,
             "-no-h265" => options.h265_support = false,
             "-nofreeze" => options.nofreeze = true,
+            "-freeze" => options.nofreeze = false,
+            "-no-mp4" => options.mux_to_file = false,
+            "-no-ca" => { options.render_cover_art = false; options.cover_art_filename = None; },
+            "-no-md" => options.metadata_filename = None,
+            "-no-vdmp" => options.dump_video = false,
+            "-no-admp" => options.dump_audio = false,
+            "-no-FPSdata" => options.show_client_fps = false,
+            "-clear-clients" => { options.allowed_clients.clear(); options.blocked_clients.clear(); options.restrict_clients = false; },
             _ => return fail(1, notices, format!("unknown option {arg}, stopping (for help use option \"-h\")\n")),
         }
         i += 1;

@@ -1,39 +1,156 @@
-# UxPlay for Windows user configuration.
-# The first launch creates %APPDATA%/UxPlay/config.toml from this template.
-# Order of precedence: built-in defaults < legacy uxplayrc < this file < command line.
+# UxPlay for Windows user configuration. First launch creates this at
+# %APPDATA%/UxPlay/config.toml. Precedence: defaults < uxplayrc < this file < CLI.
+# Commented keys are optional. Relative file paths are resolved beside this file.
+
+# Show a tray notification with a requested PIN while the log terminal is hidden.
+# PINs are also written to the log. true/false.
+notifications = true
 
 [server]
-# AirPlay receiver name shown on the network. Must not be empty.
+# AirPlay receiver name; must not be empty.
 name = "UxPlay"
+# Add the computer's hostname to the advertised name. true/false.
+append_hostname = true
 
 [video]
-# Video renderer: "auto", "d3d11", or "vulkan". Unsupported hardware/plugins fall back with a warning.
+# Renderer: auto | d3d11 | vulkan. Requires compatible hardware/runtime.
 renderer = "auto"
-# Maximum requested dimensions, optionally with a refresh rate, e.g. "1920x1080@60".
-# Width and height: 1..9999. Inline refresh rate: 1..255. Unset uses UxPlay's default.
+# Resolution cap WIDTHxHEIGHT or WIDTHxHEIGHT@FPS; dimensions 1..9999, FPS 1..255.
 # resolution = "1920x1080@60"
-# Maximum requested frame rate: integer 1..255. Unset uses UxPlay's default.
+# Frame-rate cap, integer 1..255.
 # max_fps = 60
-# Enable H.265 AirPlay mirroring when the sending device supports it. Default: false.
+# H.265 mirroring; requires sender and installed GStreamer plugins. true/false.
 h265 = false
-# Drop stale decoded frames to reduce latency. This may reduce smoothness on a slow PC.
+# Drop stale frames for lower latency; may reduce smoothness. true/false.
 low_latency = false
-# Synchronize video to its clock. Default: true.
+# Synchronize video to clock. true/false. Optional delay -999.999..999.999 ms.
 vsync = true
+# sync_delay_ms = 0
+# Start video fullscreen. true/false.
+fullscreen = false
+# Image transform: none | horizontal | vertical | invert (180°).
+flip = "none"
+# Image rotation: none | right | left.
+rotation = "none"
+# Crop overscanned image edges. true/false.
+overscan = false
+
+[audio]
+# Play receiver audio. true/false.
+enabled = true
+# GStreamer audio sink name and optional properties; plugin must be installed.
+# sink = "autoaudiosink"
+# Synchronize audio to video. true/false; delay is -999.999..999.999 ms.
+sync = true
+# sync_delay_ms = 0
+# Audio pipeline latency in seconds, 0..10.
+# latency_seconds = 0
+# Initial volume from 0.0 (mute) to 1.0 (full volume).
+# volume = 1.0
+# Apply volume taper. true/false.
+# volume_taper = false
+# Optional dB gain range [low, high], where low < 0 and high > low.
+# db_range = [-24.0, -3.0]
+
+[connection]
+# Close the video window when the client stops. true/false.
+close_window_on_client_stop = true
+# Reset the stream after this many idle seconds, 0..86400; 0 disables it.
+reset_after_seconds = 15
+# Allow a new client to take over an existing session. true/false.
+takeover = true
+# Optional three distinct ports per protocol, each 1024..65535.
+# tcp_ports = [7100, 7000, 7001]
+# udp_ports = [7011, 6001, 6000]
+# Avoid freezing the video window after stream loss. true/false.
+# nofreeze = false
+
+[access]
+# open | first_time | every_time | password.
+# first_time pairs trusted devices with a 4-digit PIN; every_time asks for a new
+# generated 4-digit code for each connection; password uses the string below.
+mode = "open"
+# Fixed PIN, first_time only: four digits 0001..9999. Omit for generated PIN.
+# pin = "1234"
+# password mode only: at least 4 characters. Plain text; keep this file private.
+# password = "ChangeThisPassword"
+# Registry of paired keys. Used in first_time mode; relative to this config.
+pairing_file = "paired-devices.txt"
+# Optional client IDs. restrict = true rejects IDs not present in allow_ids.
+# allow_ids = ["device-id-1", "device-id-2"]
+# block_ids = ["device-id-3"]
+# restrict = false
 
 [startup]
-# Start UxPlay when the current Windows user signs in. Applied by the tray/startup milestone.
+# Start when the current Windows user signs in, hidden in the tray. true/false.
 enabled = false
+# Restart receiver after this many minutes without clients, 0..10080.
+# 0 disables. Default 360 (6 hours).
+idle_restart_minutes = 360
+
+[gstreamer]
+# Optional GStreamer element names. Must exist in the installed plugin set.
+# video_parser = "h264parse"
+# video_decoder = "avdec_h264"
+# video_converter = "videoconvert"
+# video_sink = "d3d11videosink"
+# audio_sink = "wasapisink"
+
+[hls]
+# HLS support for compatible AirPlay apps, primarily YouTube. true/false.
+enabled = false
+# Player version 2 or 3; used only when enabled.
+player_version = 3
+# Colon-separated preferred audio/subtitle language tags (e.g. "fr:en-US:en").
+# languages = "en-US:en"
+# subtitles = "en-US:en"
+# Custom maximum profile, e.g. "AVC:720,HVC:1080"; validated by UxPlay.
+# custom_profile = "AVC:720"
+
+[recording]
+# Save received stream to MP4. Optional output filename; default chosen by UxPlay.
+mp4_enabled = false
+# mp4_file = "recording.mp4"
+# Render received cover art, or set cover_art_file to save it instead.
+cover_art = false
+# cover_art_file = "cover.jpg"
+# Write media metadata to this file.
+# metadata_file = "metadata.txt"
+# Dump audio/video packets; optional positive packet limit and output filename.
+video_dump_enabled = false
+# video_dump_limit = 500
+# video_dump_file = "video.dump"
+audio_dump_enabled = false
+# audio_dump_limit = 500
+# audio_dump_file = "audio.dump"
+# Print client FPS data. true/false.
+show_fps = false
+
+[identity]
+# Set a fixed MAC address, or random_mac = true to generate one. Leave both unset
+# for UxPlay's default identity. Format: xx:xx:xx:xx:xx:xx.
+# mac_address = "02:11:22:33:44:55"
+# random_mac = false
+# Optional pairing private-key file.
+# key_file = "airplay.key"
+
+[advanced]
+# Optional custom RTP pipelines; GStreamer syntax, only use if you understand them.
+# video_rtp_pipeline = "rtph264pay ! udpsink host=127.0.0.1 port=5000"
+# audio_rtp_pipeline = "rtpL16pay ! udpsink host=127.0.0.1 port=5002"
+# Optional DACP remote-control service file.
+# dacp_file = "uxplay.dacp"
 
 [ble]
-# Start the Windows BLE service-discovery companion. If enabled, it starts after the AirPlay port
-# is ready and stops when this receiver exits. An unavailable adapter does not stop AirPlay.
+# Launch the Windows BLE service-discovery companion. true/false.
 enabled = false
-# Optional handoff-file location. Relative paths are resolved beside this config file.
+# Optional handoff file path.
 # handoff_path = "uxplay.ble"
 
 [logging]
-# normal, debug (protocol/pipeline details), or debug_data (includes packet data).
+# normal | debug | debug_data. Debug data may contain packet-level details.
 level = "normal"
-# Optional log-file location. Relative paths are resolved beside this config file.
+# Optional log file base name; default is %APPDATA%/UxPlay/logs/uxplay.log.
+# Tray mode creates a separate timestamped file each app launch, for example
+# %APPDATA%/UxPlay/logs/uxplay-2026-11-28_14-05-09.log.
 # file = "logs/uxplay.log"

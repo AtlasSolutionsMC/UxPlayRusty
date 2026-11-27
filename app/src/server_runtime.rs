@@ -97,6 +97,15 @@ impl ServerControl {
         }
     }
 
+    #[cfg(windows)]
+    pub fn has_active_clients(&self) -> bool {
+        self.connections
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .upgrade()
+            .is_some_and(|connections| connections.has_connections())
+    }
+
     fn attach_connections(&self, connections: &Arc<ConnectionRegistry>) {
         *self
             .connections
@@ -1504,6 +1513,8 @@ impl ProtocolEffectSink for StartupEffects {
                     eprintln!("{image}");
                 }
                 eprintln!("*** CLIENT MUST NOW ENTER PIN = \"{pin}\" AS AIRPLAY PASSWORD");
+                #[cfg(windows)]
+                crate::windows_tray::notify_pairing_pin(&pin);
             }
             HandlerEffect::AirPlayControl(control) => match control {
                 crate::airplay_controls::AirPlayControl::Scrub { position } => {

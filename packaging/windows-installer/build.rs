@@ -1,5 +1,5 @@
 use flate2::{Compression, write::GzEncoder};
-use std::{env, fs, io::Write, path::PathBuf};
+use std::{env, fs, io::Write, path::PathBuf, process::Command};
 
 fn main() {
     println!("cargo:rerun-if-env-changed=UXPLAY_STAGE_DIR");
@@ -40,6 +40,53 @@ fn main() {
     }
     source.push_str("];\n");
     fs::write(output, source).expect("write embedded payload table");
+    if env::var("TARGET").is_ok_and(|target| target.ends_with("-windows-gnu")) {
+        embed_installer_resources();
+    }
+}
+
+fn embed_installer_resources() {
+    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest directory"));
+    let output = PathBuf::from(env::var_os("OUT_DIR").expect("build output directory"));
+    let repository = root.join("../..");
+    let icon = repository.join("assets/uxplayrusty.ico");
+    let manifest = repository.join("assets/uxplayrusty.manifest");
+    let template = fs::read_to_string(root.join("installer.rc.in"))
+        .expect("read installer dialog resource template");
+    let resource = output.join("uxplay-installer.rc");
+    let object = output.join("uxplay-installer.o");
+    let script = template
+        .replace("@ICON_PATH@", &resource_path(&icon))
+        .replace("@MANIFEST_PATH@", &resource_path(&manifest));
+    fs::write(&resource, script).expect("write installer dialog resource script");
+    println!("cargo:rerun-if-changed={}", icon.display());
+    println!("cargo:rerun-if-changed={}", manifest.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        root.join("installer.rc.in").display()
+    );
+    let status = Command::new("windres")
+        .args([
+            "-i",
+            resource.to_str().expect("resource path"),
+            "-O",
+            "coff",
+            "-o",
+        ])
+        .arg(&object)
+        .status()
+        .expect("run windres to embed installer resources");
+    assert!(
+        status.success(),
+        "windres failed to embed installer resources"
+    );
+    println!("cargo:rustc-link-arg-bin=Setup={}", object.display());
+}
+
+fn resource_path(path: &std::path::Path) -> String {
+    path.to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
 }
 
 fn collect_files(root: &PathBuf, directory: &PathBuf, files: &mut Vec<(PathBuf, PathBuf)>) {
