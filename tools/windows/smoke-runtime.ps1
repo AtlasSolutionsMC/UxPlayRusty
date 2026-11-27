@@ -33,7 +33,7 @@ try {
         'appsrc', 'decodebin', 'avdec_aac', 'avdec_alac', 'h264parse', 'h265parse',
         'audioconvert', 'audioresample', 'volume', 'level', 'autoaudiosink', 'wasapisink',
         'videoconvert', 'videoscale', 'autovideosink', 'playbin3', 'hlsdemux',
-        'd3d11videosink', 'vulkanupload', 'vulkansink'
+        'd3d11h264dec', 'd3d11h265dec', 'd3d11videosink', 'vulkanupload', 'vulkansink'
     )
     foreach ($factory in $factories) {
         if ($factory -eq 'vulkansink') {
