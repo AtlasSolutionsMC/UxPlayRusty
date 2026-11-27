@@ -1,20 +1,44 @@
+<div align="center">
+
+<img src="assets/uxplayrusty-logo.png" alt="UxPlayRusty logo" width="300">
+
 # UxPlayRusty
 
-UxPlayRusty is a standalone Rust AirPlay receiver for Windows, Linux, and macOS. It includes the receiver application and a separate BLE companion.
+### A Rust AirPlay receiver for Windows, Linux, and macOS
 
-## Windows features
+Stream audio and video from Apple devices over your local network. Includes the receiver application and an optional BLE companion.
 
-- Optional low-latency video queues and D3D11 or Vulkan renderer selection
-- Editable `config.toml` with command-line overrides
-- Notification-area controls for configuration, restart, disconnect, and exit
-- Optional sign-in startup and BLE companion lifecycle management
-- Windows installer and bundled GStreamer runtime build scripts
+</div>
 
-Apple-device streaming and hardware-specific renderer and BLE behavior still require hands-on validation. The repository does not claim full AirPlay compatibility based only on builds or synthetic tests.
+---
 
-## Build on Windows
+## About
 
-Install Rust stable for `x86_64-pc-windows-gnu`, MSYS2 UCRT64 with the required GStreamer runtime and development packages, and OpenSSL. In PowerShell, configure the toolchain and build the receiver:
+UxPlayRusty is a Rust implementation of the UxPlay receiver, organized into modules for the main application, network service discovery, media rendering, and the BLE service-discovery beacon.
+
+> **Status:** Under active development. Builds and automated checks do not confirm AirPlay compatibility with physical Apple devices or hardware-specific behavior.
+
+## Features
+
+| Area | Details |
+| --- | --- |
+| AirPlay receiver | `uxplay` application for Windows, Linux, and macOS |
+| Video | Windows renderer selection: `auto`, `d3d11`, or `vulkan` |
+| Configuration | Windows `config.toml` with command-line overrides |
+| Notification area | Windows menu for Config, Restart, Disconnect, and Exit |
+| BLE companion | `uxplay-beacon` advertises the AirPlay service over Bluetooth LE; enable it from Windows configuration |
+| Windows packaging | Scripts for creating a bundled runtime and `Setup.exe` installer |
+
+## Getting started on Windows
+
+### Requirements
+
+- Rust stable for the `x86_64-pc-windows-gnu` target
+- MSYS2 UCRT64 with GStreamer runtime and development packages, plus OpenSSL
+
+### Build
+
+From the repository root in PowerShell, run:
 
 ```powershell
 $msysUcrt = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2\ucrt64'
@@ -22,16 +46,50 @@ $env:Path = "$msysUcrt\bin;$env:Path"
 $env:RUSTUP_TOOLCHAIN = 'stable-x86_64-pc-windows-gnu'
 $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = Join-Path $msysUcrt 'bin\gcc.exe'
 $env:PKG_CONFIG_PATH = "$msysUcrt\lib\pkgconfig;$msysUcrt\share\pkgconfig"
+
 cargo build --manifest-path app/Cargo.toml --release
 cargo build --manifest-path beacon/Cargo.toml --release
 ```
 
-Run `uxplay.exe -h` for command-line options. Focused crate tests can be run with their manifest, for example:
+The executables are written to `app/target/release/uxplay.exe` and `beacon/target/release/uxplay-beacon.exe`. To see the available command-line options, run:
 
 ```powershell
-cargo test --manifest-path units/playfair-sap-hash/Cargo.toml
+app\target\release\uxplay.exe -h
 ```
 
-## Windows configuration and installer
+### Configuration
 
-See [Windows configuration](docs/development/WindowsConfig.md) for every supported setting, [Windows tray controls](docs/development/WindowsTray.md) for desktop behavior, and [Windows release packaging](docs/development/WindowsRelease.md) to build and smoke-test the installer. Build output is written under the ignored `dist/windows/` directory and is not included in Git.
+On first launch, the app creates `%APPDATA%\UxPlay\config.toml`. Use it to configure the receiver name, video renderer, low-latency mode, BLE, and logging.
+
+- [Example configuration](app/assets/config.example.toml)
+- [Configuration options and networking](docs/development/WindowsConfig.md)
+- [Notification-area controls](docs/development/WindowsTray.md)
+- [Build the installer and run smoke checks](docs/development/WindowsRelease.md)
+
+## Build on Linux and macOS
+
+In addition to Rust, install the native development packages for GStreamer, OpenSSL, and libplist. Linux also requires a DNS-SD/Avahi development package. Then build with:
+
+```sh
+cargo build --manifest-path app/Cargo.toml --release
+cargo build --manifest-path beacon/Cargo.toml --release
+```
+
+See the [Linux](.github/workflows/rust-linux.yml) and [macOS](.github/workflows/rust-macos.yml) CI workflows for the packages used by the project.
+
+## Project structure
+
+```text
+app/       AirPlay receiver application
+beacon/    BLE service-discovery companion
+core/      Shared foundational code
+render/    Audio, video, and mux renderers
+units/     Protocol modules and supporting components
+packaging/ Windows packaging tools
+docs/      Development and configuration guides
+```
+
+## License
+
+This project is distributed under the [GNU General Public License v3.0](LICENSE). Review dependency license notices and the licenses of bundled packages before redistributing a runtime bundle.
+
