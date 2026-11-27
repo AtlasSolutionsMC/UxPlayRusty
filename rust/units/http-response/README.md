@@ -19,9 +19,9 @@ copy in `../../staging/http-response/` is test-only and is not linked into the R
 
 ## Source provenance
 
-- `D:\Save\Uxplay\UxPlay\lib\http_response.c`, SHA-256
+- Original `lib/http_response.c`, SHA-256
   `6159594A4C2D2D5482DFB920A930B09CA60C17850A6F368BD606734689DBCEE9`
-- `D:\Save\Uxplay\UxPlay\lib\http_response.h`, SHA-256
+- Original `lib/http_response.h`, SHA-256
   `E9B14B46EBD6FBF8991E731CA77DBCFB87C5AF944436958DE88CA2B9BA53CAF5`
 
 `rust-anything bridge` refused this unit because every export takes or returns opaque pointers;

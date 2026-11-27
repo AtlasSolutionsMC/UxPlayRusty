@@ -33,5 +33,5 @@ cargo +stable-x86_64-pc-windows-gnu build
 
 The source license notices are recorded in `LICENSE-NOTICE.md` and the copied
 PlayFair GPL text. Rust Anything's generic recorder cannot model opaque C handles
-with fixed-size buffers and cross-call state; see `GATE_NOTES.md` for that gate
-limitation.
+with fixed-size buffers and cross-call state, so the oracle and C ABI smoke
+scripts provide the focused compatibility checks for this unit.

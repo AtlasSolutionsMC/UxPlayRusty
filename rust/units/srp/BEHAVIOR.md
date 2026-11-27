@@ -1,6 +1,6 @@
 # SRP source behavior record
 
-Source: `D:\Save\Uxplay\UxPlay\lib\srp.c` and `lib\srp.h` (MIT licensed; original notice retained in the copied header).
+Source: the original `lib/srp.c` and `lib/srp.h` (MIT licensed; original notice retained in the copied header).
 
 The active header enables `APPLE_VARIANT`. It exposes ten server-side functions around five hash enums (SHA-1, SHA-224, SHA-256, SHA-384, SHA-512), one active RFC 5054 group (2048-bit, generator 2), and custom hexadecimal groups. The SRP user/client implementation is under `#if 0` and is not a source export. `hash_reset` has external linkage in the C file but takes the private `HashCTX_t`, is not declared by `srp.h`, and is only an implementation helper; it is excluded from the public C API port.
 

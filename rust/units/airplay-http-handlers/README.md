@@ -14,14 +14,14 @@ typed plans for the Rust app to execute once its state layer is ready.
   handlers inside `http_handlers.h`, depend on `raop.c` state, libplist, and
   callbacks, and have no direct test hooks; this fixture set is not a live C/Rust
   differential run.
-- `rust-anything analyze D:\Save\Uxplay\UxPlay --lang c` finds
+- `rust-anything analyze <upstream-uxplay-source> --lang c` finds
   `lib/http_handlers.h` in an import cycle with `raop.c`, `airplay_video.c`, and
   RTP units, and reports no C tests. The generated C-ABI bridge/record/gate flow
   cannot characterize these static callback-driven handlers independently.
 - Run `cargo test --manifest-path rust/units/airplay-http-handlers/Cargo.toml`
   for the Rust contract tests. A `rust-anything gate` result is intentionally not
   claimed because no executable original-handler oracle is wired to this crate.
-- `UxPlay` was used read-only.
+- The upstream C source was used read-only.
 
 ## Source behavior notes
 

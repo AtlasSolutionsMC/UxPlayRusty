@@ -1,7 +1,7 @@
 # mux-renderer-rs
 
-Rust-owned port of `renderers/mux_renderer.c`. The original remains read-only at
-`D:\Save\Uxplay\UxPlay` and is used by the C oracle under `record_shims/`.
+Rust-owned port of `renderers/mux_renderer.c`. The original C implementation is
+used read-only by the C oracle under `record_shims/`.
 
 ## API
 

@@ -1,147 +1,43 @@
 # Windows release packaging
 
-The Windows installer is assembled from the GNU/MSYS2 UCRT64 release build.
-The packager builds both executables, follows PE DLL imports for the app,
-beacon, GStreamer plugins and plugin scanner, collects the required runtime
-files, records MSYS2 package metadata and installed license texts, then compiles
-Inno Setup's installer. When exact source packages are supplied, the packager
-can also include top-level license texts from those version-matched sources.
+This procedure builds the Windows GNU/MSYS2 UCRT64 executables, bundles their runtime dependencies, and creates `Setup.exe` with Inno Setup 6.
+
+## Requirements
+
+- Rust stable for `x86_64-pc-windows-gnu`
+- MSYS2 UCRT64 with the GStreamer runtime/plugins and OpenSSL required by UxPlay
+- Inno Setup 6
 
 ## Build
 
-Install Rust stable for `x86_64-pc-windows-gnu`, MSYS2 UCRT64 with the GStreamer
-runtime/plugins used by UxPlay, and Inno Setup 6. From the repository root run:
+From the repository root in PowerShell:
 
 ```powershell
 $msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
 .\tools\windows\package-release.ps1 -Msys2Root $msysRoot
 ```
 
-The script rebuilds `uxplay.exe` and `uxplay-beacon.exe` and writes the staging
-directory and `Setup.exe` below the ignored `dist/windows/` directory. The
-Windows release uses embedded mDNS. It does not require Bonjour at runtime.
-The staged runtime contains the GStreamer plugins needed for default audio,
-H.264/H.265 mirror playback, HLS, D3D11 and Vulkan paths; arbitrary custom
-GStreamer pipelines can require plugins beyond this bundle.
+The script rebuilds `uxplay.exe` and `uxplay-beacon.exe`, stages the runtime, and writes `Setup.exe` under `dist/windows/`. Build outputs are ignored by Git. The bundled runtime uses embedded mDNS and includes the GStreamer plugins selected by the packaging script. Custom pipelines may need additional plugins.
 
-The installer adds a Start Menu shortcut, an optional desktop shortcut, an
-optional current-user Run-key startup entry, an Add/Remove Programs entry and an
-uninstaller. It installs under the current user's Programs directory, keeps
-configuration and logs under the user's profile, and preserves config/logs on
-uninstall. Startup selection updates both `config.toml` and the current-user
-Run value.
+The installer supports a current-user installation, Start Menu shortcut, optional desktop shortcut, optional sign-in startup, and uninstall. Configuration and logs are kept under the user's profile and preserved when the application is uninstalled.
 
-## Runtime and installer smoke
+## Smoke checks
 
-Run the bundled-runtime smoke with MSYS2 removed from the child process path:
+Check the staged runtime and CLI without relying on MSYS2 being on the child process path:
 
 ```powershell
 $msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
 .\tools\windows\smoke-runtime.ps1 -StageDirectory .\dist\windows\stage -Msys2Root $msysRoot
 ```
 
-The smoke loads required GStreamer factories from the staged bundle and checks
-the packaged app's CLI startup. It does not test media from an Apple device,
-tray interaction, GPU rendering quality, BLE radio behavior or a clean Windows
-installation.
-
-The install smoke installs silently to a temporary directory, checks the
-Start Menu shortcut, startup config and Run registration, runs the installed
-`uxplay.exe -h` with MSYS2 removed from `PATH`, launches the tray build with an
-isolated config and checks that the AirPlay server starts, uninstalls, and
-checks cleanup:
+The install smoke installs the package, checks startup/configuration and tray command routing, launches the app, uninstalls it, and checks cleanup:
 
 ```powershell
 .\tools\windows\test-install.ps1 -Setup .\dist\windows\Setup.exe
 ```
 
-It refuses to run if the current user already has a UxPlay installation or a
-running `uxplay.exe`; it temporarily backs up and restores the current user's
-config, BLE handoff, startup value and UxPlay shortcut. The smoke installs to a
-unique temporary directory, launches through the installed current-user Run
-value with MSYS2 removed from `PATH`, checks startup preference changes through
-Restart, session shutdown, duplicate-instance handling, Config/Disconnect/
-Restart/Exit command routing, BLE companion behavior and uninstall cleanup.
-The command-routing checks post menu command IDs to the tray window; they do not
-visually click the notification-area menu or disconnect a live Apple session.
+The install smoke refuses to run when a UxPlay installation or running `uxplay.exe` is already present for the current user. These automated checks do not replace validation with a physical Apple device, visible tray interaction, GPU-backed renderer lifecycle, or BLE radio scanner.
 
-The `Windows installer smoke` workflow builds a provisional installer on one
-fresh GitHub-hosted Windows runner, then transfers it as a one-day workflow
-artifact to a separate fresh Windows runner. Run `45976352552` passed the
-renderer/app/beacon gates, runtime smoke, fresh-runner install and uninstall,
-startup Run-target launch and false/true preference transitions, session
-shutdown, duplicate-instance, tray command-routing, and BLE failure/companion
-lifecycle checks. The artifact is temporary CI handoff only; it is not a
-release upload. Physical Apple playback, visible tray interaction, sign-in
-observation, GPU-backed UxPlay-window behavior and remote BLE visibility remain
-manual acceptance checks.
+## Distribution note
 
-`third-party-licenses/` contains license texts installed by MSYS2 when
-available. Some installed packages supply SPDX metadata but no separate text;
-those packages receive a `LICENSE-REFERENCE.txt`, and their package version,
-SPDX declaration and upstream URL are recorded in `THIRD-PARTY-NOTICES.txt`.
-The current UCRT64 bundle includes GPL-labeled FFmpeg, x264 and x265 runtime
-packages; the staged `avcodec-63.dll` imports the x264 and x265 DLLs. Their
-staged directories contain `LICENSE-REFERENCE.txt` rather than the package
-license text or corresponding source. The exact package source archives have
-now been collected separately; FFmpeg documents that enabling GPL parts makes
-GPL apply to FFmpeg and describes distributing the exact matching source and
-build information ([FFmpeg legal considerations](https://www.ffmpeg.org/legal.html)).
-Treat `Setup.exe` as provisional: do not publish it until the exact source/build
-inputs and notices are resolved for the runtime, or the runtime is rebuilt with
-a reviewed license profile.
-
-## Matching MSYS2 source packages
-
-To collect the exact MSYS2 source package archives for the staged runtime and
-write a SHA-256 manifest, run:
-
-```powershell
-$msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
-.\tools\windows\collect-source-packages.ps1 `
-    -StageDirectory .\dist\windows\stage `
-    -Msys2Root $msysRoot `
-    -CreateTar
-```
-
-The script maps runtime package names to their MSYS2 base packages, downloads
-the exact package-version source archives, validates each Zstandard archive,
-and writes `dist/windows/source-packages.tar`. The companion archive contains
-the matching source package archives, `SOURCE-PACKAGES.txt` with hashes and
-source URLs, and a copy of `THIRD-PARTY-NOTICES.txt`. The current staged
-runtime produces 99 unique source archives for 102 package owners (about
-1.18 GiB). The source set is separate from `Setup.exe`; include it alongside
-the installer when publishing a release. Archive validation and a package
-index do not replace a license-obligation review. Keep the installer
-provisional until the exact binary/source relationship, notices, and release
-presentation have been reviewed.
-
-## Include source-tree license texts in Setup
-
-The MSYS2 runtime may not install a separate license file for every package.
-After collecting the exact-version source packages above, rebuild the installer
-with the source directory:
-
-```powershell
-$msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
-$packageOutput = Join-Path (Get-Location) 'dist\windows\source-license-review'
-./tools/windows/package-release.ps1 `
-    -Msys2Root $msysRoot `
-    -OutputDirectory $packageOutput `
-    -SourcePackageDirectory ./dist/windows/source-packages
-```
-
-Use a new output directory for this review build. The packager refuses to
-replace an existing stage unless `-ReplaceExistingStage` is explicitly passed.
-The stage and installer output directory are supplied to Inno Setup at compile
-time, so this isolated build does not touch the normal `dist/windows/stage` or
-`dist/windows/Setup.exe`.
-
-The packager checks package versions against `THIRD-PARTY-NOTICES.txt`, verifies
-each source archive's SHA-256 from `SOURCE-PACKAGES.txt`, and adds top-level
-`COPYING`/`LICENSE` texts with source paths and hashes under each package's
-`third-party-licenses/<package>/source/` directory. It fails on missing or
-mismatched inputs. This does not include the source archive in `Setup.exe`,
-does not collect nested vendor notices, and is not a legal compliance
-determination; distribute the matching source companion and have the notice set
-reviewed before publishing.
+Treat locally generated installers as build artifacts until the bundled runtime's license notices and corresponding source availability have been reviewed for the exact package versions. The build script can collect matching MSYS2 source packages with `tools/windows/collect-source-packages.ps1`; these archives are separate from `Setup.exe` and are not added to Git automatically.

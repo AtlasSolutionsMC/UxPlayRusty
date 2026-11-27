@@ -28,6 +28,5 @@ cargo +stable-x86_64-pc-windows-gnu build
 .\tests\run_c_abi_smoke.ps1
 ```
 
-The two scripts set `OPENSSL_DIR` and `OPENSSL_STATIC=0` for this local GNU
-OpenSSL installation. See [GATE_NOTES.md](GATE_NOTES.md) for the rust-anything
-recorder and gate limitations.
+The two scripts set `OPENSSL_DIR` and `OPENSSL_STATIC=0` for the selected GNU
+OpenSSL installation.

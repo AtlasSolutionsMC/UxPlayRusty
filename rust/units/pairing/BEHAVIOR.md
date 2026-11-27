@@ -22,4 +22,5 @@ Malformed/missing digest fields and invalid short SRP proofs return a failed res
 
 ## Pending verification
 
-See `CHECKPOINTS.md` for current local build, test, and C-oracle status. Cross-platform Windows/Linux/macOS/BSD execution is not available from this Windows runner.
+Run this crate's tests with `cargo test --manifest-path rust/units/pairing/Cargo.toml`.
+Platform-specific behavior should be verified on each supported operating system.
