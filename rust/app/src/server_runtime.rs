@@ -640,11 +640,13 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
     let executable = match std::env::current_exe() {
         Ok(path) => path.with_file_name("uxplay-beacon.exe"),
         Err(error) => {
+            remove_beacon_handoff(&handoff_path);
             eprintln!("UxPlay: could not locate uxplay-beacon.exe: {error}");
             return None;
         }
     };
     if !executable.is_file() {
+        remove_beacon_handoff(&handoff_path);
         eprintln!(
             "UxPlay: BLE companion {} is missing; AirPlay will continue without BLE discovery",
             executable.display()
@@ -662,6 +664,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
     let mut child = match child {
         Ok(child) => child,
         Err(error) => {
+            remove_beacon_handoff(&handoff_path);
             eprintln!(
                 "UxPlay: could not start BLE companion {}: {error}; AirPlay remains available",
                 executable.display()
@@ -685,7 +688,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         loop {
             if thread_stop.load(std::sync::atomic::Ordering::Acquire) {
                 // Removing the handoff asks uxplay-beacon to stop and exit cleanly.
-                let _ = std::fs::remove_file(&handoff_path);
+                remove_beacon_handoff(&handoff_path);
                 let deadline = Instant::now() + Duration::from_secs(8);
                 while Instant::now() < deadline {
                     match child.try_wait() {
@@ -712,6 +715,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
             }
             match child.try_wait() {
                 Ok(Some(status)) => {
+                    remove_beacon_handoff(&handoff_path);
                     eprintln!("UxPlay: BLE companion exited ({status}); AirPlay remains available");
                     join_beacon_log_readers(stdout_reader, stderr_reader);
                     return;
@@ -721,6 +725,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
                     eprintln!("UxPlay: could not monitor BLE companion: {error}");
                     let _ = child.kill();
                     let _ = child.wait();
+                    remove_beacon_handoff(&handoff_path);
                     join_beacon_log_readers(stdout_reader, stderr_reader);
                     return;
                 }
@@ -731,6 +736,42 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         stop_requested,
         worker,
     })
+}
+
+#[cfg(windows)]
+fn remove_beacon_handoff(path: &Path) {
+    if let Err(error) = std::fs::remove_file(path)
+        && error.kind() != io::ErrorKind::NotFound
+    {
+        eprintln!(
+            "UxPlay: could not remove BLE handoff {}: {error}",
+            path.display()
+        );
+    }
+}
+
+#[cfg(all(test, windows))]
+mod beacon_handoff_cleanup_tests {
+    use super::remove_beacon_handoff;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn companion_failure_cleanup_removes_only_its_handoff_and_is_idempotent() {
+        let id = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "uxplay-beacon-cleanup-{}-{id}.tmp",
+            std::process::id()
+        ));
+        std::fs::write(&path, b"handoff").unwrap();
+
+        remove_beacon_handoff(&path);
+        assert!(!path.exists());
+        remove_beacon_handoff(&path);
+        assert!(!path.exists());
+    }
 }
 
 #[cfg(all(test, windows))]
