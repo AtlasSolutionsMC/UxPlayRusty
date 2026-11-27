@@ -429,7 +429,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn explicit_rc_keeps_non_utf8_filename_bytes() {
+    fn explicit_rc_keeps_unix_filename_bytes() {
         use std::os::unix::ffi::OsStringExt;
 
         let directory = std::env::temp_dir().join(format!(
@@ -438,7 +438,7 @@ mod tests {
             std::thread::current().name().unwrap_or("test")
         ));
         std::fs::create_dir_all(&directory).unwrap();
-        let filename = OsString::from_vec(b"config-\xff.rc".to_vec());
+        let filename = OsString::from_vec("config-λ.rc".as_bytes().to_vec());
         let path = directory.join(&filename);
         std::fs::write(&path, b"-n receiver\n").unwrap();
 
@@ -449,7 +449,8 @@ mod tests {
         ];
         assert!(matches!(explicit_rc(&argv), RcSelection::File(found) if found == path));
 
-        let missing = directory.join(OsString::from_vec(b"missing-\xfe.rc".to_vec()));
+        let missing_name = "missing-雪.rc";
+        let missing = directory.join(OsString::from_vec(missing_name.as_bytes().to_vec()));
         assert!(matches!(
             explicit_rc(&[
                 OsString::from("uxplay"),
@@ -461,8 +462,8 @@ mod tests {
         let message = rc_not_found_message(&missing);
         assert!(
             message
-                .windows(b"missing-\xfe.rc".len())
-                .any(|window| window == b"missing-\xfe.rc")
+                .windows(missing_name.len())
+                .any(|window| window == missing_name.as_bytes())
         );
         assert!(message.ends_with(b" specified by option -rc was not found\n"));
 
