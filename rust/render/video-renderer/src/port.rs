@@ -453,7 +453,11 @@ impl VideoRenderer {
                 .ok_or_else(|| format!("video renderer {} has no GStreamer bus", id + 1))?;
             let eos = Arc::new(Mutex::new(false));
             let discovered_sink = Arc::new(Mutex::new(None));
-            install_window_handle_handler(&bus, Arc::clone(&external_window_handle));
+            install_window_handle_handler(
+                &bus,
+                Arc::clone(&external_window_handle),
+                Arc::clone(&logger),
+            );
             pipeline.set_state(gst::State::Ready).map_err(|error| {
                 format!(
                     "Failed to initialize GStreamer video renderer {}: {error}",
@@ -1225,7 +1229,11 @@ fn make_video_sink(videosink: &str, options: &str) -> Result<Option<gst::Element
     Ok(Some(sink))
 }
 
-fn install_window_handle_handler(bus: &gst::Bus, handle: Arc<std::sync::atomic::AtomicUsize>) {
+fn install_window_handle_handler(
+    bus: &gst::Bus,
+    handle: Arc<std::sync::atomic::AtomicUsize>,
+    logger: LogCallback,
+) {
     bus.set_sync_handler(move |_bus, message| {
         if gst_video::is_video_overlay_prepare_window_handle_message(message) {
             let window_handle = handle.load(std::sync::atomic::Ordering::SeqCst);
@@ -1233,11 +1241,29 @@ fn install_window_handle_handler(bus: &gst::Bus, handle: Arc<std::sync::atomic::
                 .src()
                 .and_then(|source| source.downcast_ref::<gst::Element>().cloned())
             else {
+                log(
+                    &logger,
+                    LogLevel::Warning,
+                    "video renderer: prepare-window-handle message has no element source",
+                );
                 return gst::BusSyncReply::Pass;
             };
             // A zero handle tells GstVideoOverlay to create its own window. This
             // application has no parent video window, so still answer the sync
             // message explicitly instead of dropping it without a target.
+            log(
+                &logger,
+                LogLevel::Debug,
+                &format!(
+                    "video renderer: {} requested a window; using {}",
+                    source.name(),
+                    if window_handle == 0 {
+                        "the sink-managed window"
+                    } else {
+                        "the supplied application window"
+                    }
+                ),
+            );
             crate::set_video_overlay_window_handle(&source, window_handle);
             gst::BusSyncReply::Drop
         } else {
