@@ -560,3 +560,8 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - Code revision `e995b0f` passed Windows workflow [`45983328435`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45983328435): renderer tests 18; app tests 567 default and 569 with `external-dns-sd`; beacon tests 72 library + 5 CLI; format/Clippy; runtime smoke; and fresh Windows Server 2025 install/launch/shutdown/uninstall. The app and beacon launched without MSYS2 on the clean runner. Provisional `Setup.exe` was 54,603,812 bytes.
 - Linux [`45983328580`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45983328580) and macOS [`45983328461`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45983328461) workflows passed on the same source revision. This closes hosted three-platform CI for the new diagnostic, not device acceptance.
 - Local Windows UCRT64 renderer tests passed 18/18 and Clippy with warnings denied; app tests passed 567 default / 569 `external-dns-sd`, and Clippy passed both modes. Formatting and `git diff --check` passed. The real iPhone still needs to demonstrate that decoded-frame evidence corresponds to a visible window.
+
+### 2026-11-27 — Keep first-frame instrumentation one-shot
+
+- Changed the decoded-frame pad probe to return `Remove` as soon as it logs the first buffer, instead of checking an atomic flag on every subsequent frame. This keeps the diagnostic cost out of the sustained video path after its single observation.
+- Windows GNU/UCRT64 renderer tests passed 18/18, renderer Clippy with `-D warnings` passed, and format/diff checks passed. CI for this follow-up is pending after push.

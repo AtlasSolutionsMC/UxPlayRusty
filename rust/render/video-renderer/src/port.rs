@@ -1338,12 +1338,8 @@ fn install_first_decoded_frame_probe(
     };
     let sink_name = sink_name.to_owned();
     let warning_sink_name = sink_name.clone();
-    let logged = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let probe_logger = Arc::clone(&logger);
     let probe_id = pad.add_probe(gst::PadProbeType::BUFFER, move |pad, info| {
-        if logged.swap(true, std::sync::atomic::Ordering::AcqRel) {
-            return gst::PadProbeReturn::Ok;
-        }
         let caps = pad
             .current_caps()
             .map_or_else(|| "unavailable".to_owned(), |caps| caps.to_string());
@@ -1359,7 +1355,7 @@ fn install_first_decoded_frame_probe(
                 codec.name()
             ),
         );
-        gst::PadProbeReturn::Ok
+        gst::PadProbeReturn::Remove
     });
     if probe_id.is_none() {
         log(
