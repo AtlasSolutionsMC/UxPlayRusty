@@ -1,5 +1,0 @@
-bin.name = "uxplay"
-args = ["-rc", "héllo wörld"]
-status.code = 0
-fs.sandbox = true
-binary = true

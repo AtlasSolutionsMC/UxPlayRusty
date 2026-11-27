@@ -1,2 +1,2 @@
-tools/record-shims/*.bin -text -diff
-rust/render/audio-renderer/testdata/*.bin -text -diff
+app/testdata/*.bin -text -diff
+render/audio-renderer/testdata/*.bin -text -diff

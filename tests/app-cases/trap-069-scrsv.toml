@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-scrsv", "-7"]
-status.code = 1
-fs.sandbox = true

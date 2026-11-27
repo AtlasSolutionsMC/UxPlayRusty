@@ -1,2 +1,0 @@
-{"name":"server-info","method":"GET","path":"/server-info","headers":{"X-Apple-Session-ID":"session"}}
-{"name":"playback-info","method":"GET","path":"/playback-info","headers":{"X-Apple-Session-ID":"session"}}

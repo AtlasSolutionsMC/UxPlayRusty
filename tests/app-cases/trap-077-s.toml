@@ -1,5 +1,0 @@
-bin.name = "uxplay"
-args = ["-s", "héllo wörld", "-fps", "bad"]
-status.code = 0
-fs.sandbox = true
-binary = true

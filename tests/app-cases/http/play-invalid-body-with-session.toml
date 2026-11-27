@@ -1,9 +1,0 @@
-[request]
-method = "POST"
-path = "/play"
-
-[request.headers]
-X-Apple-Session-ID = "session"
-
-[response]
-status = 400

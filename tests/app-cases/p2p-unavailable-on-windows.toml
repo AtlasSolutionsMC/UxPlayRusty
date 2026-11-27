@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-p2p"]
-status.code = 1
-fs.sandbox = true

@@ -3,7 +3,7 @@
 On Windows, the first normal launch creates `%APPDATA%\UxPlay\config.toml`. Set
 `UXPLAY_CONFIG` to use a different file, which is useful for portable deployments
 and diagnostics. The tracked template is
-[`config.example.toml`](../../rust/app/assets/config.example.toml).
+[`config.example.toml`](../../app/assets/config.example.toml).
 
 Settings are applied in this order:
 

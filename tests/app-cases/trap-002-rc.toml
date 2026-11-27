@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-rc", "👍🏽 thumbs"]
-status.code = 0
-fs.sandbox = true

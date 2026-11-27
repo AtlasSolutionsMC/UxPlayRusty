@@ -1,9 +1,0 @@
-invalid: "-rpi" must be followed by a model code:
-    possible code values are:
-    3  (Raspberry Pi model 3 or lower, including Pi ZERO)
-    30 (Raspberry Pi model 3 or lower, WITH ACTIVE COOLING)
-    4  (Raspberry Pi model 4)
-    40 (Raspberry Pi model 4 WITH ACTIVE COOLING)
-    5  (Raspberry Pi model 5)
-    50 (Raspberry Pi model 5 WITH ACTIVE COOLING)
-

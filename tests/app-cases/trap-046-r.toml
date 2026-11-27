@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-r", "İstanbul"]
-status.code = 1
-fs.sandbox = true

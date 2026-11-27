@@ -41,44 +41,44 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            rust/app -> target
-            rust/beacon -> target
+            app -> target
+            beacon -> target
 
       - name: Format standalone BLE beacon
-        run: cargo fmt --manifest-path rust/beacon/Cargo.toml -- --check
+        run: cargo fmt --manifest-path beacon/Cargo.toml -- --check
 
       - name: Test standalone BLE beacon
-        run: cargo test --manifest-path rust/beacon/Cargo.toml --all-targets
+        run: cargo test --manifest-path beacon/Cargo.toml --all-targets
 
       - name: Lint standalone BLE beacon
-        run: cargo clippy --manifest-path rust/beacon/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path beacon/Cargo.toml --all-targets -- -D warnings
 
       - name: Build standalone BLE beacon
-        run: cargo build --manifest-path rust/beacon/Cargo.toml --release
+        run: cargo build --manifest-path beacon/Cargo.toml --release
 
       - name: Format
-        run: cargo fmt --manifest-path rust/app/Cargo.toml -- --check
+        run: cargo fmt --manifest-path app/Cargo.toml -- --check
 
       - name: Test embedded mDNS configuration
-        run: cargo test --manifest-path rust/app/Cargo.toml --all-targets
+        run: cargo test --manifest-path app/Cargo.toml --all-targets
 
       - name: Lint embedded mDNS configuration
-        run: cargo clippy --manifest-path rust/app/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings
 
       - name: Build embedded mDNS release
-        run: cargo build --manifest-path rust/app/Cargo.toml --release
+        run: cargo build --manifest-path app/Cargo.toml --release
 
       - name: Smoke standalone CLI
         run: |
           home="$(mktemp -d)"
-          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -h >/dev/null
-          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
+          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" app/target/release/uxplay -h >/dev/null
+          env -u UXPLAYRC HOME="$home" XDG_CONFIG_HOMEDIR="$home" app/target/release/uxplay -v | grep -q '^UxPlay version '
           python3 - <<'PY'
           import os
           import subprocess
           import tempfile
 
-          executable = os.fsencode("rust/app/target/release/uxplay")
+          executable = os.fsencode("app/target/release/uxplay")
           with tempfile.TemporaryDirectory(prefix="uxplay-argv-smoke-") as home:
               env = os.environ.copy()
               env.pop("UXPLAYRC", None)
@@ -183,7 +183,7 @@ jobs:
               env["HOME"] = home
               env["XDG_CONFIG_HOMEDIR"] = home
               proc = subprocess.Popen(
-                  ["rust/app/target/release/uxplay", "-n", "CodexLinuxSmoke", "-a", "-hls", "-vs", "0",
+                  ["app/target/release/uxplay", "-n", "CodexLinuxSmoke", "-a", "-hls", "-vs", "0",
                    "-p", "tcp", f"{port + 1},{port},{port + 2}"],
                   env=env, stdout=log, stderr=subprocess.STDOUT,
               )
@@ -246,10 +246,10 @@ jobs:
           PY
 
       - name: Test external DNS-SD configuration
-        run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features external-dns-sd
+        run: cargo test --manifest-path app/Cargo.toml --all-targets --features external-dns-sd
 
       - name: Lint external DNS-SD configuration
-        run: cargo clippy --manifest-path rust/app/Cargo.toml --all-targets --features external-dns-sd -- -D warnings
+        run: cargo clippy --manifest-path app/Cargo.toml --all-targets --features external-dns-sd -- -D warnings
 
       - name: Build external DNS-SD release
-        run: cargo build --manifest-path rust/app/Cargo.toml --release --features external-dns-sd
+        run: cargo build --manifest-path app/Cargo.toml --release --features external-dns-sd

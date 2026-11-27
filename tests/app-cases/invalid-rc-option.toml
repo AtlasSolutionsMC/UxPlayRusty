@@ -1,6 +1,0 @@
-bin.name = "uxplay"
-args = ["-v"]
-env.add.UXPLAYRC = "invalid.rc"
-status.code = 1
-fs.sandbox = true
-fs.base = "invalid-rc-option.in"

@@ -1,5 +1,0 @@
-bin.name = "uxplay"
-args = ["-fps", "straße"]
-status.code = 0
-fs.sandbox = true
-binary = true

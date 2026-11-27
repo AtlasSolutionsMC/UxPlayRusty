@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-rc", "👨‍👩‍👧 family"]
-status.code = 0
-fs.sandbox = true

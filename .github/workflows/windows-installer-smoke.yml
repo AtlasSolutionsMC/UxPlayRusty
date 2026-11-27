@@ -7,8 +7,12 @@ on:
       - windows-delivery
     paths:
       - '.github/workflows/windows-installer-smoke.yml'
-      - 'rust/**'
-      - 'tools/windows/**'
+      - 'app/**'
+      - 'beacon/**'
+      - 'core/**'
+      - 'render/**'
+      - 'units/**'
+      - 'packaging/windows/**'
       - 'README.md'
       - 'LICENSE'
 
@@ -54,27 +58,27 @@ jobs:
         run: |
           $env:RUSTUP_TOOLCHAIN = 'stable-x86_64-pc-windows-gnu'
           $env:Path = (Join-Path $env:MSYS2_ROOT 'ucrt64\bin') + ';' + $env:Path
-          cargo fmt --manifest-path .\rust\app\Cargo.toml -- --check
+          cargo fmt --manifest-path .\app\Cargo.toml -- --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo fmt --manifest-path .\rust\beacon\Cargo.toml -- --check
+          cargo fmt --manifest-path .\beacon\Cargo.toml -- --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo fmt --manifest-path .\rust\render\video-renderer\Cargo.toml -- --check
+          cargo fmt --manifest-path .\render\video-renderer\Cargo.toml -- --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --manifest-path .\rust\render\video-renderer\Cargo.toml --all-targets
+          cargo test --manifest-path .\render\video-renderer\Cargo.toml --all-targets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --manifest-path .\rust\app\Cargo.toml --all-targets
+          cargo test --manifest-path .\app\Cargo.toml --all-targets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd
+          cargo test --manifest-path .\app\Cargo.toml --all-targets --features external-dns-sd
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --manifest-path .\rust\beacon\Cargo.toml
+          cargo test --manifest-path .\beacon\Cargo.toml
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --manifest-path .\rust\app\Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path .\app\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd -- -D warnings
+          cargo clippy --manifest-path .\app\Cargo.toml --all-targets --features external-dns-sd -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --manifest-path .\rust\beacon\Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path .\beacon\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --manifest-path .\rust\render\video-renderer\Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path .\render\video-renderer\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup
@@ -93,13 +97,13 @@ jobs:
           )
           $compiler = $compilerCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
           if (-not $compiler) { throw 'Could not locate ISCC.exe after installing Inno Setup.' }
-          .\tools\windows\package-release.ps1 -Msys2Root $env:MSYS2_ROOT -InnoSetupCompiler $compiler
+          .\packaging\windows\package-release.ps1 -Msys2Root $env:MSYS2_ROOT -InnoSetupCompiler $compiler
 
       - name: Smoke bundled runtime
         shell: pwsh
         env:
           MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
-        run: .\tools\windows\smoke-runtime.ps1 -StageDirectory .\dist\windows\stage -Msys2Root $env:MSYS2_ROOT
+        run: .\packaging\windows\smoke-runtime.ps1 -StageDirectory .\dist\windows\stage -Msys2Root $env:MSYS2_ROOT
 
       - name: Transfer installer to fresh Windows runner
         uses: actions/upload-artifact@v4
@@ -122,4 +126,4 @@ jobs:
 
       - name: Install, launch without MSYS2, and uninstall
         shell: pwsh
-        run: .\tools\windows\test-install.ps1 -Setup .\dist\windows\Setup.exe
+        run: .\packaging\windows\test-install.ps1 -Setup .\dist\windows\Setup.exe

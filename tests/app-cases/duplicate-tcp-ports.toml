@@ -1,4 +1,0 @@
-bin.name = "uxplay"
-args = ["-p", "6000,6000"]
-status.code = 1
-fs.sandbox = true

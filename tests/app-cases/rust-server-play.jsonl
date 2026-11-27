@@ -1,1 +1,0 @@
-{"name":"play-invalid-body-with-session","method":"POST","path":"/play","headers":{"X-Apple-Session-ID":"session"}}

@@ -34,23 +34,23 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            rust/app -> target
-            rust/beacon -> target
+            app -> target
+            beacon -> target
 
       - name: Format standalone BLE beacon
-        run: cargo fmt --manifest-path rust/beacon/Cargo.toml -- --check
+        run: cargo fmt --manifest-path beacon/Cargo.toml -- --check
 
       - name: Test standalone BLE beacon
-        run: cargo test --manifest-path rust/beacon/Cargo.toml --all-targets
+        run: cargo test --manifest-path beacon/Cargo.toml --all-targets
 
       - name: Lint standalone BLE beacon
-        run: cargo clippy --manifest-path rust/beacon/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path beacon/Cargo.toml --all-targets -- -D warnings
 
       - name: Build standalone BLE beacon
-        run: cargo build --manifest-path rust/beacon/Cargo.toml --release
+        run: cargo build --manifest-path beacon/Cargo.toml --release
 
       - name: Format
-        run: cargo fmt --manifest-path rust/app/Cargo.toml -- --check
+        run: cargo fmt --manifest-path app/Cargo.toml -- --check
 
       - name: Test macOS Bonjour and P2P configuration
         # The hosted runner registers VideoToolbox, but its HLS fixture is
@@ -58,15 +58,15 @@ jobs:
         # Apply the documented rank override before GStreamer initializes.
         env:
           GST_PLUGIN_FEATURE_RANK: "vtdechw0:NONE,avdec_h264:MAX"
-        run: cargo test --manifest-path rust/app/Cargo.toml --all-targets --features apple-p2p
+        run: cargo test --manifest-path app/Cargo.toml --all-targets --features apple-p2p
 
       - name: Lint macOS Bonjour and P2P configuration
-        run: cargo clippy --manifest-path rust/app/Cargo.toml --all-targets --features apple-p2p -- -D warnings
+        run: cargo clippy --manifest-path app/Cargo.toml --all-targets --features apple-p2p -- -D warnings
 
       - name: Build macOS release
-        run: cargo build --manifest-path rust/app/Cargo.toml --release --features apple-p2p
+        run: cargo build --manifest-path app/Cargo.toml --release --features apple-p2p
 
       - name: Smoke standalone CLI
         run: |
-          rust/app/target/release/uxplay -h >/dev/null
-          rust/app/target/release/uxplay -v | grep -q '^UxPlay version '
+          app/target/release/uxplay -h >/dev/null
+          app/target/release/uxplay -v | grep -q '^UxPlay version '

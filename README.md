@@ -22,14 +22,14 @@ $env:Path = "$msysUcrt\bin;$env:Path"
 $env:RUSTUP_TOOLCHAIN = 'stable-x86_64-pc-windows-gnu'
 $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = Join-Path $msysUcrt 'bin\gcc.exe'
 $env:PKG_CONFIG_PATH = "$msysUcrt\lib\pkgconfig;$msysUcrt\share\pkgconfig"
-cargo build --manifest-path rust/app/Cargo.toml --release
-cargo build --manifest-path rust/beacon/Cargo.toml --release
+cargo build --manifest-path app/Cargo.toml --release
+cargo build --manifest-path beacon/Cargo.toml --release
 ```
 
 Run `uxplay.exe -h` for command-line options. Focused crate tests can be run with their manifest, for example:
 
 ```powershell
-cargo test --manifest-path rust/units/playfair-sap-hash/Cargo.toml
+cargo test --manifest-path units/playfair-sap-hash/Cargo.toml
 ```
 
 ## Windows configuration and installer
