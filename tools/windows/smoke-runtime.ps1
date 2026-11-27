@@ -36,6 +36,15 @@ try {
         'd3d11h264dec', 'd3d11h265dec', 'd3d11videosink', 'vulkanupload', 'vulkansink'
     )
     foreach ($factory in $factories) {
+        if ($factory -in @('d3d11h264dec', 'd3d11h265dec', 'd3d11videosink')) {
+            $d3d11Plugin = Join-Path $env:GST_PLUGIN_SYSTEM_PATH_1_0 'libgstd3d11.dll'
+            if (-not (Test-Path -LiteralPath $d3d11Plugin)) {
+                throw "Bundled D3D11 plugin is missing: $d3d11Plugin"
+            }
+            Write-Output "PASS libgstd3d11.dll is staged; $factory activation requires a D3D11-capable device"
+            continue
+        }
+
         if ($factory -eq 'vulkansink') {
             $vulkanPlugin = Join-Path $env:GST_PLUGIN_SYSTEM_PATH_1_0 'libgstvulkan.dll'
             if (-not (Test-Path -LiteralPath $vulkanPlugin)) {

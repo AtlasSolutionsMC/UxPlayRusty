@@ -351,3 +351,8 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 ### 2026-11-27 — Current tray UI target recheck
 
 - Refreshed Computer Use `sky.list_apps()` and `sky.list_windows()` while the current `ab27afc` receiver remained running/listening. Neither list exposes a UxPlay window; the targetable top-level windows are ChatGPT, File Explorer, and Brave. The tray host remains hidden, so direct right-click/menu/Config UI acceptance cannot be performed through this interface. No UI input was sent and the receiver was left running for the user's later retry.
+
+### 2026-11-27 — Hardware-dependent D3D11 smoke on hosted Windows
+
+- Windows workflow [`45943371902`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45943371902) for `602b6aa` failed in `smoke-runtime.ps1`: all prior runtime probes passed, but `gst-inspect d3d11h264dec` exited `-1` on the hosted runner. This probe activates a hardware-dependent D3D11 decoder and therefore cannot be required on a runner without a D3D11-capable device; it is not evidence that the staged package lacks the plugin. Linux and macOS workflows for `602b6aa` passed.
+- Updated the packaged-runtime smoke to require the bundled `runtime/plugins/libgstd3d11.dll` and explicitly label decoder/sink activation as device-specific. Local smoke against `dist/windows/stage` passed all runtime checks and `uxplay -h` with MSYS2 removed from runtime `PATH`. No claim of hosted acceptance is recorded for this script change until Windows CI reruns successfully. The existing unstaged Linux workflow and pairing/SRP checkpoints were left untouched.
