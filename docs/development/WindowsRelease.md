@@ -25,7 +25,7 @@ H.264/H.265 mirror playback, HLS, D3D11 and Vulkan paths; arbitrary custom
 GStreamer pipelines can require plugins beyond this bundle.
 
 The installer adds a Start Menu shortcut, an optional desktop shortcut, an
-optional current-user sign-in startup task, an Add/Remove Programs entry and an
+optional current-user Run-key startup entry, an Add/Remove Programs entry and an
 uninstaller. It installs under the current user's Programs directory, keeps
 configuration and logs under the user's profile, and preserves config/logs on
 uninstall. Startup selection updates both `config.toml` and the current-user
@@ -57,19 +57,24 @@ checks cleanup:
 
 It refuses to run if the current user already has a UxPlay installation or a
 running `uxplay.exe`; it temporarily backs up and restores the current user's
-config, BLE handoff, startup value and UxPlay shortcut. This checks installer
-plumbing on the development machine. The clean-runner install/uninstall and
-tray/server startup gate passed in run `45898164036`; sign-in startup, tray
-menus, connected-client controls and Apple-device media remain manual
-acceptance checks before a final release.
+config, BLE handoff, startup value and UxPlay shortcut. The smoke installs to a
+unique temporary directory, launches through the installed current-user Run
+value with MSYS2 removed from `PATH`, checks startup preference changes through
+Restart, session shutdown, duplicate-instance handling, Config/Disconnect/
+Restart/Exit command routing, BLE companion behavior and uninstall cleanup.
+The command-routing checks post menu command IDs to the tray window; they do not
+visually click the notification-area menu or disconnect a live Apple session.
 
 The `Windows installer smoke` workflow builds a provisional installer on one
 fresh GitHub-hosted Windows runner, then transfers it as a one-day workflow
-artifact to a separate fresh Windows runner for install, startup-registration,
-installed CLI, tray/server startup and uninstall checks. The artifact is
-temporary CI handoff only; it is not a release upload. This provides a clean OS
-install gate while real AirPlay devices, tray interaction and BLE radio
-behavior remain separate manual acceptance checks.
+artifact to a separate fresh Windows runner. Run `45976352552` passed the
+renderer/app/beacon gates, runtime smoke, fresh-runner install and uninstall,
+startup Run-target launch and false/true preference transitions, session
+shutdown, duplicate-instance, tray command-routing, and BLE failure/companion
+lifecycle checks. The artifact is temporary CI handoff only; it is not a
+release upload. Physical Apple playback, visible tray interaction, sign-in
+observation, GPU-backed UxPlay-window behavior and remote BLE visibility remain
+manual acceptance checks.
 
 `third-party-licenses/` contains license texts installed by MSYS2 when
 available. Some installed packages supply SPDX metadata but no separate text;

@@ -7,8 +7,7 @@ continue to use the console path, which is useful for diagnostics.
 
 The tray menu provides:
 
-- **Config** opens `%APPDATA%\UxPlay\config.toml` with the file's registered
-  editor.
+- **Config** opens `%APPDATA%\UxPlay\config.toml` in Notepad.
 - **Restart** validates current settings before stopping the active server,
   cleans up renderer, output, discovery and worker resources, then starts the
   server again with the new values.

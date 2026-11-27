@@ -507,3 +507,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 - Windows [`45976352552`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45976352552), Linux [`45976352075`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45976352075), and macOS [`45976352085`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45976352085) passed on code revision `96fde5e`. Windows standalone renderer tests passed 18/18, including `vulkan_renderer_initializes_or_logs_automatic_fallback`; app tests passed 567 default / 569 `external-dns-sd`; beacon tests passed 72 library + 5 CLI; formatting and Clippy passed.
 - The renderer now emits the resolved mirror pipeline at Info; the Vulkan initialization/fallback test asserts the captured log contains the initialized renderer's effective pipeline. Windows built a 54,604,649-byte provisional Setup, passed runtime smoke, and passed clean-runner install, startup preference toggles, session/tray lifecycle, and uninstall. Linux/macOS retain their existing app/beacon CI.
 - These are code/pipeline and package checks. They do not prove real iPhone playback or latency, the UxPlay window on a real Vulkan/D3D11 path, BLE discovery by another device, or interactive sign-in/tray behavior.
+
+### 2026-11-27 — Refresh Windows install and tray documentation
+
+- Updated `docs/development/WindowsRelease.md` to describe the installed Run-key startup entry and current fresh-runner smoke coverage at `45976352552`: startup preference toggles, duplicate instance, tray command routing, session shutdown, companion checks and uninstall.
+- Clarified that tray commands are dispatched programmatically in CI and do not prove visible menu interaction or live-client disconnect. Updated the Config action description in `docs/development/WindowsTray.md` to match the tested Notepad behavior.
+- `git diff --check` passed. Documentation-only; no workflow or test results are claimed by this edit.
