@@ -34,6 +34,11 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 | 9 | Release binaries and installer | Build `uxplay.exe`, `uxplay-beacon.exe`, runtime bundle and `Setup.exe` from verified revision; test install through uninstall on a clean Windows machine. | IN PROGRESS — run `45917501442` built `Setup.exe` (54,600,440 bytes) and passed the bundled-runtime smoke plus install, startup registration, installed CLI without MSYS2 PATH, no-argument tray/server startup, and uninstall on a separate fresh Windows runner from `f3cc51b`. Exact source archives for all 102 staged runtime package owners were assembled and hash-verified as a 1.18 GiB companion bundle; legal/notices review and final accepted-revision package remain. |
 | 10 | Final repository and handoff | After main acceptance, clean `UxPlayRusty(Final)`, retain user-facing README, remove internal reports/local-machine references as requested, then push to confirmed remote/branch and record artifacts/evidence. | NOT STARTED |
 
+## Final repository pre-audit (read-only; cleanup not started)
+
+- `D:\Save\Uxplay\UxPlayRusty(Final)` is clean on local branch `Workspace` at `53fa163`; its `origin` points to the same GitHub repository as the development checkout. GitHub reports default branch `master`, currently `origin/master` at `61ff297`. Confirm the intended publish target from repository state at M10; no Final files or refs have been changed.
+- Initial inventory found 57 Markdown files, 26 filenames matching likely internal checkpoint/report/decision/porting notes, and 52 tracked-file candidates containing machine-specific paths or usernames. These are search counts for review, not an automatic deletion list; retain source-adjacent documentation and only remove irrelevant internal reports after checking links and README coverage.
+
 ## Current blockers and evidence gaps
 
 - The ordinary development directory is on local/remote branch `windows-delivery`, based on `origin/Workspace` at `53fa163404402d88c746b01f174febe79ff24d5a`; initial map/checkpoint commit `d5afffc` is pushed to GitHub. `master` remains the repo's default branch; keep Windows development on `windows-delivery`.
