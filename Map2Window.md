@@ -10,7 +10,7 @@ Detailed requirements: `DEVELOPMENT_PLAN_WINDOWS.md` supplied by the user and th
 
 ## Scope rules
 
-- Implement in `D:\Save\Uxplay\UxPlayRusty` first. Keep `UxPlayRusty(Final)` for the final repository presentation and cleanup after the main work passes acceptance.
+- Implement in the development checkout `UxPlayRusty` first. Keep `UxPlayRusty(Final)` for the final repository presentation and cleanup after the main work passes acceptance.
 - Windows GNU/MSYS2 UCRT64 is the target development environment. Keep Linux/macOS CI enabled; record platform-specific failures without allowing them to block Windows work.
 - Do not include native iPhone Mirroring protocol implementation or phone mouse/keyboard control.
 - Preserve existing local edits and test/CI coverage. Do not reset or overwrite unrelated work.
@@ -36,7 +36,7 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 ## Final repository pre-audit (read-only; cleanup not started)
 
-- `D:\Save\Uxplay\UxPlayRusty(Final)` is clean on local branch `Workspace` at `53fa163`; its `origin` points to the same GitHub repository as the development checkout. GitHub reports default branch `master`, currently `origin/master` at `61ff297`. Confirm the intended publish target from repository state at M10; no Final files or refs have been changed.
+- The `UxPlayRusty(Final)` checkout is clean on local branch `Workspace` at `53fa163`; its `origin` points to the same GitHub repository as the development checkout. GitHub reports default branch `master`, currently `origin/master` at `61ff297`. Confirm the intended publish target from repository state at M10; no Final files or refs have been changed.
 - Initial inventory found 57 Markdown files, 26 filenames matching likely internal checkpoint/report/decision/porting notes, and 52 tracked-file candidates containing machine-specific paths or usernames. These are search counts for review, not an automatic deletion list; retain source-adjacent documentation and only remove irrelevant internal reports after checking links and README coverage.
 
 ## Current blockers and evidence gaps
@@ -299,7 +299,7 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 ### 2026-11-27 — Tray UI target availability
 
-- Read-only process inventory confirms PID `23748` is `D:\save\uxplay\uxplayrusty\dist\windows\stage\uxplay.exe`, the legacy tray process that must remain untouched. Computer Use `list_apps()` / `list_windows()` exposed only the ChatGPT window; the tray host has no targetable application window in this session. No input was sent to UxPlay. Current-build tray menu interaction and shutdown acceptance therefore remain open; hosted CI still only establishes no-argument startup/server and clean uninstall.
+- Read-only process inventory confirms PID `23748` uses the legacy `dist/windows/stage/uxplay.exe` candidate, which must remain untouched. Computer Use `list_apps()` / `list_windows()` exposed only the ChatGPT window; the tray host has no targetable application window in this session. No input was sent to UxPlay. Current-build tray menu interaction and shutdown acceptance therefore remain open; hosted CI still only establishes no-argument startup/server and clean uninstall.
 
 ### 2026-11-27 — BLE companion failure-path unit coverage
 
