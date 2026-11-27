@@ -19,6 +19,21 @@ $config = Join-Path $env:APPDATA 'UxPlay\config.toml'
 $handoff = Join-Path $env:APPDATA 'UxPlay\uxplay.ble'
 $shortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\UxPlay\UxPlay.lnk'
 $backupRoot = Join-Path $env:TEMP ('UxPlay-Install-Backup-' + [guid]::NewGuid().ToString('N'))
+
+function Get-BleSmokeCompanionState {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$ProcessId,
+        [Parameter(Mandatory = $true)]
+        [string]$HandoffPath
+    )
+    $companion = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    $handoffExists = Test-Path -LiteralPath $HandoffPath
+    if ($companion -and $handoffExists) { return 'running' }
+    if (-not $companion -and -not $handoffExists) { return 'exited-cleanly' }
+    return $null
+}
+
 $hadConfig = Test-Path $config
 $hadHandoff = Test-Path $handoff
 $hadShortcut = Test-Path $shortcut
@@ -248,10 +263,18 @@ public static class UxPlaySessionEndProbe {
         if ($companionPid -eq 0) {
             throw 'The installed app did not launch its packaged BLE companion.'
         }
-        if (-not (Test-Path -LiteralPath $activeBleHandoff)) {
-            throw 'The installed app did not create the active BLE handoff.'
+        $initialCompanionStateDeadline = [DateTime]::UtcNow.AddSeconds(10)
+        $initialCompanionState = $null
+        do {
+            $initialCompanionState = Get-BleSmokeCompanionState -ProcessId $companionPid -HandoffPath $activeBleHandoff
+            if ($initialCompanionState) { break }
+            Start-Sleep -Milliseconds 250
+        } while ([DateTime]::UtcNow -lt $initialCompanionStateDeadline)
+        if (-not $initialCompanionState) {
+            $activeBleText = if (Test-Path -LiteralPath $activeBleLog) { Get-Content -LiteralPath $activeBleLog -Raw } else { '<no app log>' }
+            throw "BLE companion process and handoff did not settle to a consistent state: $activeBleText"
         }
-        Write-Output "PASS installed app launches packaged BLE companion (PID $companionPid) while AirPlay listens"
+        Write-Output "PASS installed app launches packaged BLE companion (PID $companionPid); state=$initialCompanionState with AirPlay listening"
 
         $activeTrayWindow = [UxPlaySessionEndProbe]::FindWindow('UxPlayRustyTrayHost', 'UxPlay')
         if ($activeTrayWindow -eq [IntPtr]::Zero) { throw 'Could not find tray host during active BLE shutdown smoke.' }
@@ -281,6 +304,7 @@ public static class UxPlaySessionEndProbe {
         }
         $restartDeadline = [DateTime]::UtcNow.AddSeconds(30)
         $restartedCompanionPid = 0
+        $restartedCompanionState = $null
         do {
             $activeBleProcess.Refresh()
             if ($activeBleProcess.HasExited) {
@@ -292,21 +316,28 @@ public static class UxPlaySessionEndProbe {
                 if ($companionStarts.Count -ge 2) {
                     $restartedCompanionPid = [int]$companionStarts[$companionStarts.Count - 1].Groups['pid'].Value
                     $listenerAfterRestart = @(Get-NetTCPConnection -State Listen -OwningProcess $activeBleProcess.Id -ErrorAction SilentlyContinue)
-                    if ($listenerAfterRestart.Count -gt 0) { break }
+                    if ($listenerAfterRestart.Count -gt 0) {
+                        $restartedCompanionState = Get-BleSmokeCompanionState -ProcessId $restartedCompanionPid -HandoffPath $activeBleHandoff
+                        if ($restartedCompanionState) { break }
+                    }
                 }
             }
             Start-Sleep -Milliseconds 250
         } while ([DateTime]::UtcNow -lt $restartDeadline)
-        if ($restartedCompanionPid -eq 0) { throw 'Tray Restart did not launch a second BLE companion.' }
+        if ($restartedCompanionPid -eq 0 -or -not $restartedCompanionState) {
+            $activeBleText = if (Test-Path -LiteralPath $activeBleLog) { Get-Content -LiteralPath $activeBleLog -Raw } else { '<no app log>' }
+            throw "Tray Restart did not reach a consistent second companion state: $activeBleText"
+        }
         $oldChildExitDeadline = [DateTime]::UtcNow.AddSeconds(10)
         do {
             $oldCompanion = Get-Process -Id $companionPid -ErrorAction SilentlyContinue
+            if ($companionPid -eq $restartedCompanionPid) { $oldCompanion = $null }
             if (-not $oldCompanion) { break }
             Start-Sleep -Milliseconds 250
         } while ([DateTime]::UtcNow -lt $oldChildExitDeadline)
         if ($oldCompanion) { throw "Previous BLE companion process $companionPid remained after Restart." }
         $companionPid = $restartedCompanionPid
-        Write-Output "PASS tray Restart replaces the BLE companion (new PID $companionPid) and keeps AirPlay listening"
+        Write-Output "PASS tray Restart manages second BLE companion (PID $companionPid, state=$restartedCompanionState) and keeps AirPlay listening"
 
         if (-not [UxPlaySessionEndProbe]::PostMessage($activeTrayWindow, 0x800B, [UIntPtr]::new(1004), [IntPtr]::Zero)) {
             throw 'Could not dispatch the tray Exit command.'
@@ -328,7 +359,7 @@ public static class UxPlaySessionEndProbe {
         if (@(Get-NetTCPConnection -State Listen -OwningProcess $activeBleProcess.Id -ErrorAction SilentlyContinue).Count -gt 0) {
             throw 'AirPlay listener remained after active BLE app shutdown.'
         }
-        Write-Output 'PASS tray Exit stops the packaged BLE companion, removes handoff, and releases AirPlay'
+        Write-Output 'PASS tray Exit leaves no packaged BLE companion or handoff and releases AirPlay'
     } finally {
         $activeBleProcess.Refresh()
         if (-not $activeBleProcess.HasExited) {
