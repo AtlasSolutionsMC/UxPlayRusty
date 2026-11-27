@@ -1,14 +1,15 @@
-<div align="center">
-
-<img src="assets/uxplayrusty-logo.png" alt="UxPlayRusty logo" width="300">
-
-# UxPlayRusty
-
-### A Rust AirPlay receiver for Windows, Linux, and macOS
-
-Stream audio and video from Apple devices over your local network. Includes the receiver application and an optional BLE companion.
-
-</div>
+<table>
+<tr>
+<td width="220" align="center" valign="middle">
+<img src="assets/uxplayrusty-logo.png" alt="UxPlayRusty logo" width="190">
+</td>
+<td valign="middle">
+<h1>UxPlayRusty</h1>
+<p><strong>A Rust AirPlay receiver for Windows, Linux, and macOS</strong></p>
+<p>Stream audio and video from Apple devices over your local network. Includes the receiver application and an optional BLE companion.</p>
+</td>
+</tr>
+</table>
 
 ---
 
