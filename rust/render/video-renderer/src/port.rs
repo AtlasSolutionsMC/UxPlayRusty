@@ -414,7 +414,7 @@ impl VideoRenderer {
                 let launch = pipeline_description(&config, codec);
                 log(
                     &logger,
-                    LogLevel::Debug,
+                    LogLevel::Info,
                     &format!("GStreamer video pipeline {}:\n\"{}\"", id + 1, launch),
                 );
                 let element = gst::parse::launch(&launch).map_err(|error| {
@@ -2166,6 +2166,15 @@ mod tests {
             }),
         )
         .expect("automatic sink fallback should keep renderer initialization available");
+        let actual_pipeline = renderer.pipeline_description("h264").unwrap();
+        let captured_logs = messages
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        assert!(captured_logs.iter().any(|message| {
+            message.contains("GStreamer video pipeline 1:")
+                && message.contains(actual_pipeline.as_str())
+        }));
+        drop(captured_logs);
         match renderer.config.renderer {
             VideoRendererKind::Vulkan => assert!(
                 renderer

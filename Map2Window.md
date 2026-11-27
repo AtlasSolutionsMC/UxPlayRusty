@@ -496,3 +496,8 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - Windows workflow [`45973974564`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45973974564) passed on code revision `406d572`: standalone renderer 18/18; app 567 default and 569 `external-dns-sd` (451/453 app + 10 control + 99 HTTP + 7 RAOP); beacon 72 library + 5 CLI; formatting/Clippy; runtime smoke; fresh Windows Server 2025 install, session shutdown, and uninstall. Linux [`45973974555`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45973974555) and macOS [`45973974699`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45973974699) passed.
 - On the clean runner, tray Restart with `startup.enabled=false` removed the current-user Run value while the AirPlay listener stayed available; changing it back to `true` restored the installed executable target. The packaged Setup was 54,602,131 bytes. No sign-in event or live-client disconnect was simulated.
+
+### 2026-11-27 — Log the effective mirror pipeline at normal log level
+
+- Promoted the selected GStreamer mirror pipeline description from `Debug` to `Info`. This exposes the resolved H.264/H.265 decoder, low-latency queues, and actual sink (including renderer fallback) in ordinary logs, as required for M3/M4 troubleshooting.
+- Extended the Vulkan constructor/fallback test to require the captured normal pipeline log to match the effective pipeline description returned by the initialized renderer. Local `cargo fmt --check` and `git diff --check` passed. This host lacks the MSYS2 UCRT64/GStreamer environment for the renderer test; hosted Windows/Linux/macOS CI will execute the available checks after push.
