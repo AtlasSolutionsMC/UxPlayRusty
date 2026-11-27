@@ -2437,7 +2437,17 @@ mod tests {
             video_sync: false,
             ..VideoRendererConfig::default()
         };
-        let mut renderer = VideoRenderer::new(config).expect("H.264 decoder pipeline");
+        let first_packet_accepted = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let accepted_flag = Arc::clone(&first_packet_accepted);
+        let logger: LogCallback = Arc::new(move |level, message| {
+            if level == LogLevel::Info
+                && message == "GStreamer accepted the first AirPlay video packet"
+            {
+                accepted_flag.store(true, std::sync::atomic::Ordering::Release);
+            }
+        });
+        let mut renderer =
+            VideoRenderer::new_with_logger(config, logger).expect("H.264 decoder pipeline");
         let h264_index = renderer.type_h264.expect("H.264 renderer should exist");
         let sink = renderer.renderers[h264_index]
             .as_ref()
@@ -2455,6 +2465,7 @@ mod tests {
         assert_eq!(renderer.choose_codec(false, false), 0);
         let (_, outcome) = renderer.render_buffer(&encoded_frame, 0);
         assert_eq!(outcome, RenderOutcome::Submitted);
+        assert!(first_packet_accepted.load(std::sync::atomic::Ordering::Acquire));
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
         while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
             && std::time::Instant::now() < deadline
