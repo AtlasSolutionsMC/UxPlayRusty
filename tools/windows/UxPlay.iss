@@ -1,16 +1,20 @@
 #define StageDir GetEnv("UXPLAY_STAGE_DIR")
 #define OutputDirectory GetEnv("UXPLAY_OUTPUT_DIR")
+#define AppVersion GetEnv("UXPLAY_VERSION")
 #if StageDir == ""
   #error "UXPLAY_STAGE_DIR must point to the staged runtime"
 #endif
 #if OutputDirectory == ""
   #error "UXPLAY_OUTPUT_DIR must point to the installer output directory"
 #endif
+#if AppVersion == ""
+  #error "UXPLAY_VERSION must match the Cargo package version"
+#endif
 
 [Setup]
 AppId={{9AFA2E24-CA0D-44D7-B13C-22D3F5BA6935}
 AppName=UxPlayRusty
-AppVersion=0.1.0
+AppVersion={#AppVersion}
 AppPublisher=AtlasSolutionsMC
 DefaultDirName={localappdata}\Programs\UxPlay
 DefaultGroupName=UxPlay

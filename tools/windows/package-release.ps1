@@ -53,6 +53,18 @@ $env:Path = "$binaryRoot;$env:Path"
 $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = Join-Path $binaryRoot 'gcc.exe'
 $env:PKG_CONFIG_PATH = "$ucrtRoot\lib\pkgconfig;$ucrtRoot\share\pkgconfig"
 $rustRoot = Join-Path $repoRoot 'rust'
+$appManifest = Get-Content -LiteralPath (Join-Path $rustRoot 'app\Cargo.toml') -Raw
+$beaconManifest = Get-Content -LiteralPath (Join-Path $rustRoot 'beacon\Cargo.toml') -Raw
+$appVersionMatch = [regex]::Match($appManifest, '(?ms)^\[package\]\s+.*?^version\s*=\s*"(?<version>[^"\r\n]+)"')
+$beaconVersionMatch = [regex]::Match($beaconManifest, '(?ms)^\[package\]\s+.*?^version\s*=\s*"(?<version>[^"\r\n]+)"')
+if (-not $appVersionMatch.Success -or -not $beaconVersionMatch.Success) {
+    throw 'Could not read app and beacon package versions from their Cargo manifests.'
+}
+$appVersion = $appVersionMatch.Groups['version'].Value
+$beaconVersion = $beaconVersionMatch.Groups['version'].Value
+if ($appVersion -ne $beaconVersion) {
+    throw "App version '$appVersion' does not match beacon version '$beaconVersion'."
+}
 Push-Location $rustRoot
 try {
     & cargo build --manifest-path app/Cargo.toml --release
@@ -198,9 +210,11 @@ $compilerPath = (Resolve-Path -LiteralPath $InnoSetupCompiler -ErrorAction Silen
 if (-not $compilerPath) { throw "Inno Setup 6 compiler not found at '$InnoSetupCompiler'." }
 $previousStageDirectory = $env:UXPLAY_STAGE_DIR
 $previousOutputDirectory = $env:UXPLAY_OUTPUT_DIR
+$previousVersion = $env:UXPLAY_VERSION
 try {
     $env:UXPLAY_STAGE_DIR = $stageFull
     $env:UXPLAY_OUTPUT_DIR = $outputRoot
+    $env:UXPLAY_VERSION = $appVersion
     & $compilerPath (Join-Path $PSScriptRoot 'UxPlay.iss')
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
 } finally {
@@ -208,6 +222,8 @@ try {
     else { $env:UXPLAY_STAGE_DIR = $previousStageDirectory }
     if ($null -eq $previousOutputDirectory) { Remove-Item Env:UXPLAY_OUTPUT_DIR -ErrorAction SilentlyContinue }
     else { $env:UXPLAY_OUTPUT_DIR = $previousOutputDirectory }
+    if ($null -eq $previousVersion) { Remove-Item Env:UXPLAY_VERSION -ErrorAction SilentlyContinue }
+    else { $env:UXPLAY_VERSION = $previousVersion }
 }
 
 $setup = Join-Path $outputRoot 'Setup.exe'
