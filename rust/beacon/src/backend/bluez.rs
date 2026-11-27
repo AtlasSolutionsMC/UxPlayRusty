@@ -494,7 +494,11 @@ mod tests {
         let manufacturer = object.manufacturer_data_property().unwrap();
         assert_eq!(manufacturer.len(), 1);
         let value = &manufacturer[&APPLE_COMPANY_ID];
-        assert_eq!(value.value_signature().to_string(), "v");
+        assert_eq!(
+            value.value_signature().to_string(),
+            "ay",
+            "ManufacturerData variant must contain a byte array"
+        );
         let Variant::Array(bytes) = &**value else {
             panic!("ManufacturerData variant must contain a byte array")
         };
