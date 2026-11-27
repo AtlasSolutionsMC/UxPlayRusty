@@ -29,7 +29,7 @@ working while allowing command-line values to override saved preferences.
 | `video.vsync` | Boolean | `true` | Synchronize the video sink to its clock |
 | `ble.enabled` | Boolean | `false` | Start/stop the Windows `uxplay-beacon.exe` companion |
 | `ble.handoff_path` | String path, absolute or relative to this config file | `%APPDATA%\UxPlay\uxplay.ble` | Handoff file shared with the BLE companion |
-| `startup.enabled` | Boolean | `false` | Saved startup preference; Windows registration is implemented with the tray/startup milestone |
+| `startup.enabled` | Boolean | `false` | Register or remove UxPlay in the current user's Windows sign-in startup list |
 | `logging.level` | `"normal"`, `"debug"`, `"debug_data"` | `"normal"` | Select routine, diagnostic, or packet-level logging |
 | `logging.file` | String path, absolute or relative to this config file | `%APPDATA%\UxPlay\logs\uxplay.log` | GUI log destination |
 
@@ -38,7 +38,7 @@ names, empty receiver names, and out-of-range dimensions/FPS stop startup with
 the offending key and reason. The application does not silently ignore typos.
 
 The file is plain TOML and can be edited in any text editor. Save it and use the
-tray's Restart action to apply changes once the tray milestone is available.
+tray's Restart action to apply changes.
 
 ## Network and firewall
 
