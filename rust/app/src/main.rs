@@ -143,6 +143,7 @@ mod rtp_wire;
 mod server_runtime;
 mod startup_validation;
 mod units;
+#[cfg_attr(not(windows), allow(dead_code))]
 mod windows_config;
 #[cfg(windows)]
 mod windows_tray;

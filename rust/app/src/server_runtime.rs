@@ -65,6 +65,7 @@ impl ServerControl {
         }
     }
 
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub fn request_exit(&self) {
         self.stop_requested
             .store(true, std::sync::atomic::Ordering::Release);
@@ -72,6 +73,7 @@ impl ServerControl {
             .store(true, std::sync::atomic::Ordering::Release);
     }
 
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub(crate) fn reset(&self) {
         self.stop_requested
             .store(false, std::sync::atomic::Ordering::Release);
@@ -83,6 +85,7 @@ impl ServerControl {
             .unwrap_or_else(std::sync::PoisonError::into_inner) = Weak::new();
     }
 
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub fn request_disconnect(&self) {
         if let Some(connections) = self
             .connections
@@ -110,6 +113,7 @@ impl Default for ServerControl {
 
 /// Runs the server under externally managed lifecycle controls. The caller owns the control
 /// handle and may request disconnect or graceful shutdown from another thread.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn run_with_control(options: Options, control: Arc<ServerControl>) -> ExitCode {
     match run_server(options, control, false) {
         Ok(()) => ExitCode::SUCCESS,

@@ -95,7 +95,7 @@ pub(crate) fn check_airplay_receiver_startup() -> ReceiverStartupOutput {
             .output()
             .map_or_else(|_| Vec::new(), |output| output.stdout);
 
-        return receiver_startup_output_from_bytes(&output);
+        receiver_startup_output_from_bytes(&output)
     }
 
     #[cfg(not(all(target_os = "macos", feature = "apple-p2p")))]
