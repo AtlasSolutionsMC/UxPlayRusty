@@ -67,45 +67,84 @@ try {
 
     $launchLog = Join-Path $backupRoot 'launch.log'
     $launchConfig = Join-Path $backupRoot 'launch-config.toml'
+    $bleHandoff = Join-Path $backupRoot 'ble-startup-smoke.ble'
     $launchLogToml = $launchLog.Replace('\', '/')
+    $bleHandoffToml = $bleHandoff.Replace('\', '/')
     Set-Content -LiteralPath $launchConfig -Encoding utf8 -Value @(
         '[server]'
         'name = "UxPlay-Install-Smoke"'
         ''
         '[ble]'
-        'enabled = false'
+        'enabled = true'
+        "handoff_path = `"$bleHandoffToml`""
         ''
         '[logging]'
         'level = "debug"'
         "file = `"$launchLogToml`""
     )
-    $startInfo = [Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $appPath
-    $startInfo.WorkingDirectory = $install
-    $startInfo.UseShellExecute = $false
-    $startInfo.Environment['UXPLAY_CONFIG'] = $launchConfig
-    $guiProcess = [Diagnostics.Process]::Start($startInfo)
+    $beaconPath = Join-Path $install 'uxplay-beacon.exe'
+    $disabledBeaconPath = Join-Path $install 'uxplay-beacon.exe.smoke-disabled'
+    $installPrefix = [IO.Path]::GetFullPath($install).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    foreach ($candidatePath in @($beaconPath, $disabledBeaconPath)) {
+        if (-not [IO.Path]::GetFullPath($candidatePath).StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to move a BLE companion outside the temporary installation: $candidatePath"
+        }
+    }
+    if (-not (Test-Path -LiteralPath $beaconPath)) { throw 'The installed BLE companion is missing.' }
+    if (Test-Path -LiteralPath $disabledBeaconPath) { throw 'A stale BLE smoke marker already exists.' }
+    Move-Item -LiteralPath $beaconPath -Destination $disabledBeaconPath
     try {
-        Start-Sleep -Seconds 8
-        $guiProcess.Refresh()
-        if ($guiProcess.HasExited) {
-            throw "Installed tray app exited during launch smoke (exit $($guiProcess.ExitCode))."
+        $startInfo = [Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = $appPath
+        $startInfo.WorkingDirectory = $install
+        $startInfo.UseShellExecute = $false
+        $startInfo.Environment['UXPLAY_CONFIG'] = $launchConfig
+        $guiProcess = [Diagnostics.Process]::Start($startInfo)
+        try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(20)
+            $airplayReadyAfterBleFailure = $false
+            do {
+                $guiProcess.Refresh()
+                if ($guiProcess.HasExited) {
+                    throw "Installed tray app exited during launch smoke (exit $($guiProcess.ExitCode))."
+                }
+                if (-not (Test-Path -LiteralPath $launchLog)) {
+                    Start-Sleep -Milliseconds 250
+                    continue
+                }
+                $logText = Get-Content -LiteralPath $launchLog -Raw
+                $startupFailure = Select-String -LiteralPath $launchLog -Pattern 'UxPlay Rust: server startup failed:'
+                if ($startupFailure) {
+                    throw "Installed tray app could not start the AirPlay server: $($startupFailure.Line)"
+                }
+                $listener = @(Get-NetTCPConnection -State Listen -OwningProcess $guiProcess.Id -ErrorAction SilentlyContinue)
+                $bleCompanionMissing = $logText -match 'BLE companion .* is missing; AirPlay will continue without BLE discovery'
+                if ($listener.Count -gt 0 -and $bleCompanionMissing -and -not (Test-Path -LiteralPath $bleHandoff)) {
+                    $airplayReadyAfterBleFailure = $true
+                    break
+                }
+                Start-Sleep -Milliseconds 250
+            } while ([DateTime]::UtcNow -lt $deadline)
+
+            if (-not $airplayReadyAfterBleFailure) {
+                throw 'AirPlay did not open a TCP listener and clean the BLE handoff after the missing-companion failure.'
+            }
+            Write-Output 'PASS AirPlay listener stays active when the BLE companion is missing; handoff is cleaned up'
+        } finally {
+            $guiProcess.Refresh()
+            if (-not $guiProcess.HasExited) {
+                Stop-Process -Id $guiProcess.Id -Force
+                $guiProcess.WaitForExit(5000) | Out-Null
+            }
+            $guiProcess.Dispose()
         }
-        if (-not (Test-Path -LiteralPath $launchLog)) {
-            throw 'Installed tray app did not create its isolated launch log.'
-        }
-        $startupFailure = Select-String -LiteralPath $launchLog -Pattern 'UxPlay Rust: server startup failed:'
-        if ($startupFailure) {
-            throw "Installed tray app could not start the AirPlay server: $($startupFailure.Line)"
-        }
-        Write-Output 'PASS installed tray app starts the AirPlay server'
     } finally {
-        $guiProcess.Refresh()
-        if (-not $guiProcess.HasExited) {
-            Stop-Process -Id $guiProcess.Id -Force
-            $guiProcess.WaitForExit(5000) | Out-Null
+        if (Test-Path -LiteralPath $disabledBeaconPath) {
+            if (Test-Path -LiteralPath $beaconPath) {
+                throw 'Refusing to restore the BLE companion over an existing installed file.'
+            }
+            Move-Item -LiteralPath $disabledBeaconPath -Destination $beaconPath
         }
-        $guiProcess.Dispose()
     }
 
     $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @(
