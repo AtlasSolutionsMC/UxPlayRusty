@@ -233,6 +233,8 @@ pub struct VideoRenderer {
     active: Option<usize>,
     sync: bool,
     first_packet: bool,
+    first_buffer_accepted: bool,
+    push_failure_logged: bool,
     base_time_ns: u64,
     hls: Arc<Mutex<HlsState>>,
     external_window_handle: Arc<std::sync::atomic::AtomicUsize>,
@@ -506,6 +508,8 @@ impl VideoRenderer {
             active,
             sync,
             first_packet: false,
+            first_buffer_accepted: false,
+            push_failure_logged: false,
             base_time_ns: u64::MAX,
             hls: Arc::new(Mutex::new(hls_state)),
             external_window_handle,
@@ -602,6 +606,8 @@ impl VideoRenderer {
         }
         self.active = None;
         self.first_packet = true;
+        self.first_buffer_accepted = false;
+        self.push_failure_logged = false;
     }
 
     pub fn pause(&self) {
@@ -688,7 +694,26 @@ impl VideoRenderer {
                 map.as_mut_slice().copy_from_slice(data);
             }
         }
-        let _ = appsrc.push_buffer(buffer);
+        match appsrc.push_buffer(buffer) {
+            Ok(_) if !self.first_buffer_accepted => {
+                log(
+                    &self.logger,
+                    LogLevel::Info,
+                    "GStreamer accepted the first AirPlay video packet",
+                );
+                self.first_buffer_accepted = true;
+            }
+            Ok(_) => {}
+            Err(error) if !self.push_failure_logged => {
+                log(
+                    &self.logger,
+                    LogLevel::Error,
+                    &format!("GStreamer rejected an AirPlay video packet: {error:?}"),
+                );
+                self.push_failure_logged = true;
+            }
+            Err(_) => {}
+        }
         let use_x11 = self.active_entry().is_none_or(|entry| {
             entry
                 .discovered_sink
