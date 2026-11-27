@@ -632,10 +632,6 @@ fn beacon_companion_command(executable: &Path, handoff_path: &Path) -> std::proc
 
 #[cfg(windows)]
 fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
-    use std::os::windows::process::CommandExt;
-    use std::process::Stdio;
-    use std::time::Instant;
-
     let handoff_path = PathBuf::from(options.ble_filename.as_ref()?);
     let executable = match std::env::current_exe() {
         Ok(path) => path.with_file_name("uxplay-beacon.exe"),
@@ -645,6 +641,19 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
             return None;
         }
     };
+    start_beacon_companion_with_paths(&handoff_path, &executable)
+}
+
+#[cfg(windows)]
+fn start_beacon_companion_with_paths(
+    handoff_path: &Path,
+    executable: &Path,
+) -> Option<BeaconManager> {
+    use std::os::windows::process::CommandExt;
+    use std::process::Stdio;
+    use std::time::Instant;
+
+    let handoff_path = handoff_path.to_path_buf();
     if !executable.is_file() {
         remove_beacon_handoff(&handoff_path);
         eprintln!(
@@ -654,7 +663,7 @@ fn start_beacon_companion(options: &Options) -> Option<BeaconManager> {
         return None;
     }
 
-    let child = beacon_companion_command(&executable, &handoff_path)
+    let child = beacon_companion_command(executable, &handoff_path)
         .current_dir(executable.parent().unwrap_or_else(|| Path::new(".")))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -752,25 +761,69 @@ fn remove_beacon_handoff(path: &Path) {
 
 #[cfg(all(test, windows))]
 mod beacon_handoff_cleanup_tests {
-    use super::remove_beacon_handoff;
+    use super::{remove_beacon_handoff, start_beacon_companion_with_paths};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn companion_failure_cleanup_removes_only_its_handoff_and_is_idempotent() {
-        let id = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "uxplay-beacon-cleanup-{}-{id}.tmp",
+    fn missing_companion_removes_its_handoff_and_returns_without_manager() {
+        let id = unique_test_id();
+        let handoff_path = std::env::temp_dir().join(format!(
+            "uxplay-beacon-missing-{}-{id}.ble",
             std::process::id()
         ));
-        std::fs::write(&path, b"handoff").unwrap();
+        let missing_executable = std::env::temp_dir().join(format!(
+            "uxplay-beacon-missing-{}-{id}.exe",
+            std::process::id()
+        ));
+        assert!(!missing_executable.exists());
+        std::fs::write(&handoff_path, b"handoff").unwrap();
 
-        remove_beacon_handoff(&path);
-        assert!(!path.exists());
-        remove_beacon_handoff(&path);
-        assert!(!path.exists());
+        let manager = start_beacon_companion_with_paths(&handoff_path, &missing_executable);
+
+        assert!(manager.is_none());
+        assert!(!handoff_path.exists());
+    }
+
+    #[test]
+    fn companion_spawn_failure_removes_its_handoff_and_returns_without_manager() {
+        let id = unique_test_id();
+        let handoff_path = std::env::temp_dir().join(format!(
+            "uxplay-beacon-spawn-failure-{}-{id}.ble",
+            std::process::id()
+        ));
+        let executable = std::env::temp_dir().join(format!(
+            "uxplay-beacon-invalid-{}-{id}.exe",
+            std::process::id()
+        ));
+        std::fs::write(&handoff_path, b"handoff").unwrap();
+        std::fs::write(&executable, b"not a Windows executable").unwrap();
+
+        let manager = start_beacon_companion_with_paths(&handoff_path, &executable);
+
+        assert!(manager.is_none());
+        assert!(!handoff_path.exists());
+        std::fs::remove_file(executable).unwrap();
+    }
+
+    #[test]
+    fn handoff_removal_is_idempotent() {
+        let handoff_path = std::env::temp_dir().join(format!(
+            "uxplay-beacon-idempotent-{}-{}.ble",
+            std::process::id(),
+            unique_test_id()
+        ));
+        std::fs::write(&handoff_path, b"handoff").unwrap();
+
+        remove_beacon_handoff(&handoff_path);
+        remove_beacon_handoff(&handoff_path);
+        assert!(!handoff_path.exists());
+    }
+
+    fn unique_test_id() -> u128 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
     }
 }
 

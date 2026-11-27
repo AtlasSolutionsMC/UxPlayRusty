@@ -300,3 +300,9 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 ### 2026-11-27 — Tray UI target availability
 
 - Read-only process inventory confirms PID `23748` is `D:\save\uxplay\uxplayrusty\dist\windows\stage\uxplay.exe`, the legacy tray process that must remain untouched. Computer Use `list_apps()` / `list_windows()` exposed only the ChatGPT window; the tray host has no targetable application window in this session. No input was sent to UxPlay. Current-build tray menu interaction and shutdown acceptance therefore remain open; hosted CI still only establishes no-argument startup/server and clean uninstall.
+
+### 2026-11-27 — BLE companion failure-path unit coverage
+
+- Refactored the Windows-only companion startup path to take explicit handoff/executable paths internally, while keeping production executable discovery unchanged. Replaced the previous cleanup-only test with direct tests of the missing companion and failed process-spawn branches; both assert that the app removes its handoff file and returns without a manager. A third test keeps the handoff-removal idempotency check.
+- Windows UCRT64 verification passed: `cargo fmt --manifest-path rust/app/Cargo.toml -- --check`; focused cleanup suite (3 tests); default app `cargo test --all-targets` (451 unit + 10 + 99 + 7 integration tests); and `cargo clippy --all-targets -- -D warnings`. With `--features external-dns-sd`, app tests passed (453 + 10 + 99 + 7) and Clippy passed. Test binaries require MSYS2 UCRT64 `bin` on `PATH` for DLL loading.
+- This improves confidence in app-side handoff cleanup when the companion is unavailable or cannot be spawned. It does not demonstrate BLE advertising/scanner visibility or real-device behavior. Windows hosted CI is expected to run from this code push; no run result is recorded yet.
