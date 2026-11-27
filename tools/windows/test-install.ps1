@@ -34,6 +34,30 @@ function Get-BleSmokeCompanionState {
     return $null
 }
 
+function Write-BleSmokeExitDiagnostics {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Stage,
+        [Parameter(Mandatory = $true)]
+        [string]$LogPath
+    )
+    # The app supervisor joins the companion's stdout/stderr readers after observing exit.
+    Start-Sleep -Milliseconds 500
+    Write-Output "BLE companion exited before the $Stage action; relevant app log follows:"
+    if (-not (Test-Path -LiteralPath $LogPath)) {
+        Write-Output '<no app log>'
+        return
+    }
+    $lines = @(Get-Content -LiteralPath $LogPath | Where-Object {
+        $_ -match '(?i)BLE companion|WinRT|Bluetooth|advertis|publisher|beacon|failed|error|exited'
+    } | Select-Object -Last 40)
+    if ($lines.Count -eq 0) {
+        Write-Output '<no BLE-related log lines>'
+        return
+    }
+    foreach ($line in $lines) { Write-Output "BLE-LOG $line" }
+}
+
 $hadConfig = Test-Path $config
 $hadHandoff = Test-Path $handoff
 $hadShortcut = Test-Path $shortcut
@@ -275,6 +299,9 @@ public static class UxPlaySessionEndProbe {
             throw "BLE companion process and handoff did not settle to a consistent state: $activeBleText"
         }
         Write-Output "PASS installed app launches packaged BLE companion (PID $companionPid); state=$initialCompanionState with AirPlay listening"
+        if ($initialCompanionState -eq 'exited-cleanly') {
+            Write-BleSmokeExitDiagnostics -Stage 'tray Config' -LogPath $activeBleLog
+        }
 
         $activeTrayWindow = [UxPlaySessionEndProbe]::FindWindow('UxPlayRustyTrayHost', 'UxPlay')
         if ($activeTrayWindow -eq [IntPtr]::Zero) { throw 'Could not find tray host during active BLE shutdown smoke.' }
@@ -338,6 +365,9 @@ public static class UxPlaySessionEndProbe {
         if ($oldCompanion) { throw "Previous BLE companion process $companionPid remained after Restart." }
         $companionPid = $restartedCompanionPid
         Write-Output "PASS tray Restart manages second BLE companion (PID $companionPid, state=$restartedCompanionState) and keeps AirPlay listening"
+        if ($restartedCompanionState -eq 'exited-cleanly') {
+            Write-BleSmokeExitDiagnostics -Stage 'tray Exit' -LogPath $activeBleLog
+        }
 
         if (-not [UxPlaySessionEndProbe]::PostMessage($activeTrayWindow, 0x800B, [UIntPtr]::new(1004), [IntPtr]::Zero)) {
             throw 'Could not dispatch the tray Exit command.'
