@@ -1,4 +1,11 @@
-#define StageDir AddBackslash(SourcePath) + "..\..\dist\windows\stage"
+#define StageDir GetEnv("UXPLAY_STAGE_DIR")
+#define OutputDirectory GetEnv("UXPLAY_OUTPUT_DIR")
+#if StageDir == ""
+  #error "UXPLAY_STAGE_DIR must point to the staged runtime"
+#endif
+#if OutputDirectory == ""
+  #error "UXPLAY_OUTPUT_DIR must point to the installer output directory"
+#endif
 
 [Setup]
 AppId={{9AFA2E24-CA0D-44D7-B13C-22D3F5BA6935}
@@ -9,7 +16,7 @@ DefaultDirName={localappdata}\Programs\UxPlay
 DefaultGroupName=UxPlay
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-OutputDir=..\..\dist\windows
+OutputDir={#OutputDirectory}
 OutputBaseFilename=Setup
 UninstallDisplayName=UxPlayRusty
 CloseApplications=yes

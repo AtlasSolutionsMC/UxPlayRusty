@@ -119,10 +119,18 @@ with the source directory:
 
 ```powershell
 $msysRoot = Join-Path $env:LOCALAPPDATA 'Programs\MSYS2'
+$packageOutput = Join-Path (Get-Location) 'dist\windows\source-license-review'
 ./tools/windows/package-release.ps1 `
     -Msys2Root $msysRoot `
+    -OutputDirectory $packageOutput `
     -SourcePackageDirectory ./dist/windows/source-packages
 ```
+
+Use a new output directory for this review build. The packager refuses to
+replace an existing stage unless `-ReplaceExistingStage` is explicitly passed.
+The stage and installer output directory are supplied to Inno Setup at compile
+time, so this isolated build does not touch the normal `dist/windows/stage` or
+`dist/windows/Setup.exe`.
 
 The packager checks package versions against `THIRD-PARTY-NOTICES.txt`, verifies
 each source archive's SHA-256 from `SOURCE-PACKAGES.txt`, and adds top-level

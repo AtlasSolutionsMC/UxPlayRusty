@@ -6,7 +6,9 @@ param(
 
     [string]$InnoSetupCompiler = (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
 
-    [string]$SourcePackageDirectory
+    [string]$SourcePackageDirectory,
+
+    [switch]$ReplaceExistingStage
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,6 +38,9 @@ if (-not $stageFull.StartsWith($expectedOutputPrefix, [StringComparison]::Ordina
     throw "Refusing to replace an output outside dist/windows: $stageFull"
 }
 if (Test-Path -LiteralPath $stageFull) {
+    if (-not $ReplaceExistingStage) {
+        throw "Stage already exists; choose a fresh -OutputDirectory or pass -ReplaceExistingStage to replace it: $stageFull"
+    }
     Remove-Item -LiteralPath $stageFull -Recurse -Force
 }
 $runtime = Join-Path $stage 'runtime'
@@ -191,8 +196,19 @@ Set-Content -LiteralPath (Join-Path $stage 'BUILD-INFO.txt') -Encoding utf8 -Val
 
 $compilerPath = (Resolve-Path -LiteralPath $InnoSetupCompiler -ErrorAction SilentlyContinue).Path
 if (-not $compilerPath) { throw "Inno Setup 6 compiler not found at '$InnoSetupCompiler'." }
-& $compilerPath (Join-Path $PSScriptRoot 'UxPlay.iss')
-if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
+$previousStageDirectory = $env:UXPLAY_STAGE_DIR
+$previousOutputDirectory = $env:UXPLAY_OUTPUT_DIR
+try {
+    $env:UXPLAY_STAGE_DIR = $stageFull
+    $env:UXPLAY_OUTPUT_DIR = $outputRoot
+    & $compilerPath (Join-Path $PSScriptRoot 'UxPlay.iss')
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
+} finally {
+    if ($null -eq $previousStageDirectory) { Remove-Item Env:UXPLAY_STAGE_DIR -ErrorAction SilentlyContinue }
+    else { $env:UXPLAY_STAGE_DIR = $previousStageDirectory }
+    if ($null -eq $previousOutputDirectory) { Remove-Item Env:UXPLAY_OUTPUT_DIR -ErrorAction SilentlyContinue }
+    else { $env:UXPLAY_OUTPUT_DIR = $previousOutputDirectory }
+}
 
 $setup = Join-Path $outputRoot 'Setup.exe'
 if (-not (Test-Path -LiteralPath $setup)) { throw "Inno Setup did not produce '$setup'." }
