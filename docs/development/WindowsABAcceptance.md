@@ -55,8 +55,10 @@ or starting the next profile.
 4. Save the UxPlay log for each run. Record the `AirPlay mirror codec
    configured` line (codec, source/frame dimensions and renderer selection), the
    `GStreamer video pipeline` line matching that codec (decoder, queues and
-   sink), first AirPlay video packet acceptance, and any first GStreamer flow
-   error. The pipeline is logged at Info, so the normal log level is sufficient.
+   sink), first AirPlay video packet acceptance, first decoded frame reaching
+   the sink (including negotiated caps/PTS), and any first GStreamer flow
+   error. These pipeline/frame diagnostics are logged at Info, so the normal
+   log level is sufficient.
 
 After the low-latency comparison, run a separate synchronization comparison if
 you want to check `video.vsync`. Keep `video.low_latency`, renderer, codec,
@@ -75,8 +77,10 @@ pass threshold.
 
 If no sender connection or first-video-packet diagnostic appears, classify the
 run as **ingress/network not established** and do not score it as a renderer or
-latency result. If packets are accepted but the window stays blank, preserve the
-log and classify it as a renderer/display failure.
+latency result. If a packet is accepted but no decoded-frame message follows,
+preserve the log and classify it as a decoder/pipeline failure. If a decoded
+frame reaches the sink but the window stays blank, preserve the log and classify
+it as a renderer/display failure.
 
 For a blank-display follow-up, repeat one stream run with
 `logging.level = "debug"` in an isolated config. Keep renderer and video

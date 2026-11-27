@@ -446,6 +446,19 @@ impl VideoRenderer {
                 } else {
                     None
                 };
+                if matches!(codec, Codec::H264 | Codec::H265) {
+                    let sink_factory = if config.renderer == VideoRendererKind::Vulkan {
+                        "vulkansink"
+                    } else {
+                        config.video_sink.as_str()
+                    };
+                    install_first_decoded_frame_probe(
+                        &pipeline,
+                        codec,
+                        &format!("{sink_factory}_{}", codec.name()),
+                        Arc::clone(&logger),
+                    );
+                }
                 sync = config.video_sync && codec != Codec::Jpeg;
                 (pipeline, Some(appsrc), textsrc)
             };
@@ -1295,6 +1308,68 @@ fn install_window_handle_handler(
             gst::BusSyncReply::Pass
         }
     });
+}
+
+fn install_first_decoded_frame_probe(
+    pipeline: &gst::Pipeline,
+    codec: Codec,
+    sink_name: &str,
+    logger: LogCallback,
+) {
+    let Some(sink) = pipeline.by_name(sink_name) else {
+        log(
+            &logger,
+            LogLevel::Warning,
+            &format!(
+                "video renderer: could not observe first decoded frame; sink {sink_name} was not found"
+            ),
+        );
+        return;
+    };
+    let Some(pad) = sink.static_pad("sink") else {
+        log(
+            &logger,
+            LogLevel::Warning,
+            &format!(
+                "video renderer: could not observe first decoded frame; sink {sink_name} has no sink pad"
+            ),
+        );
+        return;
+    };
+    let sink_name = sink_name.to_owned();
+    let warning_sink_name = sink_name.clone();
+    let logged = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let probe_logger = Arc::clone(&logger);
+    let probe_id = pad.add_probe(gst::PadProbeType::BUFFER, move |pad, info| {
+        if logged.swap(true, std::sync::atomic::Ordering::AcqRel) {
+            return gst::PadProbeReturn::Ok;
+        }
+        let caps = pad
+            .current_caps()
+            .map_or_else(|| "unavailable".to_owned(), |caps| caps.to_string());
+        let pts = info
+            .buffer()
+            .and_then(|buffer| buffer.pts())
+            .map_or_else(|| "unavailable".to_owned(), |pts| format!("{} ns", pts.nseconds()));
+        log(
+            &probe_logger,
+            LogLevel::Info,
+            &format!(
+                "GStreamer delivered the first decoded {} video frame to sink {sink_name}; caps={caps}; PTS={pts}",
+                codec.name()
+            ),
+        );
+        gst::PadProbeReturn::Ok
+    });
+    if probe_id.is_none() {
+        log(
+            &logger,
+            LogLevel::Warning,
+            &format!(
+                "video renderer: could not install first decoded-frame probe on sink {warning_sink_name}"
+            ),
+        );
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2420,11 +2495,18 @@ mod tests {
 
         let first_packet_accepted = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let accepted_flag = Arc::clone(&first_packet_accepted);
+        let first_frame_delivered = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let delivered_flag = Arc::clone(&first_frame_delivered);
         let logger: LogCallback = Arc::new(move |level, message| {
             if level == LogLevel::Info
                 && message == "GStreamer accepted the first AirPlay video packet"
             {
                 accepted_flag.store(true, std::sync::atomic::Ordering::Release);
+            }
+            if level == LogLevel::Info
+                && message.starts_with("GStreamer delivered the first decoded ")
+            {
+                delivered_flag.store(true, std::sync::atomic::Ordering::Release);
             }
         });
         let mut renderer = VideoRenderer::new_with_logger(config.clone(), logger)
@@ -2461,6 +2543,11 @@ mod tests {
         assert!(
             handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
             "valid {codec} fixture did not reach fakesink (low_latency={}) through appsrc, parser and decoder",
+            config.low_latency
+        );
+        assert!(
+            first_frame_delivered.load(std::sync::atomic::Ordering::Acquire),
+            "valid {codec} fixture did not produce the first decoded-frame diagnostic (low_latency={})",
             config.low_latency
         );
     }
