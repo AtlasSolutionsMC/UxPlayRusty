@@ -2398,6 +2398,64 @@ mod tests {
         assert_eq!(ended_uri.as_deref(), Some(uri.as_str()));
     }
 
+    fn assert_mirror_fixture_decodes_to_fakesink(
+        mut config: VideoRendererConfig,
+        h265: bool,
+        encoded_frame: &[u8],
+    ) {
+        let codec = if h265 { "h265" } else { "h264" };
+        config.video_sink = "fakesink".to_owned();
+        config.video_sink_options = " signal-handoffs=true".to_owned();
+        config.video_sync = false;
+        config.h265_support = h265;
+
+        let first_packet_accepted = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let accepted_flag = Arc::clone(&first_packet_accepted);
+        let logger: LogCallback = Arc::new(move |level, message| {
+            if level == LogLevel::Info
+                && message == "GStreamer accepted the first AirPlay video packet"
+            {
+                accepted_flag.store(true, std::sync::atomic::Ordering::Release);
+            }
+        });
+        let mut renderer = VideoRenderer::new_with_logger(config.clone(), logger)
+            .unwrap_or_else(|error| panic!("{codec} decoder pipeline: {error}"));
+        let renderer_index = if h265 {
+            renderer.type_h265.expect("H.265 renderer should exist")
+        } else {
+            renderer.type_h264.expect("H.264 renderer should exist")
+        };
+        let sink = renderer.renderers[renderer_index]
+            .as_ref()
+            .expect("mirror renderer pipeline")
+            .pipeline
+            .by_name(&format!("fakesink_{codec}"))
+            .expect("named fakesink");
+        let handoffs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let sink_handoffs = Arc::clone(&handoffs);
+        let _handoff_handler = sink.connect("handoff", false, move |_| {
+            sink_handoffs.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            None
+        });
+
+        assert_eq!(renderer.choose_codec(false, h265), 0);
+        let (_, outcome) = renderer.render_buffer(encoded_frame, 0);
+        assert_eq!(outcome, RenderOutcome::Submitted);
+        assert!(first_packet_accepted.load(std::sync::atomic::Ordering::Acquire));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        renderer.destroy();
+        assert!(
+            handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
+            "valid {codec} fixture did not reach fakesink (low_latency={}) through appsrc, parser and decoder",
+            config.low_latency
+        );
+    }
+
     #[test]
     fn h264_appsrc_pipeline_decodes_fixture_idr_to_fakesink() {
         gst::init().expect("GStreamer must be initialized before querying factories");
@@ -2431,52 +2489,16 @@ mod tests {
             encoded_frame.extend_from_slice(nalu);
         }
 
-        let config = VideoRendererConfig {
-            video_sink: "fakesink".to_owned(),
-            video_sink_options: " signal-handoffs=true".to_owned(),
-            video_sync: false,
-            ..VideoRendererConfig::default()
-        };
-        let first_packet_accepted = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let accepted_flag = Arc::clone(&first_packet_accepted);
-        let logger: LogCallback = Arc::new(move |level, message| {
-            if level == LogLevel::Info
-                && message == "GStreamer accepted the first AirPlay video packet"
-            {
-                accepted_flag.store(true, std::sync::atomic::Ordering::Release);
-            }
-        });
-        let mut renderer =
-            VideoRenderer::new_with_logger(config, logger).expect("H.264 decoder pipeline");
-        let h264_index = renderer.type_h264.expect("H.264 renderer should exist");
-        let sink = renderer.renderers[h264_index]
-            .as_ref()
-            .expect("H.264 renderer pipeline")
-            .pipeline
-            .by_name("fakesink_h264")
-            .expect("named fakesink");
-        let handoffs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let sink_handoffs = Arc::clone(&handoffs);
-        let _handoff_handler = sink.connect("handoff", false, move |_| {
-            sink_handoffs.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-            None
-        });
-
-        assert_eq!(renderer.choose_codec(false, false), 0);
-        let (_, outcome) = renderer.render_buffer(&encoded_frame, 0);
-        assert_eq!(outcome, RenderOutcome::Submitted);
-        assert!(first_packet_accepted.load(std::sync::atomic::Ordering::Acquire));
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
-        while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
-            && std::time::Instant::now() < deadline
-        {
-            std::thread::sleep(std::time::Duration::from_millis(5));
+        for low_latency in [false, true] {
+            assert_mirror_fixture_decodes_to_fakesink(
+                VideoRendererConfig {
+                    low_latency,
+                    ..VideoRendererConfig::default()
+                },
+                false,
+                &encoded_frame,
+            );
         }
-        renderer.destroy();
-        assert!(
-            handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
-            "valid SPS/PPS/IDR input did not reach fakesink through appsrc, h264parse and avdec_h264"
-        );
     }
 
     #[test]
@@ -2490,41 +2512,15 @@ mod tests {
         }
 
         let encoded_frame = include_bytes!("../testdata/mirror/black-frame.hevc");
-        let config = VideoRendererConfig {
-            video_sink: "fakesink".to_owned(),
-            video_sink_options: " signal-handoffs=true".to_owned(),
-            video_sync: false,
-            h265_support: true,
-            ..VideoRendererConfig::default()
-        };
-        let mut renderer = VideoRenderer::new(config).expect("H.265 decoder pipeline");
-        let h265_index = renderer.type_h265.expect("H.265 renderer should exist");
-        let sink = renderer.renderers[h265_index]
-            .as_ref()
-            .expect("H.265 renderer pipeline")
-            .pipeline
-            .by_name("fakesink_h265")
-            .expect("named H.265 fakesink");
-        let handoffs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let sink_handoffs = Arc::clone(&handoffs);
-        let _handoff_handler = sink.connect("handoff", false, move |_| {
-            sink_handoffs.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-            None
-        });
-
-        assert_eq!(renderer.choose_codec(false, true), 0);
-        let (_, outcome) = renderer.render_buffer(encoded_frame, 0);
-        assert_eq!(outcome, RenderOutcome::Submitted);
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
-        while handoffs.load(std::sync::atomic::Ordering::Acquire) == 0
-            && std::time::Instant::now() < deadline
-        {
-            std::thread::sleep(std::time::Duration::from_millis(5));
+        for low_latency in [false, true] {
+            assert_mirror_fixture_decodes_to_fakesink(
+                VideoRendererConfig {
+                    low_latency,
+                    ..VideoRendererConfig::default()
+                },
+                true,
+                encoded_frame,
+            );
         }
-        renderer.destroy();
-        assert!(
-            handoffs.load(std::sync::atomic::Ordering::Acquire) > 0,
-            "valid HEVC fixture did not reach fakesink through appsrc, h265parse and avdec_h265"
-        );
     }
 }
