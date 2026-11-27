@@ -83,6 +83,7 @@ try {
         -not $startup.Trim('"').EndsWith($expectedSuffix, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Startup Run value does not point to this installation: $startup"
     }
+    $startupExecutable = $startup.Trim('"')
     if ($configText -notmatch '(?m)^enabled = true\s*$') {
         throw 'The installer startup checkbox did not persist startup.enabled = true.'
     }
@@ -137,7 +138,7 @@ try {
     Move-Item -LiteralPath $beaconPath -Destination $disabledBeaconPath
     try {
         $startInfo = [Diagnostics.ProcessStartInfo]::new()
-        $startInfo.FileName = $appPath
+        $startInfo.FileName = $startupExecutable
         $startInfo.WorkingDirectory = $install
         $startInfo.UseShellExecute = $false
         $startInfo.Environment['UXPLAY_CONFIG'] = $launchConfig
@@ -171,7 +172,7 @@ try {
             if (-not $airplayReadyAfterBleFailure) {
                 throw 'AirPlay did not open a TCP listener and clean the BLE handoff after the missing-companion failure.'
             }
-            Write-Output 'PASS AirPlay listener stays active when the BLE companion is missing; handoff is cleaned up'
+            Write-Output 'PASS current-user startup Run target launches the installed tray app; AirPlay stays active when the BLE companion is missing and handoff is cleaned up'
 
             if (-not ('UxPlaySessionEndProbe' -as [type])) {
                 Add-Type -TypeDefinition @'
