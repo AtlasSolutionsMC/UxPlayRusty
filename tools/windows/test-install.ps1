@@ -241,6 +241,50 @@ public static class UxPlaySessionEndProbe {
             if ($windowProcessId -ne $guiProcess.Id) {
                 throw "Tray host belongs to PID $windowProcessId instead of installed app PID $($guiProcess.Id)."
             }
+            $startupLines = @(Get-Content -LiteralPath $launchConfig)
+            $startupSection = [Array]::IndexOf($startupLines, '[startup]')
+            if ($startupSection -lt 0 -or $startupSection + 1 -ge $startupLines.Count -or
+                $startupLines[$startupSection + 1] -notmatch '^enabled\s*=') {
+                throw 'Could not locate startup.enabled in the isolated user config.'
+            }
+            $startupLines[$startupSection + 1] = 'enabled = false'
+            Set-Content -LiteralPath $launchConfig -Encoding utf8 -Value $startupLines
+            if (-not [UxPlaySessionEndProbe]::PostMessage($trayWindow, 0x800B, [UIntPtr]::new(1002), [IntPtr]::Zero)) {
+                throw 'Could not dispatch tray Restart with startup disabled.'
+            }
+            $startupDisabledDeadline = [DateTime]::UtcNow.AddSeconds(15)
+            do {
+                $guiProcess.Refresh()
+                if ($guiProcess.HasExited) { throw 'Tray app exited while applying startup.enabled = false.' }
+                $startupRunValue = (Get-ItemProperty $runKey -Name UxPlay -ErrorAction SilentlyContinue).UxPlay
+                $listenerAfterDisable = @(Get-NetTCPConnection -State Listen -OwningProcess $guiProcess.Id -ErrorAction SilentlyContinue)
+                if (-not $startupRunValue -and $listenerAfterDisable.Count -gt 0) { break }
+                Start-Sleep -Milliseconds 200
+            } while ([DateTime]::UtcNow -lt $startupDisabledDeadline)
+            if ($startupRunValue -or $listenerAfterDisable.Count -eq 0) {
+                throw 'Restart with startup.enabled = false did not remove the Run value while keeping AirPlay available.'
+            }
+            Write-Output 'PASS startup.enabled = false removes the current-user Run value on tray Restart'
+
+            $startupLines[$startupSection + 1] = 'enabled = true'
+            Set-Content -LiteralPath $launchConfig -Encoding utf8 -Value $startupLines
+            if (-not [UxPlaySessionEndProbe]::PostMessage($trayWindow, 0x800B, [UIntPtr]::new(1002), [IntPtr]::Zero)) {
+                throw 'Could not dispatch tray Restart with startup enabled.'
+            }
+            $startupEnabledDeadline = [DateTime]::UtcNow.AddSeconds(15)
+            do {
+                $guiProcess.Refresh()
+                if ($guiProcess.HasExited) { throw 'Tray app exited while applying startup.enabled = true.' }
+                $startupRunValue = (Get-ItemProperty $runKey -Name UxPlay -ErrorAction SilentlyContinue).UxPlay
+                $listenerAfterEnable = @(Get-NetTCPConnection -State Listen -OwningProcess $guiProcess.Id -ErrorAction SilentlyContinue)
+                if ($startupRunValue -and $startupRunValue.Trim('"') -eq $startupExecutable -and $listenerAfterEnable.Count -gt 0) { break }
+                Start-Sleep -Milliseconds 200
+            } while ([DateTime]::UtcNow -lt $startupEnabledDeadline)
+            if (-not $startupRunValue -or $startupRunValue.Trim('"') -ne $startupExecutable -or $listenerAfterEnable.Count -eq 0) {
+                throw 'Restart with startup.enabled = true did not restore the installed Run target while keeping AirPlay available.'
+            }
+            Write-Output 'PASS startup.enabled = true restores the installed current-user Run target on tray Restart'
+
             [UIntPtr]$queryResult = [UIntPtr]::Zero
             $querySent = [UxPlaySessionEndProbe]::SendMessageTimeout(
                 $trayWindow, 0x0011, [UIntPtr]::Zero, [IntPtr]::Zero, 0x0002, 5000, [ref]$queryResult
