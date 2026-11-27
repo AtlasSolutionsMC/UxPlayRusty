@@ -58,6 +58,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo fmt --manifest-path .\rust\beacon\Cargo.toml -- --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo fmt --manifest-path .\rust\render\video-renderer\Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path .\rust\render\video-renderer\Cargo.toml --all-targets
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --manifest-path .\rust\app\Cargo.toml --all-targets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd
@@ -69,6 +73,8 @@ jobs:
           cargo clippy --manifest-path .\rust\app\Cargo.toml --all-targets --features external-dns-sd -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo clippy --manifest-path .\rust\beacon\Cargo.toml --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path .\rust\render\video-renderer\Cargo.toml --all-targets -- -D warnings
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup

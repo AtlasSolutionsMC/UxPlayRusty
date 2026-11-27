@@ -460,4 +460,5 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 ### 2026-11-27 — Low-latency decoder fixture coverage
 
 - Expanded the appsrc-to-fakesink integration fixtures so each valid H.264 and H.265 frame runs through both the default and opt-in low-latency mirror pipelines. The check asserts appsrc accepts the first packet and the decoded frame reaches fakesink in both modes; this is fixture evidence only, not real-device latency or playback acceptance.
-- Windows GNU/MSYS2 GStreamer is not installed in this local environment, so local validation is limited to Rust formatting and diff checks; hosted Windows CI is the required test run. CI result is pending.
+- The app test suite compiles `video-renderer` as a dependency but does not execute that crate's unit tests. Updated `.github/workflows/windows-installer-smoke.yml` to run `cargo fmt`, standalone `cargo test --all-targets`, and Clippy for `rust/render/video-renderer` under MSYS2 UCRT64 before app gates. This closes the CI coverage gap for these fixtures; its result is pending.
+- Windows GNU/MSYS2 GStreamer is not installed in this local environment, so local validation is limited to Rust formatting and diff checks; hosted Windows CI is the required test run.
