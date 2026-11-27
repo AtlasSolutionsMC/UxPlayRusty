@@ -547,9 +547,8 @@ pub trait BeaconBackend {
     }
 
     /// The source performs a fake port-1 start/stop for native backends before
-    /// printing its startup summary. BlueZ uses port 1 internally as a preflight
-    /// sentinel but suppresses the source's `test passed` line; WinRT reports the
-    /// successful port-1 probe to that line.
+    /// printing its startup summary. Backends may override this when a dummy
+    /// advertisement cannot safely model starting the real endpoint.
     fn preflight(&mut self, options: &BeaconOptions) -> Result<bool, String> {
         let advertised_port = self.start(options, 1)?;
         self.stop()?;
@@ -577,6 +576,14 @@ impl<T: BeaconBackend + ?Sized> BeaconBackend for Box<T> {
 
     fn stop_after_interrupt(&mut self) -> Result<(), String> {
         (**self).stop_after_interrupt()
+    }
+
+    fn check_port(&self, advertised_port: Option<u16>, candidate_port: u16) -> bool {
+        (**self).check_port(advertised_port, candidate_port)
+    }
+
+    fn preflight(&mut self, options: &BeaconOptions) -> Result<bool, String> {
+        (**self).preflight(options)
     }
 }
 
@@ -1054,6 +1061,32 @@ mod tests {
         assert!(backend.starts.is_empty());
         assert_eq!(backend.stops, 0);
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn boxed_backend_forwards_preflight_and_port_check_overrides() {
+        struct OverrideBackend;
+        impl BeaconBackend for OverrideBackend {
+            fn start(&mut self, _: &BeaconOptions, _: u16) -> Result<u16, String> {
+                panic!("preflight override should be forwarded through Box")
+            }
+
+            fn stop(&mut self) -> Result<(), String> {
+                panic!("preflight override should not call stop")
+            }
+
+            fn preflight(&mut self, _: &BeaconOptions) -> Result<bool, String> {
+                Ok(false)
+            }
+
+            fn check_port(&self, _: Option<u16>, _: u16) -> bool {
+                false
+            }
+        }
+
+        let mut backend: Box<dyn BeaconBackend> = Box::new(OverrideBackend);
+        assert_eq!(backend.preflight(&options("beacon.ble".into())), Ok(false));
+        assert!(!backend.check_port(Some(7100), 7100));
     }
 
     #[derive(Default)]

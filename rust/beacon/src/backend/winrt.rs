@@ -233,10 +233,11 @@ impl BeaconBackend for WinRtBackend {
         )
     }
 
-    fn preflight(&mut self, options: &BeaconOptions) -> Result<bool, String> {
-        let start_result = self.start(options, 1);
-        let publisher_was_created = self.publisher.is_some();
-        finish_preflight(start_result, publisher_was_created, || self.stop())
+    fn preflight(&mut self, _options: &BeaconOptions) -> Result<bool, String> {
+        // A fake port-1 advertisement immediately followed by Stop can leave the
+        // WinRT publisher in STARTED while its asynchronous transition completes.
+        // Defer adapter validation to the real handoff advertisement instead.
+        Ok(false)
     }
 }
 
@@ -293,25 +294,6 @@ fn finish_stop<T>(
             discard_stopped_publisher(publisher);
             Err(error)
         }
-    }
-}
-
-fn finish_preflight(
-    start_result: Result<u16, String>,
-    publisher_was_created: bool,
-    stop: impl FnOnce() -> Result<(), String>,
-) -> Result<bool, String> {
-    match start_result {
-        Ok(port) => {
-            stop()?;
-            Ok(port == 1)
-        }
-        Err(_error) if publisher_was_created => {
-            // Python calls beacon_off() even when WinRT's start call returned no port.
-            stop()?;
-            Ok(false)
-        }
-        Err(error) => Err(error),
     }
 }
 
@@ -462,23 +444,22 @@ mod tests {
     }
 
     #[test]
-    fn failed_winrt_preflight_stops_a_created_publisher_and_continues() {
-        let mut operations = Vec::new();
-        let result = finish_preflight(Err("Failed to start beacon".to_owned()), true, || {
-            operations.push("stop");
-            Ok(())
-        });
+    fn winrt_preflight_defers_to_the_real_handoff_advertisement() {
+        let options = BeaconOptions {
+            ble_type: crate::BleType::WinRt,
+            file: None,
+            path: "beacon.ble".into(),
+            ipv4: Ipv4Addr::new(192, 0, 2, 8),
+            advmin: None,
+            advmax: None,
+            index: None,
+            device: None,
+            exit_when_stopped: false,
+            notices: Vec::new(),
+        };
+        let mut backend = WinRtBackend::new();
 
-        assert_eq!(result, Ok(false));
-        assert_eq!(operations, ["stop"]);
-    }
-
-    #[test]
-    fn failed_winrt_preflight_without_publisher_propagates_without_stop() {
-        let result = finish_preflight(Err("publisher creation failed".to_owned()), false, || {
-            panic!("stop must not run before publisher creation")
-        });
-
-        assert_eq!(result, Err("publisher creation failed".to_owned()));
+        assert_eq!(backend.preflight(&options), Ok(false));
+        assert!(backend.publisher.is_none());
     }
 }
