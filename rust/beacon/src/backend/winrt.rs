@@ -32,7 +32,6 @@ pub struct WinRtBackend {
     publisher: Option<PublisherLease<BluetoothLEAdvertisementPublisher>>,
     advertised_port: Option<u16>,
     advertised_address: Option<Ipv4Addr>,
-    current_publisher_stopped: Arc<AtomicBool>,
     quiet: Arc<AtomicBool>,
 }
 
@@ -53,7 +52,6 @@ impl WinRtBackend {
             publisher: None,
             advertised_port: None,
             advertised_address: None,
-            current_publisher_stopped: Arc::new(AtomicBool::new(false)),
             quiet: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -61,7 +59,7 @@ impl WinRtBackend {
     fn create_publisher(
         payload: &[u8],
         quiet: Arc<AtomicBool>,
-        current_publisher_stopped: Arc<AtomicBool>,
+        publisher_stopped: Arc<AtomicBool>,
     ) -> windows::core::Result<PublisherLease<BluetoothLEAdvertisementPublisher>> {
         let writer = DataWriter::new()?;
         writer.WriteBytes(payload)?;
@@ -76,7 +74,7 @@ impl WinRtBackend {
             .Append(&manufacturer_data)?;
 
         let publisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)?;
-        let callback_stopped = Arc::clone(&current_publisher_stopped);
+        let callback_stopped = Arc::clone(&publisher_stopped);
         let status_changed = TypedEventHandler::<
             BluetoothLEAdvertisementPublisher,
             BluetoothLEAdvertisementPublisherStatusChangedEventArgs,
@@ -96,15 +94,15 @@ impl WinRtBackend {
                 std::process::exit(1);
             }
             if status == BluetoothLEAdvertisementPublisherStatus::Stopped {
-                // Python's callback clears the module-level publisher on STOPPED,
-                // even when this event came from an older publisher instance.
+                // Record STOPPED on this publisher's lease so a delayed callback
+                // from an older instance cannot release the current publisher.
                 publisher_status_stopped(&callback_stopped);
             }
             let _ = sender;
             Ok(())
         });
         let _status_token = publisher.StatusChanged(&status_changed)?;
-        Ok(PublisherLease::new(publisher, current_publisher_stopped))
+        Ok(PublisherLease::new(publisher, publisher_stopped))
     }
 }
 
@@ -129,17 +127,13 @@ impl BeaconBackend for WinRtBackend {
 
         let quiet = port == 1;
         self.quiet.store(quiet, Ordering::Relaxed);
-        self.current_publisher_stopped
-            .store(false, Ordering::Relaxed);
         if quiet {
             crate::source_println!("beacon test");
         }
-        let publisher = Self::create_publisher(
-            &payload,
-            Arc::clone(&self.quiet),
-            Arc::clone(&self.current_publisher_stopped),
-        )
-        .map_err(|error| error.to_string())?;
+        let publisher_stopped = Arc::new(AtomicBool::new(false));
+        let publisher =
+            Self::create_publisher(&payload, Arc::clone(&self.quiet), publisher_stopped)
+                .map_err(|error| error.to_string())?;
         self.publisher = Some(publisher);
         self.advertised_port = Some(port);
         self.advertised_address = Some(options.ipv4);
@@ -363,25 +357,23 @@ mod tests {
     }
 
     #[test]
-    fn old_stopped_callback_clears_the_current_global_publisher() {
-        let current_stopped = Arc::new(AtomicBool::new(false));
-        let old_publisher_callback = Arc::clone(&current_stopped);
+    fn old_stopped_callback_does_not_release_a_new_publisher() {
+        let old_publisher_stopped = Arc::new(AtomicBool::new(false));
+        let new_publisher_stopped = Arc::new(AtomicBool::new(false));
         let mut current_publisher = Some(PublisherLease::new(
             "new publisher",
-            Arc::clone(&current_stopped),
+            Arc::clone(&new_publisher_stopped),
         ));
 
-        // Python's on_status_changed ignores sender identity and sets the
-        // module-global publisher to None for every STOPPED event.
-        publisher_status_stopped(&old_publisher_callback);
+        publisher_status_stopped(&old_publisher_stopped);
 
         let released = discard_stopped_publisher(&mut current_publisher);
-        assert!(released);
+        assert!(!released);
+        assert!(!new_publisher_stopped.load(Ordering::Relaxed));
         assert_eq!(
-            stopped_publisher_stop_error(released),
-            Some(crate::WINRT_STOPPED_PUBLISHER_ERROR)
+            current_publisher.as_ref().map(|active| active.publisher),
+            Some("new publisher")
         );
-        assert!(current_publisher.is_none());
     }
 
     #[test]
