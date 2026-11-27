@@ -570,3 +570,8 @@ Status values: `DONE`, `IN PROGRESS`, `NOT STARTED`, `BLOCKED`, `NOT VERIFIED`.
 
 - Revision `8e4bf30` passed Windows workflow [`45985731368`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45985731368): renderer tests 18; app tests 567 default and 569 with `external-dns-sd`; beacon tests 72 library + 5 CLI; format/Clippy; runtime smoke; and fresh Windows Server 2025 install/launch/shutdown/uninstall. `Setup.exe` measured 54,608,096 bytes.
 - Linux [`45985731362`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45985731362) and macOS [`45985731409`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45985731409) passed on this revision. The one-shot instrumentation is accepted by fixture and hosted checks; actual iPhone display and latency remain unverified.
+
+### 2026-11-27 — Prepare the accepted provisional installer for later device testing
+
+- Downloaded the `windows-setup-smoke` artifact from successful Windows run [`45985731368`](https://github.com/AtlasSolutionsMC/UxPlayRusty/actions/runs/45985731368), whose source revision is `8e4bf30`, into the new isolated local folder `dist/windows/provisional-8e4bf30/`. Its `Setup.exe` is 54,608,096 bytes; SHA-256 is `051E4D76E7DE48D24443E3E99D74E51971BFE9E701CDFAB8D2E76A689C778657`.
+- Download command: `gh run download 45985731368 --name windows-setup-smoke --dir dist/windows/provisional-8e4bf30`; hash command: `Get-FileHash -LiteralPath 'dist/windows/provisional-8e4bf30/Setup.exe' -Algorithm SHA256`. The artifact is staged for later user-device validation only; it was not installed or launched on this workstation. Existing receiver PID `1576` and all unrelated local edits were left untouched.
