@@ -140,7 +140,7 @@ public static class UxPlaySessionEndProbe {
     public static extern IntPtr FindWindow(string className, string windowName);
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern IntPtr SendMessageTimeout(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
